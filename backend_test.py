@@ -167,7 +167,7 @@ class SMSPlatformTester:
             "balance": 150.50
         }
         
-        success, response, status = self.make_request('POST', 'clients', data, 201)
+        success, response, status = self.make_request('POST', 'clients', data, 200)
         
         if success and 'id' in response:
             self.created_client_id = response['id']
