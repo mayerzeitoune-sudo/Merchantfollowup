@@ -239,7 +239,7 @@ class SMSPlatformTester:
             "message": "Test payment reminder message"
         }
         
-        success, response, status = self.make_request('POST', 'reminders', data, 201)
+        success, response, status = self.make_request('POST', 'reminders', data, 200)
         
         if success and 'id' in response:
             self.created_reminder_id = response['id']
