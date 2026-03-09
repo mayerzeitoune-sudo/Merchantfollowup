@@ -489,7 +489,8 @@ async def create_client(data: ClientCreate, current_user: dict = Depends(get_cur
     }
     
     await db.clients.insert_one(client_doc)
-    del client_doc["_id"] if "_id" in client_doc else None
+    if "_id" in client_doc:
+        del client_doc["_id"]
     return client_doc
 
 @api_router.get("/clients", response_model=List[ClientResponse])
