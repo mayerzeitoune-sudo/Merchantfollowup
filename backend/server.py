@@ -668,7 +668,8 @@ async def create_followup(data: FollowUpCreate, current_user: dict = Depends(get
     }
     
     await db.followups.insert_one(followup_doc)
-    del followup_doc["_id"] if "_id" in followup_doc else None
+    if "_id" in followup_doc:
+        del followup_doc["_id"]
     return followup_doc
 
 @api_router.get("/followups", response_model=List[FollowUpResponse])
