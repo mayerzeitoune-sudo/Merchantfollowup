@@ -486,10 +486,14 @@ class SMSPlatformTester:
         self.test_get_client_by_id()
         self.test_update_client()
 
+        # Test SMS provider operations first (needed for send reminder)
+        self.test_create_sms_provider()
+        self.test_get_sms_providers()
+
         # Test reminder operations
         self.test_create_reminder()
         self.test_get_reminders()
-        self.test_send_reminder()  # Expected to fail without SMS provider
+        self.test_send_reminder_with_provider()  # Now should work
 
         # Test follow-up operations
         self.test_create_followup()
@@ -498,10 +502,6 @@ class SMSPlatformTester:
         # Test campaign operations
         self.test_create_campaign()
         self.test_get_campaigns()
-
-        # Test SMS provider operations
-        self.test_create_sms_provider()
-        self.test_get_sms_providers()
 
         # Test AI functionality
         self.test_ai_match_response()
