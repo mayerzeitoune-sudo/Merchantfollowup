@@ -260,20 +260,19 @@ class SMSPlatformTester:
             self.log_result("Get All Reminders", False, f"Status: {status}, Response: {response}")
             return False
 
-    def test_send_reminder(self):
-        """Test sending reminder (should fail without SMS provider)"""
+    def test_send_reminder_with_provider(self):
+        """Test sending reminder with SMS provider configured"""
         if not self.created_reminder_id:
-            self.log_result("Send Reminder", False, "No reminder ID available")
+            self.log_result("Send Reminder with Provider", False, "No reminder ID available")
             return False
             
-        success, response, status = self.make_request('POST', f'reminders/{self.created_reminder_id}/send', expected_status=400)
+        success, response, status = self.make_request('POST', f'reminders/{self.created_reminder_id}/send', expected_status=200)
         
-        # Should fail with 400 because no SMS provider is configured
-        if not success and status == 400 and 'SMS provider' in response.get('detail', ''):
-            self.log_result("Send Reminder (Expected Failure)", True)
+        if success and 'message' in response and 'sent_at' in response:
+            self.log_result("Send Reminder with Provider", True)
             return True
         else:
-            self.log_result("Send Reminder", False, f"Unexpected response - Status: {status}, Response: {response}")
+            self.log_result("Send Reminder with Provider", False, f"Status: {status}, Response: {response}")
             return False
 
     # ============== FOLLOW-UP TESTS ==============
