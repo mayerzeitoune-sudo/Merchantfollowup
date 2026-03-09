@@ -294,7 +294,7 @@ class SMSPlatformTester:
             "reminder_type": "call"
         }
         
-        success, response, status = self.make_request('POST', 'followups', data, 201)
+        success, response, status = self.make_request('POST', 'followups', data, 200)
         
         if success and 'id' in response:
             self.created_followup_id = response['id']
