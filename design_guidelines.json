@@ -1,0 +1,172 @@
+{
+  "project_name": "Merchant Follow Up",
+  "version": "1.0.0",
+  "design_philosophy": {
+    "persona": "E1 - The Anti-AI Designer",
+    "core_principles": [
+      "Fusion over Imitation: Mix Swiss precision with Organic warmth.",
+      "Emotion First: Trust and Efficiency. The user is here to get paid.",
+      "Content is King: Data density without clutter. Every pixel must earn its rent.",
+      "Contrast: High contrast for readability in bright environments (mobile use)."
+    ],
+    "anti_patterns": [
+      "No generic 'SaaS Blue'.",
+      "No gradients on text unless it's a specific 'hero' moment.",
+      "No 'Inter' for headings. Use 'Outfit' for character.",
+      "No center-aligned dashboards. Use asymmetric grids."
+    ]
+  },
+  "typography": {
+    "font_family": {
+      "headings": "Outfit, sans-serif",
+      "body": "Inter, sans-serif",
+      "mono": "JetBrains Mono, monospace"
+    },
+    "installation": "Import via Google Fonts in index.css: @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@500;600;700;800&display=swap');",
+    "usage_rules": {
+      "headings": "Use 'Outfit' for all h1-h6. Tracking tight (-0.02em). Weight 600 or 700.",
+      "body": "Use 'Inter' for all paragraphs and data tables. Tracking normal.",
+      "labels": "Uppercase, tracking-widest, text-xs, font-semibold, text-muted-foreground."
+    }
+  },
+  "colors": {
+    "palette_name": "Merchant Blaze",
+    "primary": {
+      "name": "Burnt Orange",
+      "hex": "#EA580C",
+      "hsl": "24 95% 53%",
+      "usage": "Primary buttons, active states, key highlights."
+    },
+    "secondary": {
+      "name": "Warm Stone",
+      "hex": "#F5F5F4",
+      "hsl": "60 5% 96%",
+      "usage": "Sidebar backgrounds, secondary buttons, card headers."
+    },
+    "accent": {
+      "name": "Deep Charcoal",
+      "hex": "#1C1917",
+      "hsl": "24 10% 10%",
+      "usage": "Text, strong borders, dark mode backgrounds."
+    },
+    "background": {
+      "light": "#FFFFFF",
+      "dark": "#0C0A09"
+    },
+    "semantic": {
+      "success": "#16A34A",
+      "warning": "#F59E0B",
+      "error": "#DC2626",
+      "info": "#0EA5E9"
+    },
+    "css_variables_update": {
+      "root": {
+        "--background": "0 0% 100%",
+        "--foreground": "24 10% 10%",
+        "--card": "0 0% 100%",
+        "--card-foreground": "24 10% 10%",
+        "--popover": "0 0% 100%",
+        "--popover-foreground": "24 10% 10%",
+        "--primary": "24 95% 53%",
+        "--primary-foreground": "60 9.1% 97.8%",
+        "--secondary": "60 4.8% 95.9%",
+        "--secondary-foreground": "24 9.8% 10%",
+        "--muted": "60 4.8% 95.9%",
+        "--muted-foreground": "25 5.3% 44.7%",
+        "--accent": "60 4.8% 95.9%",
+        "--accent-foreground": "24 9.8% 10%",
+        "--destructive": "0 84.2% 60.2%",
+        "--destructive-foreground": "60 9.1% 97.8%",
+        "--border": "20 5.9% 90%",
+        "--input": "20 5.9% 90%",
+        "--ring": "24 95% 53%",
+        "--radius": "0.5rem"
+      }
+    }
+  },
+  "layout": {
+    "grid_system": "Bento Grid (Mode B - High Density)",
+    "spacing": {
+      "container_padding": "p-6 md:p-8 lg:p-12",
+      "element_gap": "gap-4 md:gap-6",
+      "section_spacing": "py-12 md:py-20"
+    },
+    "containers": {
+      "dashboard_card": "bg-card border border-border shadow-sm rounded-lg p-6",
+      "sidebar": "bg-secondary/50 border-r border-border h-screen sticky top-0",
+      "main_content": "flex-1 p-8 overflow-y-auto"
+    }
+  },
+  "components": {
+    "buttons": {
+      "primary": "bg-primary text-primary-foreground hover:bg-primary/90 shadow-md transition-all duration-200 active:scale-95 rounded-md font-medium",
+      "secondary": "bg-white border border-input hover:bg-accent hover:text-accent-foreground shadow-sm transition-all duration-200 rounded-md font-medium",
+      "ghost": "hover:bg-accent hover:text-accent-foreground rounded-md"
+    },
+    "inputs": {
+      "default": "flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+    },
+    "cards": {
+      "style": "rounded-lg border bg-card text-card-foreground shadow-sm"
+    },
+    "tables": {
+      "header": "bg-muted/50 text-muted-foreground font-medium text-xs uppercase tracking-wider",
+      "row": "hover:bg-muted/50 transition-colors border-b border-border"
+    }
+  },
+  "assets": {
+    "images": {
+      "login_background": {
+        "url": "https://images.unsplash.com/photo-1720969835740-49346b3fb9ca?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjA1NzB8MHwxfHNlYXJjaHwxfHxtb2Rlcm4lMjBvZmZpY2UlMjBhYnN0cmFjdCUyMG9yYW5nZSUyMHdoaXRlfGVufDB8fHx8MTc3MzA3NjY2NXww&ixlib=rb-4.1.0&q=85",
+        "alt": "Abstract modern office background with orange accents",
+        "usage": "Full screen background for Login/Register pages with overlay."
+      },
+      "avatars": [
+        {
+          "url": "https://images.unsplash.com/photo-1576558656222-ba66febe3dec?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjA1NzB8MHwxfHNlYXJjaHwxfHxwcm9mZXNzaW9uYWwlMjBoZWFkc2hvdCUyMHBvcnRyYWl0fGVufDB8fHx8MTc3MzA3NjY3MHww&ixlib=rb-4.1.0&q=85",
+          "alt": "Male user avatar"
+        },
+        {
+          "url": "https://images.unsplash.com/photo-1762522926157-bcc04bf0b10a?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjA1NzB8MHwxfHNlYXJjaHw0fHxwcm9mZXNzaW9uYWwlMjBoZWFkc2hvdCUyMHBvcnRyYWl0fGVufDB8fHx8MTc3MzA3NjY3MHww&ixlib=rb-4.1.0&q=85",
+          "alt": "Male user avatar 2"
+        }
+      ]
+    },
+    "icons": {
+      "library": "lucide-react",
+      "style": "Stroke width 1.5px for a clean, technical look."
+    }
+  },
+  "motion": {
+    "transitions": "transition-all duration-200 ease-in-out",
+    "hover_effects": "hover:-translate-y-0.5 hover:shadow-md",
+    "page_transition": "animate-in fade-in slide-in-from-bottom-4 duration-500"
+  },
+  "accessibility": {
+    "contrast": "Ensure all text on orange backgrounds is white or very dark grey. Avoid orange text on white unless large.",
+    "focus_states": "focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-orange-500",
+    "testing": "All interactive elements must have data-testid attributes."
+  },
+  "instructions_to_main_agent": [
+    "1. UPDATE CSS VARIABLES: Replace the content of /app/frontend/src/index.css with the variables defined in 'colors.css_variables_update'.",
+    "2. INSTALL FONTS: Add the Google Fonts import to the top of index.css.",
+    "3. CONFIGURE TAILWIND: Ensure tailwind.config.js extends the theme correctly to use these variables.",
+    "4. USE SHADCN: Use the existing components in /app/frontend/src/components/ui/ but customize them via className props to match the 'Merchant Blaze' aesthetic.",
+    "5. LAYOUT: Implement the Dashboard using the Bento Grid strategy (Mode B).",
+    "6. AUTH PAGES: Use the 'login_background' image for the auth pages with a white/90 glassmorphism card for the form.",
+    "7. MOBILE RESPONSIVENESS: Ensure all tables have horizontal scroll on mobile and navigation collapses to a hamburger menu.",
+    "8. DATA-TESTID: Add data-testid to every button, input, and link."
+  ],
+  "universal_guidelines": {
+    "do_not": [
+      "Do not use gradients for main backgrounds.",
+      "Do not use 'Inter' for headings.",
+      "Do not make the UI too dense on mobile."
+    ],
+    "do": [
+      "Use whitespace to separate sections.",
+      "Use the primary orange sparingly for high-impact actions.",
+      "Keep the UI clean and professional."
+    ]
+  }
+}
