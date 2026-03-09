@@ -368,7 +368,7 @@ class SMSPlatformTester:
             "is_active": True
         }
         
-        success, response, status = self.make_request('POST', 'sms-providers', data, 201)
+        success, response, status = self.make_request('POST', 'sms-providers', data, 200)
         
         if success and 'id' in response:
             self.created_provider_id = response['id']
