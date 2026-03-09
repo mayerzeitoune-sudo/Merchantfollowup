@@ -737,7 +737,8 @@ async def create_campaign(data: CampaignCreate, current_user: dict = Depends(get
     }
     
     await db.campaigns.insert_one(campaign_doc)
-    del campaign_doc["_id"] if "_id" in campaign_doc else None
+    if "_id" in campaign_doc:
+        del campaign_doc["_id"]
     return campaign_doc
 
 @api_router.get("/campaigns", response_model=List[CampaignResponse])
