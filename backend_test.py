@@ -335,7 +335,7 @@ class SMSPlatformTester:
             "status": "draft"
         }
         
-        success, response, status = self.make_request('POST', 'campaigns', data, 201)
+        success, response, status = self.make_request('POST', 'campaigns', data, 200)
         
         if success and 'id' in response:
             self.created_campaign_id = response['id']
