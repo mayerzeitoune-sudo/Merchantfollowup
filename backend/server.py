@@ -566,7 +566,8 @@ async def create_reminder(data: ReminderCreate, current_user: dict = Depends(get
     }
     
     await db.reminders.insert_one(reminder_doc)
-    del reminder_doc["_id"] if "_id" in reminder_doc else None
+    if "_id" in reminder_doc:
+        del reminder_doc["_id"]
     return reminder_doc
 
 @api_router.get("/reminders", response_model=List[ReminderResponse])
