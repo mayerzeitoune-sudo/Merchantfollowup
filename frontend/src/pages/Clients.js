@@ -63,7 +63,13 @@ const Clients = () => {
     notes: '',
     balance: 0,
     tags: [],
-    birthday: ''
+    birthday: '',
+    address_line1: '',
+    address_line2: '',
+    city: '',
+    state: '',
+    zip_code: '',
+    country: 'US'
   });
 
   useEffect(() => {
