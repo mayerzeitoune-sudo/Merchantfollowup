@@ -657,6 +657,17 @@ async def delete_reminder(reminder_id: str, current_user: dict = Depends(get_cur
         raise HTTPException(status_code=404, detail="Reminder not found")
     return {"message": "Reminder deleted"}
 
+@api_router.post("/reminders/calculate")
+async def calculate_reminders(
+    start_date: str,
+    end_date: str,
+    days_of_week: List[str],
+    current_user: dict = Depends(get_current_user)
+):
+    """Calculate how many reminders will be sent based on date range and days"""
+    count = calculate_reminder_count(start_date, end_date, days_of_week)
+    return {"total_reminders": count}
+
 @api_router.post("/reminders/{reminder_id}/send")
 async def send_reminder(reminder_id: str, current_user: dict = Depends(get_current_user)):
     reminder = await db.reminders.find_one(
