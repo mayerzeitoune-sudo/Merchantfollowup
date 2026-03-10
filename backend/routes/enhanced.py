@@ -3,6 +3,7 @@ Enhanced Routes for Merchant Follow Up Platform
 Smart Drip Campaigns, Analytics, Lead Capture, Teams, Compliance, AI Suggestions
 """
 from fastapi import APIRouter, HTTPException, Depends, UploadFile, File, BackgroundTasks
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from typing import List, Optional, Dict, Any
 import uuid
 from datetime import datetime, timezone, timedelta
@@ -11,7 +12,10 @@ import io
 import json
 from motor.motor_asyncio import AsyncIOMotorClient
 import os
-from emergentintegrations.llm.chat import LlmChat, UserMessage
+import jwt
+import logging
+
+logger = logging.getLogger(__name__)
 
 # Import models
 from models.enhanced import (
@@ -37,13 +41,33 @@ def set_db(database):
     global db
     db = database
 
-# ============== HELPER: Get Current User ==============
-# This will be set from main server.py
-get_current_user = None
+# ============== AUTH DEPENDENCY ==============
+security = HTTPBearer()
+JWT_SECRET = os.environ.get('JWT_SECRET', 'default-secret-key')
+JWT_ALGORITHM = "HS256"
+
+_get_current_user_func = None
 
 def set_auth_dependency(auth_func):
-    global get_current_user
-    get_current_user = auth_func
+    global _get_current_user_func
+    _get_current_user_func = auth_func
+
+async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(security)):
+    """Get current user from JWT token"""
+    if _get_current_user_func:
+        return await _get_current_user_func(credentials)
+    
+    try:
+        token = credentials.credentials
+        payload = jwt.decode(token, JWT_SECRET, algorithms=[JWT_ALGORITHM])
+        user_id = payload.get("user_id")
+        if user_id is None:
+            raise HTTPException(status_code=401, detail="Invalid token")
+        return {"user_id": user_id, "email": payload.get("email")}
+    except jwt.ExpiredSignatureError:
+        raise HTTPException(status_code=401, detail="Token expired")
+    except jwt.InvalidTokenError:
+        raise HTTPException(status_code=401, detail="Invalid token")
 
 # ============== ENHANCED DRIP CAMPAIGNS ==============
 
