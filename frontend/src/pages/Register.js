@@ -19,6 +19,8 @@ const Register = () => {
   const { register } = useAuth();
   const navigate = useNavigate();
 
+  const logoUrl = "https://customer-assets.emergentagent.com/job_payment-tracker-471/artifacts/q3g0kgbm_Image_20260310_172432_668.png";
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     
@@ -46,28 +48,31 @@ const Register = () => {
 
   return (
     <div className="min-h-screen flex">
-      {/* Left Panel - Background Image */}
-      <div 
-        className="hidden lg:flex lg:w-1/2 bg-cover bg-center relative"
-        style={{ 
-          backgroundImage: `url('https://images.unsplash.com/photo-1720969835740-49346b3fb9ca?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjA1NzB8MHwxfHNlYXJjaHwxfHxtb2Rlcm4lMjBvZmZpY2UlMjBhYnN0cmFjdCUyMG9yYW5nZSUyMHdoaXRlfGVufDB8fHx8MTc3MzA3NjY2NXww&ixlib=rb-4.1.0&q=85')` 
-        }}
-      >
-        <div className="absolute inset-0 bg-gradient-to-br from-orange-600/80 to-orange-800/80" />
-        <div className="relative z-10 flex flex-col justify-center p-12 text-white">
-          <h1 className="text-4xl font-bold mb-4 font-['Outfit']">Merchant Follow Up</h1>
-          <p className="text-lg opacity-90">Start automating your payment reminders today.</p>
-          <ul className="mt-6 space-y-3 text-white/90">
+      {/* Left Panel - Dark Background with Logo */}
+      <div className="hidden lg:flex lg:w-1/2 bg-black relative items-center justify-center">
+        <div className="text-center px-12">
+          <img 
+            src={logoUrl} 
+            alt="Merchant Follow Up" 
+            className="w-64 h-auto mx-auto mb-6"
+          />
+          <p className="text-orange-400 text-lg opacity-90 mb-8">Start automating your payment reminders today.</p>
+          <ul className="space-y-3 text-white/80 text-left">
             <li className="flex items-center gap-2">
-              <div className="h-1.5 w-1.5 rounded-full bg-white" />
+              <div className="h-1.5 w-1.5 rounded-full bg-orange-400" />
               Send automated SMS reminders
             </li>
             <li className="flex items-center gap-2">
-              <div className="h-1.5 w-1.5 rounded-full bg-white" />
+              <div className="h-1.5 w-1.5 rounded-full bg-orange-400" />
               Build drip campaigns with AI
             </li>
             <li className="flex items-center gap-2">
-              <div className="h-1.5 w-1.5 rounded-full bg-white" />
+              <div className="h-1.5 w-1.5 rounded-full bg-orange-400" />
+              Track all client conversations
+            </li>
+          </ul>
+        </div>
+      </div>
               Track payments and follow-ups
             </li>
           </ul>
