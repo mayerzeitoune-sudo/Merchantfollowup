@@ -244,6 +244,109 @@ class MatchResponse(BaseModel):
     matched_keyword: Optional[str] = None
     confidence: float
 
+# Phone Number Models
+class PhoneNumberCreate(BaseModel):
+    phone_number: str
+    friendly_name: Optional[str] = None
+    provider: str = "twilio"
+
+class PhoneNumberResponse(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    id: str
+    user_id: str
+    phone_number: str
+    friendly_name: Optional[str] = None
+    provider: str
+    is_active: bool = True
+    monthly_cost: float = 1.00
+    created_at: str
+
+# Contact/Conversation Models
+class ConversationMessage(BaseModel):
+    direction: str  # inbound, outbound
+    content: str
+    timestamp: str
+    status: str = "sent"
+
+class ContactUpdate(BaseModel):
+    birthday: Optional[str] = None
+    special_events: Optional[List[Dict[str, str]]] = None
+    notes: Optional[str] = None
+
+# Gift Store Models
+class GiftCategory(BaseModel):
+    id: str
+    name: str
+    description: str
+
+class GiftProduct(BaseModel):
+    id: str
+    name: str
+    description: str
+    price: float
+    category: str
+    image_url: Optional[str] = None
+    provider: str = "catalog"
+
+class GiftOrderCreate(BaseModel):
+    client_id: str
+    product_id: str
+    occasion: str
+    delivery_date: str
+    message: Optional[str] = None
+    gift_amount: Optional[float] = None
+
+class GiftOrderResponse(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    id: str
+    user_id: str
+    client_id: str
+    client_name: Optional[str] = None
+    product_id: str
+    product_name: Optional[str] = None
+    occasion: str
+    delivery_date: str
+    message: Optional[str] = None
+    gift_amount: Optional[float] = None
+    status: str
+    created_at: str
+
+# Domain Models
+class DomainCreate(BaseModel):
+    domain_name: str
+    is_owned: bool = False
+    dns_verified: bool = False
+
+class DomainResponse(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    id: str
+    user_id: str
+    domain_name: str
+    is_owned: bool
+    dns_verified: bool
+    mx_records: List[str] = []
+    status: str
+    created_at: str
+
+class EmailAccountCreate(BaseModel):
+    domain_id: str
+    email_address: str
+    display_name: Optional[str] = None
+    smtp_host: Optional[str] = None
+    smtp_port: Optional[int] = 587
+    smtp_username: Optional[str] = None
+    smtp_password: Optional[str] = None
+
+class EmailAccountResponse(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    id: str
+    user_id: str
+    domain_id: str
+    email_address: str
+    display_name: Optional[str] = None
+    is_active: bool = True
+    created_at: str
+
 # ============== HELPER FUNCTIONS ==============
 
 def generate_otp():
