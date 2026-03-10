@@ -18,6 +18,7 @@ import PhoneNumbers from "./pages/PhoneNumbers";
 import Contacts from "./pages/Contacts";
 import GiftStore from "./pages/GiftStore";
 import Domains from "./pages/Domains";
+import Templates from "./pages/Templates";
 
 // Protected Route Component
 const ProtectedRoute = ({ children }) => {
