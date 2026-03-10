@@ -3,43 +3,52 @@ import DashboardLayout from '../components/DashboardLayout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
-import { Textarea } from '../components/ui/textarea';
-import { Badge } from '../components/ui/badge';
-import { ScrollArea } from '../components/ui/scroll-area';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '../components/ui/dialog';
 import { Label } from '../components/ui/label';
+import { Textarea } from '../components/ui/textarea';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '../components/ui/dialog';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
+import { Badge } from '../components/ui/badge';
 import { 
   Plus, 
   Search, 
-  Edit, 
-  Trash2, 
-  MessageSquare, 
+  FileText,
+  Pencil,
+  Trash2,
   Copy,
-  Filter,
-  Tag
+  BarChart3
 } from 'lucide-react';
 import { templatesApi } from '../lib/api';
 import { toast } from 'sonner';
 
+const CATEGORIES = [
+  { value: "Payment Reminder", color: "bg-orange-100 text-orange-700" },
+  { value: "Follow Up", color: "bg-yellow-100 text-yellow-700" },
+  { value: "Introduction", color: "bg-blue-100 text-blue-700" },
+  { value: "Thank You", color: "bg-green-100 text-green-700" },
+  { value: "Appointment", color: "bg-purple-100 text-purple-700" },
+  { value: "General", color: "bg-gray-100 text-gray-700" },
+];
+
+const getCategoryColor = (category) => {
+  const found = CATEGORIES.find(c => c.value === category);
+  return found ? found.color : "bg-gray-100 text-gray-700";
+};
+
 const Templates = () => {
   const [templates, setTemplates] = useState([]);
-  const [categories, setCategories] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('all');
-  const [loading, setLoading] = useState(true);
-  const [showCreateDialog, setShowCreateDialog] = useState(false);
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingTemplate, setEditingTemplate] = useState(null);
   const [formData, setFormData] = useState({
     name: '',
     category: 'General',
-    content: '',
-    variables: []
+    content: ''
   });
 
   useEffect(() => {
     fetchTemplates();
-    fetchCategories();
   }, [categoryFilter]);
 
   const fetchTemplates = async () => {
@@ -53,327 +62,262 @@ const Templates = () => {
     }
   };
 
-  const fetchCategories = async () => {
+  const handleSubmit = async (e) => {
+    e.preventDefault();
     try {
-      const response = await templatesApi.getCategories();
-      setCategories(response.data.categories);
-    } catch (error) {
-      console.error('Failed to fetch categories');
-    }
-  };
-
-  const handleCreateTemplate = async () => {
-    try {
-      await templatesApi.create(formData);
-      toast.success('Template created successfully');
-      setShowCreateDialog(false);
+      if (editingTemplate) {
+        await templatesApi.update(editingTemplate.id, formData);
+        toast.success('Template updated');
+      } else {
+        await templatesApi.create(formData);
+        toast.success('Template created');
+      }
+      setIsDialogOpen(false);
       resetForm();
       fetchTemplates();
     } catch (error) {
-      toast.error(error.response?.data?.detail || 'Failed to create template');
+      toast.error(error.response?.data?.detail || 'Operation failed');
     }
   };
 
-  const handleUpdateTemplate = async () => {
-    try {
-      await templatesApi.update(editingTemplate.id, formData);
-      toast.success('Template updated successfully');
-      setEditingTemplate(null);
-      resetForm();
-      fetchTemplates();
-    } catch (error) {
-      toast.error(error.response?.data?.detail || 'Failed to update template');
-    }
-  };
-
-  const handleDeleteTemplate = async (templateId) => {
-    if (!window.confirm('Are you sure you want to delete this template?')) return;
-    
-    try {
-      await templatesApi.delete(templateId);
-      toast.success('Template deleted successfully');
-      fetchTemplates();
-    } catch (error) {
-      toast.error('Failed to delete template');
-    }
-  };
-
-  const handleCopyTemplate = (template) => {
-    navigator.clipboard.writeText(template.content);
-    toast.success('Template content copied to clipboard');
-  };
-
-  const resetForm = () => {
-    setFormData({
-      name: '',
-      category: 'General',
-      content: '',
-      variables: []
-    });
-  };
-
-  const openEditDialog = (template) => {
+  const handleEdit = (template) => {
     setEditingTemplate(template);
     setFormData({
       name: template.name,
       category: template.category,
-      content: template.content,
-      variables: template.variables
+      content: template.content
     });
+    setIsDialogOpen(true);
   };
 
-  const extractVariables = (content) => {
-    const matches = content.match(/\{([^}]+)\}/g);
-    return matches ? matches.map(match => match.slice(1, -1)) : [];
+  const handleDelete = async (id) => {
+    if (!window.confirm('Delete this template?')) return;
+    try {
+      await templatesApi.delete(id);
+      toast.success('Template deleted');
+      fetchTemplates();
+    } catch (error) {
+      toast.error('Failed to delete');
+    }
   };
 
-  const handleContentChange = (content) => {
-    setFormData(prev => ({
-      ...prev,
-      content,
-      variables: extractVariables(content)
-    }));
+  const handleCopy = (content) => {
+    navigator.clipboard.writeText(content);
+    toast.success('Copied to clipboard');
   };
 
-  const filteredTemplates = templates.filter(template =>
-    template.name.toLowerCase().includes(search.toLowerCase()) ||
-    template.content.toLowerCase().includes(search.toLowerCase())
+  const resetForm = () => {
+    setEditingTemplate(null);
+    setFormData({ name: '', category: 'General', content: '' });
+  };
+
+  const filteredTemplates = templates.filter(t =>
+    t.name.toLowerCase().includes(search.toLowerCase()) ||
+    t.content.toLowerCase().includes(search.toLowerCase())
   );
 
-  const getCategoryColor = (category) => {
-    const colors = {
-      'Payment Reminder': 'bg-red-100 text-red-700',
-      'Follow Up': 'bg-blue-100 text-blue-700',
-      'Introduction': 'bg-green-100 text-green-700',
-      'Thank You': 'bg-purple-100 text-purple-700',
-      'Appointment': 'bg-orange-100 text-orange-700',
-      'General': 'bg-gray-100 text-gray-700'
-    };
-    return colors[category] || 'bg-gray-100 text-gray-700';
+  // Extract variables from content
+  const extractVariables = (content) => {
+    const matches = content.match(/\{(\w+)\}/g) || [];
+    return [...new Set(matches)];
   };
 
   return (
     <DashboardLayout>
       <div className="space-y-6" data-testid="templates-page">
         {/* Header */}
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
             <h1 className="text-3xl font-bold font-['Outfit']">Message Templates</h1>
             <p className="text-muted-foreground mt-1">Create and manage reusable message templates</p>
           </div>
-          <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
+          <Dialog open={isDialogOpen} onOpenChange={(open) => { setIsDialogOpen(open); if (!open) resetForm(); }}>
             <DialogTrigger asChild>
-              <Button onClick={resetForm} data-testid="create-template-btn">
+              <Button className="bg-primary hover:bg-primary/90" data-testid="add-template-btn">
                 <Plus className="h-4 w-4 mr-2" />
-                Create Template
+                New Template
               </Button>
             </DialogTrigger>
-            <DialogContent className="max-w-2xl">
+            <DialogContent className="sm:max-w-lg">
               <DialogHeader>
-                <DialogTitle>Create New Template</DialogTitle>
+                <DialogTitle className="font-['Outfit']">
+                  {editingTemplate ? 'Edit Template' : 'Create Template'}
+                </DialogTitle>
                 <DialogDescription>
-                  Create a reusable message template. Use {'{variable_name}'} for dynamic content.
+                  {editingTemplate ? 'Update your message template' : 'Create a reusable message template'}
                 </DialogDescription>
               </DialogHeader>
-              <div className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <Label htmlFor="name">Template Name</Label>
-                    <Input
-                      id="name"
-                      value={formData.name}
-                      onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
-                      placeholder="e.g., Payment Reminder - Friendly"
-                      data-testid="template-name-input"
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="category">Category</Label>
-                    <Select value={formData.category} onValueChange={(value) => setFormData(prev => ({ ...prev, category: value }))}>
-                      <SelectTrigger data-testid="template-category-select">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {categories.map((category) => (
-                          <SelectItem key={category} value={category}>
-                            {category}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
+              <form onSubmit={handleSubmit} className="space-y-4 mt-4">
+                <div className="space-y-2">
+                  <Label htmlFor="name">Template Name *</Label>
+                  <Input
+                    id="name"
+                    value={formData.name}
+                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                    placeholder="Payment Reminder - Friendly"
+                    required
+                    data-testid="template-name-input"
+                  />
                 </div>
-                <div>
-                  <Label htmlFor="content">Message Content</Label>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="category">Category</Label>
+                  <Select
+                    value={formData.category}
+                    onValueChange={(value) => setFormData({ ...formData, category: value })}
+                  >
+                    <SelectTrigger data-testid="template-category-select">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {CATEGORIES.map((cat) => (
+                        <SelectItem key={cat.value} value={cat.value}>
+                          {cat.value}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="content">Message Content *</Label>
                   <Textarea
                     id="content"
                     value={formData.content}
-                    onChange={(e) => handleContentChange(e.target.value)}
-                    placeholder="Hi {client_name}! This is a reminder about..."
-                    rows={6}
+                    onChange={(e) => setFormData({ ...formData, content: e.target.value })}
+                    placeholder="Hi {name}, this is a friendly reminder about your payment of ${amount}. Please let us know if you have any questions!"
+                    rows={5}
+                    required
                     data-testid="template-content-input"
                   />
-                  <p className="text-sm text-muted-foreground mt-1">
-                    Available variables: {'{client_name}'}, {'{client_company}'}, {'{client_balance}'}
+                  <p className="text-xs text-muted-foreground">
+                    Use variables: {'{name}'}, {'{amount}'}, {'{company}'}, {'{date}'}, {'{phone}'}
                   </p>
                 </div>
-                {formData.variables.length > 0 && (
-                  <div>
-                    <Label>Detected Variables</Label>
-                    <div className="flex flex-wrap gap-2 mt-2">
-                      {formData.variables.map((variable) => (
-                        <Badge key={variable} variant="outline">
-                          {variable}
-                        </Badge>
+
+                {/* Preview variables */}
+                {formData.content && extractVariables(formData.content).length > 0 && (
+                  <div className="p-3 bg-secondary/50 rounded-lg">
+                    <p className="text-xs font-medium text-muted-foreground mb-2">Variables detected:</p>
+                    <div className="flex flex-wrap gap-1">
+                      {extractVariables(formData.content).map((v, i) => (
+                        <Badge key={i} variant="outline" className="text-xs">{v}</Badge>
                       ))}
                     </div>
                   </div>
                 )}
-              </div>
-              <DialogFooter>
-                <Button variant="outline" onClick={() => setShowCreateDialog(false)}>
-                  Cancel
-                </Button>
-                <Button onClick={handleCreateTemplate} disabled={!formData.name || !formData.content}>
-                  Create Template
-                </Button>
-              </DialogFooter>
+                
+                <div className="flex gap-3 pt-4">
+                  <Button type="button" variant="outline" className="flex-1" onClick={() => setIsDialogOpen(false)}>
+                    Cancel
+                  </Button>
+                  <Button type="submit" className="flex-1 bg-primary hover:bg-primary/90" data-testid="save-template-btn">
+                    {editingTemplate ? 'Update' : 'Create'}
+                  </Button>
+                </div>
+              </form>
             </DialogContent>
           </Dialog>
         </div>
 
         {/* Filters */}
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex gap-4">
-              <div className="relative flex-1">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder="Search templates..."
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  className="pl-10"
-                  data-testid="search-templates-input"
-                />
-              </div>
-              <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-                <SelectTrigger className="w-48" data-testid="template-category-filter">
-                  <Filter className="h-4 w-4 mr-2" />
-                  <SelectValue placeholder="Filter by category" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Categories</SelectItem>
-                  {categories.map((category) => (
-                    <SelectItem key={category} value={category}>
-                      {category}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </CardContent>
-        </Card>
+        <div className="flex flex-col sm:flex-row gap-4">
+          <div className="relative flex-1 max-w-md">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Search templates..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="pl-10"
+              data-testid="search-templates-input"
+            />
+          </div>
+          <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+            <SelectTrigger className="w-48" data-testid="category-filter-select">
+              <SelectValue placeholder="All Categories" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Categories</SelectItem>
+              {CATEGORIES.map((cat) => (
+                <SelectItem key={cat.value} value={cat.value}>{cat.value}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
 
         {/* Templates Grid */}
         {loading ? (
-          <div className="text-center py-12">
-            <p className="text-muted-foreground">Loading templates...</p>
-          </div>
+          <p className="text-center py-12 text-muted-foreground">Loading...</p>
         ) : filteredTemplates.length === 0 ? (
           <Card>
             <CardContent className="text-center py-12">
-              <MessageSquare className="h-16 w-16 mx-auto mb-4 opacity-50" />
-              <h3 className="text-lg font-medium mb-2">No templates found</h3>
+              <FileText className="h-12 w-12 mx-auto mb-4 text-muted-foreground/50" />
               <p className="text-muted-foreground mb-4">
-                {search || categoryFilter !== 'all' 
-                  ? 'Try adjusting your search or filter criteria'
-                  : 'Create your first message template to get started'
-                }
+                {search || categoryFilter !== 'all' ? 'No templates found' : 'No templates yet'}
               </p>
-              {!search && categoryFilter === 'all' && (
-                <Button onClick={() => setShowCreateDialog(true)}>
-                  <Plus className="h-4 w-4 mr-2" />
-                  Create Template
-                </Button>
-              )}
+              <Button onClick={() => setIsDialogOpen(true)}>
+                Create Your First Template
+              </Button>
             </CardContent>
           </Card>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {filteredTemplates.map((template) => (
-              <Card key={template.id} className="flex flex-col" data-testid={`template-${template.id}`}>
-                <CardHeader className="pb-3">
+              <Card key={template.id} className="hover:shadow-md transition-shadow">
+                <CardHeader className="pb-2">
                   <div className="flex items-start justify-between">
-                    <div className="flex-1">
-                      <CardTitle className="text-lg font-['Outfit'] mb-2">{template.name}</CardTitle>
-                      <div className="flex items-center gap-2">
-                        <Badge className={getCategoryColor(template.category)}>
-                          <Tag className="h-3 w-3 mr-1" />
-                          {template.category}
-                        </Badge>
-                        {template.use_count > 0 && (
-                          <Badge variant="outline" className="text-xs">
-                            Used {template.use_count} times
-                          </Badge>
-                        )}
-                      </div>
+                    <div className="flex-1 min-w-0">
+                      <CardTitle className="text-lg font-['Outfit'] truncate">{template.name}</CardTitle>
+                      <Badge className={`mt-1 ${getCategoryColor(template.category)}`}>
+                        {template.category}
+                      </Badge>
+                    </div>
+                    <div className="flex items-center gap-1 text-muted-foreground">
+                      <BarChart3 className="h-3 w-3" />
+                      <span className="text-xs">{template.use_count}</span>
                     </div>
                   </div>
                 </CardHeader>
-                <CardContent className="flex-1 pb-3">
-                  <div className="space-y-3">
-                    <div>
-                      <p className="text-sm text-muted-foreground line-clamp-4">
-                        {template.content}
-                      </p>
+                <CardContent>
+                  <p className="text-sm text-muted-foreground line-clamp-3 mb-4">
+                    {template.content}
+                  </p>
+                  
+                  {template.variables?.length > 0 && (
+                    <div className="flex flex-wrap gap-1 mb-4">
+                      {template.variables.slice(0, 4).map((v, i) => (
+                        <Badge key={i} variant="outline" className="text-xs">{`{${v}}`}</Badge>
+                      ))}
+                      {template.variables.length > 4 && (
+                        <Badge variant="outline" className="text-xs">+{template.variables.length - 4}</Badge>
+                      )}
                     </div>
-                    {template.variables.length > 0 && (
-                      <div>
-                        <p className="text-xs font-medium text-muted-foreground mb-1">Variables:</p>
-                        <div className="flex flex-wrap gap-1">
-                          {template.variables.slice(0, 3).map((variable) => (
-                            <Badge key={variable} variant="outline" className="text-xs">
-                              {variable}
-                            </Badge>
-                          ))}
-                          {template.variables.length > 3 && (
-                            <Badge variant="outline" className="text-xs">
-                              +{template.variables.length - 3}
-                            </Badge>
-                          )}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                </CardContent>
-                <CardContent className="pt-0">
+                  )}
+                  
                   <div className="flex gap-2">
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => handleCopyTemplate(template)}
                       className="flex-1"
-                      data-testid={`copy-template-${template.id}`}
+                      onClick={() => handleCopy(template.content)}
                     >
-                      <Copy className="h-4 w-4 mr-1" />
+                      <Copy className="h-3 w-3 mr-1" />
                       Copy
                     </Button>
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => openEditDialog(template)}
-                      data-testid={`edit-template-${template.id}`}
+                      onClick={() => handleEdit(template)}
                     >
-                      <Edit className="h-4 w-4" />
+                      <Pencil className="h-3 w-3" />
                     </Button>
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => handleDeleteTemplate(template.id)}
-                      className="text-red-600 hover:text-red-700"
-                      data-testid={`delete-template-${template.id}`}
+                      className="text-destructive hover:text-destructive"
+                      onClick={() => handleDelete(template.id)}
                     >
-                      <Trash2 className="h-4 w-4" />
+                      <Trash2 className="h-3 w-3" />
                     </Button>
                   </div>
                 </CardContent>
@@ -381,79 +325,6 @@ const Templates = () => {
             ))}
           </div>
         )}
-
-        {/* Edit Dialog */}
-        <Dialog open={!!editingTemplate} onOpenChange={() => setEditingTemplate(null)}>
-          <DialogContent className="max-w-2xl">
-            <DialogHeader>
-              <DialogTitle>Edit Template</DialogTitle>
-              <DialogDescription>
-                Update your message template. Use {'{variable_name}'} for dynamic content.
-              </DialogDescription>
-            </DialogHeader>
-            <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="edit-name">Template Name</Label>
-                  <Input
-                    id="edit-name"
-                    value={formData.name}
-                    onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
-                    placeholder="e.g., Payment Reminder - Friendly"
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="edit-category">Category</Label>
-                  <Select value={formData.category} onValueChange={(value) => setFormData(prev => ({ ...prev, category: value }))}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {categories.map((category) => (
-                        <SelectItem key={category} value={category}>
-                          {category}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-              <div>
-                <Label htmlFor="edit-content">Message Content</Label>
-                <Textarea
-                  id="edit-content"
-                  value={formData.content}
-                  onChange={(e) => handleContentChange(e.target.value)}
-                  placeholder="Hi {client_name}! This is a reminder about..."
-                  rows={6}
-                />
-                <p className="text-sm text-muted-foreground mt-1">
-                  Available variables: {'{client_name}'}, {'{client_company}'}, {'{client_balance}'}
-                </p>
-              </div>
-              {formData.variables.length > 0 && (
-                <div>
-                  <Label>Detected Variables</Label>
-                  <div className="flex flex-wrap gap-2 mt-2">
-                    {formData.variables.map((variable) => (
-                      <Badge key={variable} variant="outline">
-                        {variable}
-                      </Badge>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setEditingTemplate(null)}>
-                Cancel
-              </Button>
-              <Button onClick={handleUpdateTemplate} disabled={!formData.name || !formData.content}>
-                Update Template
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
       </div>
     </DashboardLayout>
   );
