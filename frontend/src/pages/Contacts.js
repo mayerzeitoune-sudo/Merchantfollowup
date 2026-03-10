@@ -53,9 +53,16 @@ const Contacts = () => {
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
   const [calling, setCalling] = useState(false);
+  
+  // Template functionality
+  const [templates, setTemplates] = useState([]);
+  const [showTemplateDialog, setShowTemplateDialog] = useState(false);
+  const [selectedTemplate, setSelectedTemplate] = useState(null);
+  const [templateVariables, setTemplateVariables] = useState({});
 
   useEffect(() => {
     fetchClients();
+    fetchTemplates();
   }, [tagFilter]);
 
   useEffect(() => {
@@ -72,6 +79,15 @@ const Contacts = () => {
       toast.error('Failed to fetch contacts');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchTemplates = async () => {
+    try {
+      const response = await templatesApi.getAll();
+      setTemplates(response.data);
+    } catch (error) {
+      console.error('Failed to fetch templates');
     }
   };
 
@@ -98,6 +114,78 @@ const Contacts = () => {
     } finally {
       setSending(false);
     }
+  };
+
+  const handleSendTemplate = async () => {
+    if (!selectedTemplate || !selectedClient) return;
+    
+    setSending(true);
+    try {
+      // Prepare variables with default values
+      const variables = {
+        ...templateVariables,
+        client_name: selectedClient.name,
+        client_company: selectedClient.company || '',
+        client_balance: selectedClient.balance?.toString() || '0'
+      };
+      
+      await templatesApi.sendToContact(selectedClient.id, selectedTemplate.id, variables);
+      toast.success('Template message sent!');
+      setShowTemplateDialog(false);
+      setSelectedTemplate(null);
+      setTemplateVariables({});
+      fetchConversation(selectedClient.id);
+    } catch (error) {
+      toast.error(error.response?.data?.detail || 'Failed to send template message');
+    } finally {
+      setSending(false);
+    }
+  };
+
+  const handleUseTemplate = (template) => {
+    setSelectedTemplate(template);
+    
+    // Initialize variables with default values
+    const defaultVars = {
+      client_name: selectedClient?.name || '',
+      client_company: selectedClient?.company || '',
+      client_balance: selectedClient?.balance?.toString() || '0'
+    };
+    
+    // Set up variables that need user input
+    const userVars = {};
+    template.variables.forEach(variable => {
+      if (!defaultVars[variable]) {
+        userVars[variable] = '';
+      }
+    });
+    
+    setTemplateVariables(userVars);
+    
+    // If no user input needed, send directly
+    if (Object.keys(userVars).length === 0) {
+      handleSendTemplate();
+    } else {
+      setShowTemplateDialog(true);
+    }
+  };
+
+  const previewTemplateContent = () => {
+    if (!selectedTemplate) return '';
+    
+    let content = selectedTemplate.content;
+    const allVariables = {
+      ...templateVariables,
+      client_name: selectedClient?.name || '',
+      client_company: selectedClient?.company || '',
+      client_balance: selectedClient?.balance?.toString() || '0'
+    };
+    
+    Object.entries(allVariables).forEach(([key, value]) => {
+      content = content.replace(new RegExp(`\\{${key}\\}`, 'g'), value || `{${key}}`);
+    });
+    
+    return content;
   };
 
   const handleCall = async () => {
