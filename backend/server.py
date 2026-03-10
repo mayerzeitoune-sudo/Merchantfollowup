@@ -90,6 +90,13 @@ class ClientCreate(BaseModel):
     balance: float = 0.0
     tags: List[str] = []
     birthday: Optional[str] = None
+    # Address fields for gift shop
+    address_line1: Optional[str] = None
+    address_line2: Optional[str] = None
+    city: Optional[str] = None
+    state: Optional[str] = None
+    zip_code: Optional[str] = None
+    country: Optional[str] = "US"
 
 class ClientUpdate(BaseModel):
     name: Optional[str] = None
@@ -100,6 +107,12 @@ class ClientUpdate(BaseModel):
     balance: Optional[float] = None
     tags: Optional[List[str]] = None
     birthday: Optional[str] = None
+    address_line1: Optional[str] = None
+    address_line2: Optional[str] = None
+    city: Optional[str] = None
+    state: Optional[str] = None
+    zip_code: Optional[str] = None
+    country: Optional[str] = None
 
 class ClientResponse(BaseModel):
     model_config = ConfigDict(extra="ignore")
@@ -114,6 +127,13 @@ class ClientResponse(BaseModel):
     tags: List[str] = []
     birthday: Optional[str] = None
     special_events: List[Dict[str, str]] = []
+    address_line1: Optional[str] = None
+    address_line2: Optional[str] = None
+    city: Optional[str] = None
+    state: Optional[str] = None
+    zip_code: Optional[str] = None
+    country: Optional[str] = None
+    ai_summary: Optional[str] = None
     created_at: str
     updated_at: str
 
