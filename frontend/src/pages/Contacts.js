@@ -149,12 +149,25 @@ const Contacts = () => {
       await contactsApi.sendSms(selectedClient.id, message, fromNumber);
       toast.success('Message sent!');
       setMessage('');
-      fetchConversation(selectedClient.id);
+      // Refresh both chains and conversation
+      fetchConversationChains(selectedClient.id);
+      fetchConversation(selectedClient.id, activeChain);
     } catch (error) {
       toast.error(error.response?.data?.detail || 'Failed to send message');
     } finally {
       setSending(false);
     }
+  };
+
+  const handleSelectChain = (fromNumber) => {
+    setActiveChain(fromNumber);
+    setSelectedFromNumber(fromNumber);
+  };
+
+  const handleStartNewChain = (phoneNumber) => {
+    setActiveChain(phoneNumber);
+    setSelectedFromNumber(phoneNumber);
+    setConversation([]);  // Clear conversation for new chain
   };
 
   const handleSendTemplate = async () => {
