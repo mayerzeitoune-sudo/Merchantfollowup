@@ -138,3 +138,8 @@ code {
 .label-uppercase {
     @apply uppercase tracking-widest text-xs font-semibold text-muted-foreground;
 }
+
+/* Hide Emergent badge */
+#emergent-badge {
+    display: none !important;
+}
