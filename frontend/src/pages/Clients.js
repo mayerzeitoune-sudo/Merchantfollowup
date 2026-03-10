@@ -322,6 +322,70 @@ const Clients = () => {
                   </div>
                 </div>
 
+                {/* Address Section */}
+                <div className="space-y-3 pt-2 border-t">
+                  <Label className="flex items-center gap-2 text-muted-foreground">
+                    <MapPin className="h-4 w-4" />
+                    Address (optional - needed for gift delivery)
+                  </Label>
+                  
+                  <div className="space-y-2">
+                    <Input
+                      value={formData.address_line1}
+                      onChange={(e) => setFormData({ ...formData, address_line1: e.target.value })}
+                      placeholder="Street Address"
+                      data-testid="client-address1-input"
+                    />
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Input
+                      value={formData.address_line2}
+                      onChange={(e) => setFormData({ ...formData, address_line2: e.target.value })}
+                      placeholder="Apt, Suite, Unit (optional)"
+                      data-testid="client-address2-input"
+                    />
+                  </div>
+                  
+                  <div className="grid grid-cols-2 gap-2">
+                    <Input
+                      value={formData.city}
+                      onChange={(e) => setFormData({ ...formData, city: e.target.value })}
+                      placeholder="City"
+                      data-testid="client-city-input"
+                    />
+                    <Input
+                      value={formData.state}
+                      onChange={(e) => setFormData({ ...formData, state: e.target.value })}
+                      placeholder="State"
+                      data-testid="client-state-input"
+                    />
+                  </div>
+                  
+                  <div className="grid grid-cols-2 gap-2">
+                    <Input
+                      value={formData.zip_code}
+                      onChange={(e) => setFormData({ ...formData, zip_code: e.target.value })}
+                      placeholder="ZIP Code"
+                      data-testid="client-zip-input"
+                    />
+                    <Select 
+                      value={formData.country} 
+                      onValueChange={(value) => setFormData({ ...formData, country: value })}
+                    >
+                      <SelectTrigger data-testid="client-country-select">
+                        <SelectValue placeholder="Country" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="US">United States</SelectItem>
+                        <SelectItem value="CA">Canada</SelectItem>
+                        <SelectItem value="UK">United Kingdom</SelectItem>
+                        <SelectItem value="AU">Australia</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
                 {/* Tags Selection */}
                 <div className="space-y-2">
                   <Label className="flex items-center gap-2">
