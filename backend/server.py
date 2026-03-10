@@ -1628,6 +1628,170 @@ async def get_domain_marketplace(current_user: dict = Depends(get_current_user))
         "supported_registrars": ["Namecheap", "GoDaddy", "Cloudflare"]
     }
 
+# ============== MESSAGE TEMPLATE ROUTES ==============
+
+@api_router.post("/templates", response_model=TemplateResponse)
+async def create_template(data: TemplateCreate, current_user: dict = Depends(get_current_user)):
+    """Create a new message template"""
+    template_id = str(uuid.uuid4())
+    now = datetime.now(timezone.utc).isoformat()
+    
+    template_doc = {
+        "id": template_id,
+        "user_id": current_user["user_id"],
+        "name": data.name,
+        "category": data.category,
+        "content": data.content,
+        "variables": data.variables,
+        "use_count": 0,
+        "created_at": now,
+        "updated_at": now
+    }
+    
+    await db.templates.insert_one(template_doc)
+    if "_id" in template_doc:
+        del template_doc["_id"]
+    return template_doc
+
+@api_router.get("/templates", response_model=List[TemplateResponse])
+async def get_templates(category: Optional[str] = None, current_user: dict = Depends(get_current_user)):
+    """Get all templates, optionally filtered by category"""
+    query = {"user_id": current_user["user_id"]}
+    if category:
+        query["category"] = category
+    
+    templates = await db.templates.find(query, {"_id": 0}).sort("name", 1).to_list(1000)
+    return templates
+
+@api_router.get("/templates/categories")
+async def get_template_categories(current_user: dict = Depends(get_current_user)):
+    """Get available template categories"""
+    return {"categories": TEMPLATE_CATEGORIES}
+
+@api_router.get("/templates/{template_id}", response_model=TemplateResponse)
+async def get_template(template_id: str, current_user: dict = Depends(get_current_user)):
+    """Get a specific template"""
+    template = await db.templates.find_one(
+        {"id": template_id, "user_id": current_user["user_id"]},
+        {"_id": 0}
+    )
+    if not template:
+        raise HTTPException(status_code=404, detail="Template not found")
+    return template
+
+@api_router.put("/templates/{template_id}", response_model=TemplateResponse)
+async def update_template(template_id: str, data: TemplateUpdate, current_user: dict = Depends(get_current_user)):
+    """Update a template"""
+    update_data = {k: v for k, v in data.model_dump().items() if v is not None}
+    update_data["updated_at"] = datetime.now(timezone.utc).isoformat()
+    
+    result = await db.templates.update_one(
+        {"id": template_id, "user_id": current_user["user_id"]},
+        {"$set": update_data}
+    )
+    
+    if result.matched_count == 0:
+        raise HTTPException(status_code=404, detail="Template not found")
+    
+    template = await db.templates.find_one({"id": template_id}, {"_id": 0})
+    return template
+
+@api_router.delete("/templates/{template_id}")
+async def delete_template(template_id: str, current_user: dict = Depends(get_current_user)):
+    """Delete a template"""
+    result = await db.templates.delete_one(
+        {"id": template_id, "user_id": current_user["user_id"]}
+    )
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Template not found")
+    return {"message": "Template deleted"}
+
+@api_router.post("/templates/{template_id}/use")
+async def use_template(template_id: str, current_user: dict = Depends(get_current_user)):
+    """Increment template use count"""
+    result = await db.templates.update_one(
+        {"id": template_id, "user_id": current_user["user_id"]},
+        {"$inc": {"use_count": 1}}
+    )
+    
+    if result.matched_count == 0:
+        raise HTTPException(status_code=404, detail="Template not found")
+    
+    return {"message": "Template use count updated"}
+
+@api_router.post("/contacts/{client_id}/send-template")
+async def send_template_message(
+    client_id: str,
+    template_id: str,
+    variables: Optional[Dict[str, str]] = None,
+    current_user: dict = Depends(get_current_user)
+):
+    """Send a template message to a contact with variable substitution"""
+    # Get client
+    client = await db.clients.find_one(
+        {"id": client_id, "user_id": current_user["user_id"]}
+    )
+    if not client:
+        raise HTTPException(status_code=404, detail="Client not found")
+    
+    # Get template
+    template = await db.templates.find_one(
+        {"id": template_id, "user_id": current_user["user_id"]}
+    )
+    if not template:
+        raise HTTPException(status_code=404, detail="Template not found")
+    
+    # Substitute variables in template content
+    message_content = template["content"]
+    if variables:
+        for var, value in variables.items():
+            message_content = message_content.replace(f"{{{var}}}", value)
+    
+    # Default variable substitutions
+    default_vars = {
+        "client_name": client.get("name", ""),
+        "client_company": client.get("company", ""),
+        "client_balance": str(client.get("balance", 0))
+    }
+    
+    for var, value in default_vars.items():
+        message_content = message_content.replace(f"{{{var}}}", value)
+    
+    # Check for active SMS provider
+    provider = await db.sms_providers.find_one(
+        {"user_id": current_user["user_id"], "is_active": True}
+    )
+    
+    message_id = str(uuid.uuid4())
+    now = datetime.now(timezone.utc).isoformat()
+    
+    # Store the message
+    message_doc = {
+        "id": message_id,
+        "user_id": current_user["user_id"],
+        "client_id": client_id,
+        "template_id": template_id,
+        "direction": "outbound",
+        "content": message_content,
+        "timestamp": now,
+        "status": "sent" if provider else "pending_provider"
+    }
+    
+    await db.conversations.insert_one(message_doc)
+    
+    # Increment template use count
+    await db.templates.update_one(
+        {"id": template_id},
+        {"$inc": {"use_count": 1}}
+    )
+    
+    return {
+        "message_id": message_id,
+        "content": message_content,
+        "status": "sent" if provider else "pending_provider",
+        "note": None if provider else "Configure SMS provider to send messages"
+    }
+
 # ============== DASHBOARD STATS ==============
 
 @api_router.get("/dashboard/stats")
