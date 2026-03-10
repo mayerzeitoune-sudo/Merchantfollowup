@@ -96,13 +96,19 @@ const DashboardLayout = ({ children }) => {
       `}>
         <div className="flex flex-col h-full">
           {/* Logo */}
-          <div className="h-16 flex items-center justify-between px-4 border-b border-border sticky top-0 bg-white z-10">
-            <Link to="/dashboard" className="flex items-center gap-2">
-              <img 
-                src={logoUrl} 
-                alt="Merchant Follow Up" 
-                className="h-10 w-auto"
-              />
+          <div className="h-20 flex items-center justify-between px-4 border-b border-border sticky top-0 bg-white z-10">
+            <Link to="/dashboard" className="flex items-center gap-3 group">
+              <div className="relative">
+                <img 
+                  src={logoUrl} 
+                  alt="Merchant Follow Up" 
+                  className="h-12 w-auto transition-transform duration-200 group-hover:scale-105"
+                />
+              </div>
+              <div className="flex flex-col">
+                <span className="text-sm font-bold text-gray-900 leading-tight">MERCHANT</span>
+                <span className="text-xs font-medium text-orange-500 tracking-wider">FOLLOWUP</span>
+              </div>
             </Link>
             <button
               onClick={() => setSidebarOpen(false)}
