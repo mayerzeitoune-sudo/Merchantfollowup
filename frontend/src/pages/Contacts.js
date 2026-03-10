@@ -21,9 +21,10 @@ import {
   MessageCircle,
   Zap,
   FileText,
-  ChevronRight
+  ChevronRight,
+  Smartphone
 } from 'lucide-react';
-import { clientsApi, contactsApi, templatesApi } from '../lib/api';
+import { clientsApi, contactsApi, templatesApi, phoneNumbersApi } from '../lib/api';
 import { toast } from 'sonner';
 
 const AVAILABLE_TAGS = [
