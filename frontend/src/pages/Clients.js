@@ -26,7 +26,8 @@ import {
   Filter,
   X,
   Calendar,
-  MapPin
+  MapPin,
+  Eye
 } from 'lucide-react';
 import { clientsApi } from '../lib/api';
 import { toast } from 'sonner';
