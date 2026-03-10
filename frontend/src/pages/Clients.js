@@ -576,6 +576,12 @@ const Clients = () => {
                               </Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end" className="w-48">
+                              <Link to={`/clients/${client.id}`}>
+                                <DropdownMenuItem>
+                                  <Eye className="h-4 w-4 mr-2" />
+                                  View Profile
+                                </DropdownMenuItem>
+                              </Link>
                               <DropdownMenuItem onClick={() => handleEdit(client)}>
                                 <Pencil className="h-4 w-4 mr-2" />
                                 Edit
