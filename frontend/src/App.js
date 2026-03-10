@@ -19,6 +19,12 @@ import Contacts from "./pages/Contacts";
 import GiftStore from "./pages/GiftStore";
 import Domains from "./pages/Domains";
 import Templates from "./pages/Templates";
+// New Enhanced Pages
+import DripCampaigns from "./pages/DripCampaigns";
+import Analytics from "./pages/Analytics";
+import LeadCapture from "./pages/LeadCapture";
+import Compliance from "./pages/Compliance";
+import Revival from "./pages/Revival";
 
 // Protected Route Component
 const ProtectedRoute = ({ children }) => {
@@ -85,6 +91,13 @@ function AppRoutes() {
       <Route path="/gift-store" element={<ProtectedRoute><GiftStore /></ProtectedRoute>} />
       <Route path="/domains" element={<ProtectedRoute><Domains /></ProtectedRoute>} />
       <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
+      
+      {/* New Enhanced Routes */}
+      <Route path="/drip-campaigns" element={<ProtectedRoute><DripCampaigns /></ProtectedRoute>} />
+      <Route path="/analytics" element={<ProtectedRoute><Analytics /></ProtectedRoute>} />
+      <Route path="/lead-capture" element={<ProtectedRoute><LeadCapture /></ProtectedRoute>} />
+      <Route path="/compliance" element={<ProtectedRoute><Compliance /></ProtectedRoute>} />
+      <Route path="/revival" element={<ProtectedRoute><Revival /></ProtectedRoute>} />
       
       {/* Default redirect */}
       <Route path="/" element={<Navigate to="/login" replace />} />
