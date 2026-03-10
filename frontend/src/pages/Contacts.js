@@ -7,6 +7,8 @@ import { Textarea } from '../components/ui/textarea';
 import { Badge } from '../components/ui/badge';
 import { ScrollArea } from '../components/ui/scroll-area';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '../components/ui/dialog';
+import { Label } from '../components/ui/label';
 import { 
   Search, 
   Phone,
@@ -15,9 +17,11 @@ import {
   PhoneCall,
   User,
   Clock,
-  Filter
+  Filter,
+  MessageCircle,
+  Zap
 } from 'lucide-react';
-import { clientsApi, contactsApi } from '../lib/api';
+import { clientsApi, contactsApi, templatesApi } from '../lib/api';
 import { toast } from 'sonner';
 
 const AVAILABLE_TAGS = [
