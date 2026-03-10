@@ -6,6 +6,7 @@ import { Input } from '../components/ui/input';
 import { Textarea } from '../components/ui/textarea';
 import { Badge } from '../components/ui/badge';
 import { ScrollArea } from '../components/ui/scroll-area';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
 import { 
   Search, 
   Phone,
@@ -13,16 +14,37 @@ import {
   Send,
   PhoneCall,
   User,
-  Clock
+  Clock,
+  Filter
 } from 'lucide-react';
 import { clientsApi, contactsApi } from '../lib/api';
 import { toast } from 'sonner';
+
+const AVAILABLE_TAGS = [
+  { value: "New Lead", color: "bg-blue-100 text-blue-700" },
+  { value: "Contacted", color: "bg-purple-100 text-purple-700" },
+  { value: "Responded", color: "bg-cyan-100 text-cyan-700" },
+  { value: "Interested", color: "bg-green-100 text-green-700" },
+  { value: "Not Interested", color: "bg-gray-100 text-gray-700" },
+  { value: "Follow Up", color: "bg-yellow-100 text-yellow-700" },
+  { value: "Application Sent", color: "bg-indigo-100 text-indigo-700" },
+  { value: "Docs Submitted", color: "bg-orange-100 text-orange-700" },
+  { value: "Approved", color: "bg-emerald-100 text-emerald-700" },
+  { value: "Funded", color: "bg-green-100 text-green-800" },
+  { value: "Lost Deal", color: "bg-red-100 text-red-700" },
+];
+
+const getTagColor = (tag) => {
+  const found = AVAILABLE_TAGS.find(t => t.value === tag);
+  return found ? found.color : "bg-gray-100 text-gray-700";
+};
 
 const Contacts = () => {
   const [clients, setClients] = useState([]);
   const [selectedClient, setSelectedClient] = useState(null);
   const [conversation, setConversation] = useState([]);
   const [search, setSearch] = useState('');
+  const [tagFilter, setTagFilter] = useState('all');
   const [message, setMessage] = useState('');
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
@@ -30,7 +52,7 @@ const Contacts = () => {
 
   useEffect(() => {
     fetchClients();
-  }, []);
+  }, [tagFilter]);
 
   useEffect(() => {
     if (selectedClient) {
@@ -40,7 +62,7 @@ const Contacts = () => {
 
   const fetchClients = async () => {
     try {
-      const response = await clientsApi.getAll();
+      const response = await clientsApi.getAll(tagFilter === 'all' ? null : tagFilter);
       setClients(response.data);
     } catch (error) {
       toast.error('Failed to fetch contacts');
@@ -82,7 +104,6 @@ const Contacts = () => {
       const response = await contactsApi.initiateCall(selectedClient.id);
       if (response.data.provider_configured) {
         toast.success('Call initiated!');
-        // In production, this would open a calling interface
       } else {
         toast.info('Configure Twilio Voice in Settings to make browser calls');
       }
@@ -109,8 +130,8 @@ const Contacts = () => {
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 h-[calc(100vh-220px)]">
           {/* Contacts List */}
-          <Card className="lg:col-span-1">
-            <CardHeader className="pb-3">
+          <Card className="lg:col-span-1 flex flex-col">
+            <CardHeader className="pb-3 space-y-3">
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
@@ -121,9 +142,23 @@ const Contacts = () => {
                   data-testid="search-contacts-input"
                 />
               </div>
+              <Select value={tagFilter} onValueChange={setTagFilter}>
+                <SelectTrigger className="w-full" data-testid="contact-tag-filter">
+                  <Filter className="h-4 w-4 mr-2" />
+                  <SelectValue placeholder="Filter by tag" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Contacts</SelectItem>
+                  {AVAILABLE_TAGS.map((tag) => (
+                    <SelectItem key={tag.value} value={tag.value}>
+                      {tag.value}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </CardHeader>
-            <CardContent className="p-0">
-              <ScrollArea className="h-[calc(100vh-350px)]">
+            <CardContent className="p-0 flex-1 overflow-hidden">
+              <ScrollArea className="h-full">
                 {loading ? (
                   <p className="text-center py-8 text-muted-foreground">Loading...</p>
                 ) : filteredClients.length === 0 ? (
@@ -135,7 +170,7 @@ const Contacts = () => {
                         key={client.id}
                         onClick={() => setSelectedClient(client)}
                         className={`
-                          flex items-center gap-3 p-3 rounded-lg cursor-pointer transition-colors
+                          flex flex-col gap-2 p-3 rounded-lg cursor-pointer transition-colors
                           ${selectedClient?.id === client.id 
                             ? 'bg-primary text-white' 
                             : 'hover:bg-secondary'
@@ -143,22 +178,51 @@ const Contacts = () => {
                         `}
                         data-testid={`contact-${client.id}`}
                       >
-                        <div className={`
-                          h-10 w-10 rounded-full flex items-center justify-center
-                          ${selectedClient?.id === client.id ? 'bg-white/20' : 'bg-primary/10'}
-                        `}>
-                          <User className={`h-5 w-5 ${selectedClient?.id === client.id ? 'text-white' : 'text-primary'}`} />
+                        <div className="flex items-center gap-3">
+                          <div className={`
+                            h-10 w-10 rounded-full flex items-center justify-center flex-shrink-0
+                            ${selectedClient?.id === client.id ? 'bg-white/20' : 'bg-primary/10'}
+                          `}>
+                            <User className={`h-5 w-5 ${selectedClient?.id === client.id ? 'text-white' : 'text-primary'}`} />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="font-medium truncate">{client.name}</p>
+                            <p className={`text-sm truncate ${selectedClient?.id === client.id ? 'text-white/70' : 'text-muted-foreground'}`}>
+                              {client.phone}
+                            </p>
+                          </div>
+                          {client.balance > 0 && (
+                            <Badge variant={selectedClient?.id === client.id ? "secondary" : "outline"} className="text-xs flex-shrink-0">
+                              ${client.balance.toFixed(0)}
+                            </Badge>
+                          )}
                         </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="font-medium truncate">{client.name}</p>
-                          <p className={`text-sm truncate ${selectedClient?.id === client.id ? 'text-white/70' : 'text-muted-foreground'}`}>
-                            {client.phone}
-                          </p>
-                        </div>
-                        {client.balance > 0 && (
-                          <Badge variant={selectedClient?.id === client.id ? "secondary" : "outline"} className="text-xs">
-                            ${client.balance.toFixed(0)}
-                          </Badge>
+                        {/* Tags */}
+                        {client.tags?.length > 0 && (
+                          <div className="flex flex-wrap gap-1 ml-13">
+                            {client.tags.slice(0, 2).map((tag) => (
+                              <Badge 
+                                key={tag} 
+                                className={`text-xs ${
+                                  selectedClient?.id === client.id 
+                                    ? 'bg-white/20 text-white' 
+                                    : getTagColor(tag)
+                                }`}
+                              >
+                                {tag}
+                              </Badge>
+                            ))}
+                            {client.tags.length > 2 && (
+                              <Badge 
+                                variant="outline" 
+                                className={`text-xs ${
+                                  selectedClient?.id === client.id ? 'border-white/30 text-white/70' : ''
+                                }`}
+                              >
+                                +{client.tags.length - 2}
+                              </Badge>
+                            )}
+                          </div>
                         )}
                       </div>
                     ))}
@@ -181,7 +245,17 @@ const Contacts = () => {
                       </div>
                       <div>
                         <CardTitle className="font-['Outfit']">{selectedClient.name}</CardTitle>
-                        <CardDescription>{selectedClient.phone}</CardDescription>
+                        <CardDescription className="flex items-center gap-2">
+                          {selectedClient.phone}
+                          {selectedClient.tags?.length > 0 && (
+                            <span className="text-muted-foreground">•</span>
+                          )}
+                          {selectedClient.tags?.slice(0, 2).map((tag) => (
+                            <Badge key={tag} className={`text-xs ${getTagColor(tag)}`}>
+                              {tag}
+                            </Badge>
+                          ))}
+                        </CardDescription>
                       </div>
                     </div>
                     <div className="flex gap-2">
