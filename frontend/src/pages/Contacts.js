@@ -405,11 +405,16 @@ const Contacts = () => {
                             }
                           `}>
                             <p className="text-sm">{msg.content}</p>
-                            <div className={`flex items-center gap-1 mt-1 ${msg.direction === 'outbound' ? 'text-white/70' : 'text-muted-foreground'}`}>
+                            <div className={`flex items-center gap-2 mt-1 ${msg.direction === 'outbound' ? 'text-white/70' : 'text-muted-foreground'}`}>
                               <Clock className="h-3 w-3" />
                               <span className="text-xs">
                                 {new Date(msg.timestamp).toLocaleTimeString()}
                               </span>
+                              {msg.from_number && msg.direction === 'outbound' && (
+                                <span className="text-xs flex items-center gap-1">
+                                  • <Smartphone className="h-3 w-3" /> {msg.from_number}
+                                </span>
+                              )}
                             </div>
                           </div>
                         </div>
