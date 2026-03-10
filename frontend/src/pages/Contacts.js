@@ -57,6 +57,10 @@ const Contacts = () => {
   const [sending, setSending] = useState(false);
   const [calling, setCalling] = useState(false);
   
+  // Phone numbers for "send from"
+  const [ownedNumbers, setOwnedNumbers] = useState([]);
+  const [selectedFromNumber, setSelectedFromNumber] = useState('default');
+  
   // Template functionality
   const [templates, setTemplates] = useState([]);
   const [showTemplateDialog, setShowTemplateDialog] = useState(false);
@@ -66,6 +70,7 @@ const Contacts = () => {
   useEffect(() => {
     fetchClients();
     fetchTemplates();
+    fetchOwnedNumbers();
   }, [tagFilter]);
 
   useEffect(() => {
@@ -94,6 +99,15 @@ const Contacts = () => {
     }
   };
 
+  const fetchOwnedNumbers = async () => {
+    try {
+      const response = await phoneNumbersApi.getOwned();
+      setOwnedNumbers(response.data || []);
+    } catch (error) {
+      console.error('Failed to fetch phone numbers');
+    }
+  };
+
   const fetchConversation = async (clientId) => {
     try {
       const response = await contactsApi.getConversation(clientId);
@@ -108,7 +122,8 @@ const Contacts = () => {
     
     setSending(true);
     try {
-      await contactsApi.sendSms(selectedClient.id, message);
+      const fromNumber = selectedFromNumber === 'default' ? null : selectedFromNumber;
+      await contactsApi.sendSms(selectedClient.id, message, fromNumber);
       toast.success('Message sent!');
       setMessage('');
       fetchConversation(selectedClient.id);
