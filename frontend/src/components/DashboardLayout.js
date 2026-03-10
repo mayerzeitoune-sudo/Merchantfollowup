@@ -71,7 +71,11 @@ const DashboardLayout = ({ children }) => {
         >
           <Menu className="h-6 w-6" />
         </button>
-        <h1 className="font-bold text-primary font-['Outfit']">Merchant Follow Up</h1>
+        <img 
+          src={logoUrl} 
+          alt="Merchant Follow Up" 
+          className="h-8 w-auto"
+        />
         <div className="w-10" />
       </header>
 
