@@ -16,6 +16,8 @@ const Login = () => {
   const { login } = useAuth();
   const navigate = useNavigate();
 
+  const logoUrl = "https://customer-assets.emergentagent.com/job_payment-tracker-471/artifacts/q3g0kgbm_Image_20260310_172432_668.png";
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
@@ -32,17 +34,15 @@ const Login = () => {
 
   return (
     <div className="min-h-screen flex">
-      {/* Left Panel - Background Image */}
-      <div 
-        className="hidden lg:flex lg:w-1/2 bg-cover bg-center relative"
-        style={{ 
-          backgroundImage: `url('https://images.unsplash.com/photo-1720969835740-49346b3fb9ca?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjA1NzB8MHwxfHNlYXJjaHwxfHxtb2Rlcm4lMjBvZmZpY2UlMjBhYnN0cmFjdCUyMG9yYW5nZSUyMHdoaXRlfGVufDB8fHx8MTc3MzA3NjY2NXww&ixlib=rb-4.1.0&q=85')` 
-        }}
-      >
-        <div className="absolute inset-0 bg-gradient-to-br from-orange-600/80 to-orange-800/80" />
-        <div className="relative z-10 flex flex-col justify-center p-12 text-white">
-          <h1 className="text-4xl font-bold mb-4 font-['Outfit']">Merchant Follow Up</h1>
-          <p className="text-lg opacity-90">Automated SMS payment reminders that get results.</p>
+      {/* Left Panel - Dark Background with Logo */}
+      <div className="hidden lg:flex lg:w-1/2 bg-black relative items-center justify-center">
+        <div className="text-center">
+          <img 
+            src={logoUrl} 
+            alt="Merchant Follow Up" 
+            className="w-64 h-auto mx-auto mb-6"
+          />
+          <p className="text-orange-400 text-lg opacity-90">Automated SMS payment reminders that get results.</p>
         </div>
       </div>
 
@@ -50,7 +50,11 @@ const Login = () => {
       <div className="flex-1 flex items-center justify-center p-8 bg-white">
         <div className="w-full max-w-md">
           <div className="text-center mb-8 lg:hidden">
-            <h1 className="text-3xl font-bold text-primary font-['Outfit']">Merchant Follow Up</h1>
+            <img 
+              src={logoUrl} 
+              alt="Merchant Follow Up" 
+              className="h-16 w-auto mx-auto"
+            />
           </div>
 
           <Card className="border-0 shadow-none lg:shadow-lg lg:border">
