@@ -10,6 +10,7 @@ import VerifyOTP from "./pages/VerifyOTP";
 import ForgotPassword from "./pages/ForgotPassword";
 import Dashboard from "./pages/Dashboard";
 import Clients from "./pages/Clients";
+import ClientProfile from "./pages/ClientProfile";
 import Reminders from "./pages/Reminders";
 import CalendarPage from "./pages/CalendarPage";
 import Campaigns from "./pages/Campaigns";
