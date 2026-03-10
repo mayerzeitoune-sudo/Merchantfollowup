@@ -1722,11 +1722,13 @@ async def use_template(template_id: str, current_user: dict = Depends(get_curren
 @api_router.post("/contacts/{client_id}/send-template")
 async def send_template_message(
     client_id: str,
-    template_id: str,
-    variables: Optional[Dict[str, str]] = None,
+    request_data: dict,
     current_user: dict = Depends(get_current_user)
 ):
     """Send a template message to a contact with variable substitution"""
+    template_id = request_data.get("template_id")
+    variables = request_data.get("variables", {})
+    
     # Get client
     client = await db.clients.find_one(
         {"id": client_id, "user_id": current_user["user_id"]}
