@@ -19,7 +19,9 @@ import {
   Clock,
   Filter,
   MessageCircle,
-  Zap
+  Zap,
+  FileText,
+  ChevronRight
 } from 'lucide-react';
 import { clientsApi, contactsApi, templatesApi } from '../lib/api';
 import { toast } from 'sonner';
