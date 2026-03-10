@@ -72,7 +72,7 @@ async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(s
 # ============== ENHANCED DRIP CAMPAIGNS ==============
 
 @router.post("/campaigns/enhanced", response_model=EnhancedCampaignResponse)
-async def create_enhanced_campaign(data: EnhancedCampaignCreate, current_user: dict = Depends(lambda: get_current_user)):
+async def create_enhanced_campaign(data: EnhancedCampaignCreate, current_user: dict = Depends(get_current_user)):
     """Create a smart drip campaign with multi-step sequences"""
     campaign_id = str(uuid.uuid4())
     now = datetime.now(timezone.utc).isoformat()
@@ -108,7 +108,7 @@ async def create_enhanced_campaign(data: EnhancedCampaignCreate, current_user: d
     return campaign_doc
 
 @router.get("/campaigns/enhanced", response_model=List[EnhancedCampaignResponse])
-async def get_enhanced_campaigns(status: Optional[str] = None, current_user: dict = Depends(lambda: get_current_user)):
+async def get_enhanced_campaigns(status: Optional[str] = None, current_user: dict = Depends(get_current_user)):
     """Get all enhanced campaigns"""
     query = {"user_id": current_user["user_id"]}
     if status:
@@ -118,7 +118,7 @@ async def get_enhanced_campaigns(status: Optional[str] = None, current_user: dic
     return campaigns
 
 @router.get("/campaigns/enhanced/{campaign_id}", response_model=EnhancedCampaignResponse)
-async def get_enhanced_campaign(campaign_id: str, current_user: dict = Depends(lambda: get_current_user)):
+async def get_enhanced_campaign(campaign_id: str, current_user: dict = Depends(get_current_user)):
     """Get a single enhanced campaign"""
     campaign = await db.enhanced_campaigns.find_one(
         {"id": campaign_id, "user_id": current_user["user_id"]},
@@ -129,7 +129,7 @@ async def get_enhanced_campaign(campaign_id: str, current_user: dict = Depends(l
     return campaign
 
 @router.put("/campaigns/enhanced/{campaign_id}", response_model=EnhancedCampaignResponse)
-async def update_enhanced_campaign(campaign_id: str, data: EnhancedCampaignUpdate, current_user: dict = Depends(lambda: get_current_user)):
+async def update_enhanced_campaign(campaign_id: str, data: EnhancedCampaignUpdate, current_user: dict = Depends(get_current_user)):
     """Update an enhanced campaign"""
     update_data = {}
     
@@ -169,7 +169,7 @@ async def update_enhanced_campaign(campaign_id: str, data: EnhancedCampaignUpdat
     return campaign
 
 @router.delete("/campaigns/enhanced/{campaign_id}")
-async def delete_enhanced_campaign(campaign_id: str, current_user: dict = Depends(lambda: get_current_user)):
+async def delete_enhanced_campaign(campaign_id: str, current_user: dict = Depends(get_current_user)):
     """Delete an enhanced campaign"""
     result = await db.enhanced_campaigns.delete_one(
         {"id": campaign_id, "user_id": current_user["user_id"]}
@@ -186,7 +186,7 @@ async def delete_enhanced_campaign(campaign_id: str, current_user: dict = Depend
 async def enroll_contacts_in_campaign(
     campaign_id: str,
     client_ids: List[str],
-    current_user: dict = Depends(lambda: get_current_user)
+    current_user: dict = Depends(get_current_user)
 ):
     """Enroll contacts in a campaign"""
     campaign = await db.enhanced_campaigns.find_one(
@@ -255,7 +255,7 @@ async def stop_campaign_for_contact(
     campaign_id: str,
     client_id: str,
     reason: str = "manual",
-    current_user: dict = Depends(lambda: get_current_user)
+    current_user: dict = Depends(get_current_user)
 ):
     """Stop a campaign for a specific contact"""
     result = await db.campaign_enrollments.update_one(
@@ -287,7 +287,7 @@ async def stop_campaign_for_contact(
 async def resume_campaign_for_contact(
     campaign_id: str,
     client_id: str,
-    current_user: dict = Depends(lambda: get_current_user)
+    current_user: dict = Depends(get_current_user)
 ):
     """Resume a paused campaign for a contact"""
     now = datetime.now(timezone.utc)
@@ -323,7 +323,7 @@ async def resume_campaign_for_contact(
 async def get_campaign_enrollments(
     campaign_id: str,
     status: Optional[str] = None,
-    current_user: dict = Depends(lambda: get_current_user)
+    current_user: dict = Depends(get_current_user)
 ):
     """Get all enrollments for a campaign"""
     query = {"campaign_id": campaign_id, "user_id": current_user["user_id"]}
@@ -344,7 +344,7 @@ async def get_campaign_enrollments(
 # ============== ENHANCED FOLLOW-UPS ==============
 
 @router.get("/followups/today")
-async def get_todays_followups(current_user: dict = Depends(lambda: get_current_user)):
+async def get_todays_followups(current_user: dict = Depends(get_current_user)):
     """Get today's follow-ups dashboard"""
     today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
     
@@ -368,7 +368,7 @@ async def get_todays_followups(current_user: dict = Depends(lambda: get_current_
     return {"date": today, "followups": followups, "count": len(followups)}
 
 @router.get("/followups/missed")
-async def get_missed_followups(current_user: dict = Depends(lambda: get_current_user)):
+async def get_missed_followups(current_user: dict = Depends(get_current_user)):
     """Get missed follow-ups"""
     today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
     
@@ -405,7 +405,7 @@ async def get_missed_followups(current_user: dict = Depends(lambda: get_current_
 async def snooze_followup(
     followup_id: str,
     snooze_until: str,
-    current_user: dict = Depends(lambda: get_current_user)
+    current_user: dict = Depends(get_current_user)
 ):
     """Snooze a follow-up"""
     result = await db.followups.update_one(
@@ -428,7 +428,7 @@ async def snooze_followup(
 async def complete_followup(
     followup_id: str,
     notes: Optional[str] = None,
-    current_user: dict = Depends(lambda: get_current_user)
+    current_user: dict = Depends(get_current_user)
 ):
     """Mark a follow-up as complete"""
     now = datetime.now(timezone.utc).isoformat()
@@ -455,7 +455,7 @@ async def reschedule_followup(
     followup_id: str,
     new_date: str,
     new_time: Optional[str] = None,
-    current_user: dict = Depends(lambda: get_current_user)
+    current_user: dict = Depends(get_current_user)
 ):
     """Reschedule a follow-up"""
     update_data = {
@@ -484,7 +484,7 @@ async def get_inbox_conversations(
     tag: Optional[str] = None,
     search: Optional[str] = None,
     unread_only: bool = False,
-    current_user: dict = Depends(lambda: get_current_user)
+    current_user: dict = Depends(get_current_user)
 ):
     """Get all conversations for inbox view"""
     # Build client query
@@ -542,7 +542,7 @@ async def get_inbox_conversations(
 @router.post("/inbox/mark-read/{client_id}")
 async def mark_conversation_read(
     client_id: str,
-    current_user: dict = Depends(lambda: get_current_user)
+    current_user: dict = Depends(get_current_user)
 ):
     """Mark all messages in a conversation as read"""
     result = await db.conversations.update_many(
@@ -559,7 +559,7 @@ async def mark_conversation_read(
 @router.get("/inbox/search")
 async def search_conversations(
     query: str,
-    current_user: dict = Depends(lambda: get_current_user)
+    current_user: dict = Depends(get_current_user)
 ):
     """Search through all conversations"""
     # Search in messages
@@ -590,7 +590,7 @@ async def search_conversations(
 # ============== LEAD CAPTURE ==============
 
 @router.post("/leads/forms", response_model=LeadFormResponse)
-async def create_lead_form(data: LeadFormCreate, current_user: dict = Depends(lambda: get_current_user)):
+async def create_lead_form(data: LeadFormCreate, current_user: dict = Depends(get_current_user)):
     """Create a lead capture form"""
     form_id = str(uuid.uuid4())
     now = datetime.now(timezone.utc).isoformat()
@@ -618,7 +618,7 @@ async def create_lead_form(data: LeadFormCreate, current_user: dict = Depends(la
     return form_doc
 
 @router.get("/leads/forms", response_model=List[LeadFormResponse])
-async def get_lead_forms(current_user: dict = Depends(lambda: get_current_user)):
+async def get_lead_forms(current_user: dict = Depends(get_current_user)):
     """Get all lead forms"""
     forms = await db.lead_forms.find(
         {"user_id": current_user["user_id"]},
@@ -688,7 +688,7 @@ async def submit_lead_form(form_id: str, data: Dict[str, Any], background_tasks:
 async def import_leads_csv(
     file: UploadFile = File(...),
     auto_tags: str = "",
-    current_user: dict = Depends(lambda: get_current_user)
+    current_user: dict = Depends(get_current_user)
 ):
     """Import leads from CSV file"""
     content = await file.read()
@@ -738,7 +738,7 @@ async def import_leads_csv(
     return {"imported": imported, "errors": errors}
 
 @router.post("/leads/webhook")
-async def create_lead_webhook(current_user: dict = Depends(lambda: get_current_user)):
+async def create_lead_webhook(current_user: dict = Depends(get_current_user)):
     """Generate a webhook URL for lead capture"""
     webhook_id = str(uuid.uuid4())
     base_url = os.environ.get("REACT_APP_BACKEND_URL", "")
@@ -794,7 +794,7 @@ async def receive_webhook_lead(webhook_id: str, data: Dict[str, Any]):
 async def get_analytics_overview(
     start_date: Optional[str] = None,
     end_date: Optional[str] = None,
-    current_user: dict = Depends(lambda: get_current_user)
+    current_user: dict = Depends(get_current_user)
 ):
     """Get analytics overview"""
     user_id = current_user["user_id"]
@@ -853,7 +853,7 @@ async def get_analytics_overview(
     }
 
 @router.get("/analytics/campaigns/{campaign_id}")
-async def get_campaign_analytics(campaign_id: str, current_user: dict = Depends(lambda: get_current_user)):
+async def get_campaign_analytics(campaign_id: str, current_user: dict = Depends(get_current_user)):
     """Get analytics for a specific campaign"""
     campaign = await db.enhanced_campaigns.find_one(
         {"id": campaign_id, "user_id": current_user["user_id"]},
@@ -882,7 +882,7 @@ async def get_campaign_analytics(campaign_id: str, current_user: dict = Depends(
 # ============== APPOINTMENTS ==============
 
 @router.post("/appointments/types", response_model=AppointmentTypeResponse)
-async def create_appointment_type(data: AppointmentTypeCreate, current_user: dict = Depends(lambda: get_current_user)):
+async def create_appointment_type(data: AppointmentTypeCreate, current_user: dict = Depends(get_current_user)):
     """Create an appointment type"""
     type_id = str(uuid.uuid4())
     now = datetime.now(timezone.utc).isoformat()
@@ -907,7 +907,7 @@ async def create_appointment_type(data: AppointmentTypeCreate, current_user: dic
     return type_doc
 
 @router.get("/appointments/types", response_model=List[AppointmentTypeResponse])
-async def get_appointment_types(current_user: dict = Depends(lambda: get_current_user)):
+async def get_appointment_types(current_user: dict = Depends(get_current_user)):
     """Get all appointment types"""
     types = await db.appointment_types.find(
         {"user_id": current_user["user_id"]},
@@ -916,7 +916,7 @@ async def get_appointment_types(current_user: dict = Depends(lambda: get_current
     return types
 
 @router.post("/appointments", response_model=AppointmentResponse)
-async def create_appointment(data: AppointmentCreate, current_user: dict = Depends(lambda: get_current_user)):
+async def create_appointment(data: AppointmentCreate, current_user: dict = Depends(get_current_user)):
     """Create an appointment"""
     appointment_id = str(uuid.uuid4())
     now = datetime.now(timezone.utc).isoformat()
@@ -953,7 +953,7 @@ async def create_appointment(data: AppointmentCreate, current_user: dict = Depen
 async def get_appointments(
     date: Optional[str] = None,
     status: Optional[str] = None,
-    current_user: dict = Depends(lambda: get_current_user)
+    current_user: dict = Depends(get_current_user)
 ):
     """Get appointments"""
     query = {"user_id": current_user["user_id"]}
@@ -969,7 +969,7 @@ async def get_appointments(
 async def update_appointment_status(
     appointment_id: str,
     status: str,
-    current_user: dict = Depends(lambda: get_current_user)
+    current_user: dict = Depends(get_current_user)
 ):
     """Update appointment status"""
     result = await db.appointments.update_one(
@@ -985,7 +985,7 @@ async def update_appointment_status(
 # ============== SMS COMPLIANCE ==============
 
 @router.get("/compliance/settings")
-async def get_compliance_settings(current_user: dict = Depends(lambda: get_current_user)):
+async def get_compliance_settings(current_user: dict = Depends(get_current_user)):
     """Get compliance settings"""
     settings = await db.compliance_settings.find_one(
         {"user_id": current_user["user_id"]},
@@ -1005,7 +1005,7 @@ async def get_compliance_settings(current_user: dict = Depends(lambda: get_curre
     return settings
 
 @router.put("/compliance/settings")
-async def update_compliance_settings(data: ComplianceSettings, current_user: dict = Depends(lambda: get_current_user)):
+async def update_compliance_settings(data: ComplianceSettings, current_user: dict = Depends(get_current_user)):
     """Update compliance settings"""
     await db.compliance_settings.update_one(
         {"user_id": current_user["user_id"]},
@@ -1016,7 +1016,7 @@ async def update_compliance_settings(data: ComplianceSettings, current_user: dic
     return {"message": "Settings updated"}
 
 @router.get("/compliance/opt-outs")
-async def get_opt_outs(current_user: dict = Depends(lambda: get_current_user)):
+async def get_opt_outs(current_user: dict = Depends(get_current_user)):
     """Get all opted-out contacts"""
     opt_outs = await db.opt_outs.find(
         {"user_id": current_user["user_id"]},
@@ -1025,7 +1025,7 @@ async def get_opt_outs(current_user: dict = Depends(lambda: get_current_user)):
     return opt_outs
 
 @router.post("/compliance/opt-out")
-async def add_opt_out(phone_number: str, reason: str = "manual", current_user: dict = Depends(lambda: get_current_user)):
+async def add_opt_out(phone_number: str, reason: str = "manual", current_user: dict = Depends(get_current_user)):
     """Manually add an opt-out"""
     now = datetime.now(timezone.utc).isoformat()
     
@@ -1053,7 +1053,7 @@ async def add_opt_out(phone_number: str, reason: str = "manual", current_user: d
     return {"message": "Contact opted out"}
 
 @router.delete("/compliance/opt-out/{phone_number}")
-async def remove_opt_out(phone_number: str, current_user: dict = Depends(lambda: get_current_user)):
+async def remove_opt_out(phone_number: str, current_user: dict = Depends(get_current_user)):
     """Remove an opt-out (re-subscribe)"""
     await db.opt_outs.delete_one(
         {"user_id": current_user["user_id"], "phone_number": phone_number}
@@ -1070,7 +1070,7 @@ async def remove_opt_out(phone_number: str, current_user: dict = Depends(lambda:
 # ============== AI SUGGESTIONS ==============
 
 @router.post("/ai/suggest")
-async def get_ai_suggestions(data: AISuggestionRequest, current_user: dict = Depends(lambda: get_current_user)):
+async def get_ai_suggestions(data: AISuggestionRequest, current_user: dict = Depends(get_current_user)):
     """Get AI-powered message suggestions"""
     api_key = os.environ.get('EMERGENT_LLM_KEY')
     if not api_key:
@@ -1124,7 +1124,7 @@ Format your response as JSON:
         return {"suggestions": [f"AI suggestion error: {str(e)}"]}
 
 @router.post("/ai/rewrite")
-async def rewrite_message(message: str, tone: str = "professional", current_user: dict = Depends(lambda: get_current_user)):
+async def rewrite_message(message: str, tone: str = "professional", current_user: dict = Depends(get_current_user)):
     """Rewrite a message with AI"""
     api_key = os.environ.get('EMERGENT_LLM_KEY')
     if not api_key:
@@ -1146,7 +1146,7 @@ async def rewrite_message(message: str, tone: str = "professional", current_user
 # ============== DEAD LEAD REVIVAL ==============
 
 @router.post("/revival/campaigns", response_model=RevivalCampaignResponse)
-async def create_revival_campaign(data: RevivalCampaignCreate, current_user: dict = Depends(lambda: get_current_user)):
+async def create_revival_campaign(data: RevivalCampaignCreate, current_user: dict = Depends(get_current_user)):
     """Create a dead lead revival campaign"""
     campaign_id = str(uuid.uuid4())
     now = datetime.now(timezone.utc).isoformat()
@@ -1192,7 +1192,7 @@ async def create_revival_campaign(data: RevivalCampaignCreate, current_user: dic
     return campaign_doc
 
 @router.get("/revival/campaigns", response_model=List[RevivalCampaignResponse])
-async def get_revival_campaigns(current_user: dict = Depends(lambda: get_current_user)):
+async def get_revival_campaigns(current_user: dict = Depends(get_current_user)):
     """Get all revival campaigns"""
     campaigns = await db.revival_campaigns.find(
         {"user_id": current_user["user_id"]},
@@ -1201,7 +1201,7 @@ async def get_revival_campaigns(current_user: dict = Depends(lambda: get_current
     return campaigns
 
 @router.post("/revival/campaigns/{campaign_id}/run")
-async def run_revival_campaign(campaign_id: str, current_user: dict = Depends(lambda: get_current_user)):
+async def run_revival_campaign(campaign_id: str, current_user: dict = Depends(get_current_user)):
     """Run a revival campaign"""
     campaign = await db.revival_campaigns.find_one(
         {"id": campaign_id, "user_id": current_user["user_id"]}
@@ -1273,7 +1273,7 @@ async def run_revival_campaign(campaign_id: str, current_user: dict = Depends(la
 async def get_notifications(
     unread_only: bool = False,
     limit: int = 50,
-    current_user: dict = Depends(lambda: get_current_user)
+    current_user: dict = Depends(get_current_user)
 ):
     """Get notifications"""
     query = {"user_id": current_user["user_id"]}
@@ -1286,7 +1286,7 @@ async def get_notifications(
     return {"notifications": notifications, "unread_count": unread_count}
 
 @router.post("/notifications/{notification_id}/read")
-async def mark_notification_read(notification_id: str, current_user: dict = Depends(lambda: get_current_user)):
+async def mark_notification_read(notification_id: str, current_user: dict = Depends(get_current_user)):
     """Mark notification as read"""
     await db.notifications.update_one(
         {"id": notification_id, "user_id": current_user["user_id"]},
@@ -1295,7 +1295,7 @@ async def mark_notification_read(notification_id: str, current_user: dict = Depe
     return {"message": "Notification marked as read"}
 
 @router.post("/notifications/read-all")
-async def mark_all_notifications_read(current_user: dict = Depends(lambda: get_current_user)):
+async def mark_all_notifications_read(current_user: dict = Depends(get_current_user)):
     """Mark all notifications as read"""
     await db.notifications.update_many(
         {"user_id": current_user["user_id"]},
@@ -1306,7 +1306,7 @@ async def mark_all_notifications_read(current_user: dict = Depends(lambda: get_c
 # ============== CONTACT SEGMENTATION ==============
 
 @router.get("/segments/tags")
-async def get_all_tags(current_user: dict = Depends(lambda: get_current_user)):
+async def get_all_tags(current_user: dict = Depends(get_current_user)):
     """Get all tags with counts"""
     # Get custom tags from clients
     pipeline = [
@@ -1336,7 +1336,7 @@ async def get_all_tags(current_user: dict = Depends(lambda: get_current_user)):
 async def bulk_add_tags(
     client_ids: List[str],
     tags: List[str],
-    current_user: dict = Depends(lambda: get_current_user)
+    current_user: dict = Depends(get_current_user)
 ):
     """Add tags to multiple contacts"""
     result = await db.clients.update_many(
@@ -1350,7 +1350,7 @@ async def bulk_add_tags(
 async def bulk_remove_tags(
     client_ids: List[str],
     tags: List[str],
-    current_user: dict = Depends(lambda: get_current_user)
+    current_user: dict = Depends(get_current_user)
 ):
     """Remove tags from multiple contacts"""
     result = await db.clients.update_many(
@@ -1361,7 +1361,7 @@ async def bulk_remove_tags(
     return {"message": f"Updated {result.modified_count} contacts"}
 
 @router.get("/segments/pipeline")
-async def get_pipeline_stats(current_user: dict = Depends(lambda: get_current_user)):
+async def get_pipeline_stats(current_user: dict = Depends(get_current_user)):
     """Get pipeline stage statistics"""
     pipeline = [
         {"$match": {"user_id": current_user["user_id"]}},
@@ -1384,7 +1384,7 @@ async def get_pipeline_stats(current_user: dict = Depends(lambda: get_current_us
 async def update_client_pipeline(
     client_id: str,
     stage: str,
-    current_user: dict = Depends(lambda: get_current_user)
+    current_user: dict = Depends(get_current_user)
 ):
     """Update client pipeline stage"""
     if stage not in PIPELINE_STAGES:
