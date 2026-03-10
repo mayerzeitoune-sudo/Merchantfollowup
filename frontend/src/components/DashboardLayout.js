@@ -12,15 +12,23 @@ import {
   LogOut,
   Menu,
   X,
-  ChevronRight
+  ChevronRight,
+  Phone,
+  MessageSquare,
+  Gift,
+  Globe
 } from 'lucide-react';
 
 const navItems = [
   { path: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { path: '/clients', label: 'Clients', icon: Users },
+  { path: '/contacts', label: 'Messages', icon: MessageSquare },
   { path: '/reminders', label: 'Reminders', icon: Bell },
   { path: '/calendar', label: 'Calendar', icon: Calendar },
   { path: '/campaigns', label: 'Campaigns', icon: Zap },
+  { path: '/phone-numbers', label: 'Phone Numbers', icon: Phone },
+  { path: '/gift-store', label: 'Gift Store', icon: Gift },
+  { path: '/domains', label: 'Domains & Email', icon: Globe },
   { path: '/settings', label: 'Settings', icon: Settings },
 ];
 
