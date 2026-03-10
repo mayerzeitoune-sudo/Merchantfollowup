@@ -14,6 +14,10 @@ import Reminders from "./pages/Reminders";
 import CalendarPage from "./pages/CalendarPage";
 import Campaigns from "./pages/Campaigns";
 import Settings from "./pages/Settings";
+import PhoneNumbers from "./pages/PhoneNumbers";
+import Contacts from "./pages/Contacts";
+import GiftStore from "./pages/GiftStore";
+import Domains from "./pages/Domains";
 
 // Protected Route Component
 const ProtectedRoute = ({ children }) => {
