@@ -762,6 +762,85 @@ async def delete_client(client_id: str, current_user: dict = Depends(get_current
         raise HTTPException(status_code=404, detail="Client not found")
     return {"message": "Client deleted"}
 
+@api_router.post("/clients/{client_id}/generate-summary")
+async def generate_client_ai_summary(client_id: str, current_user: dict = Depends(get_current_user)):
+    """Generate AI summary of client conversations"""
+    client = await db.clients.find_one(
+        {"id": client_id, "user_id": current_user["user_id"]},
+        {"_id": 0}
+    )
+    if not client:
+        raise HTTPException(status_code=404, detail="Client not found")
+    
+    # Get all conversations for this client
+    conversations = await db.conversations.find(
+        {"client_id": client_id, "user_id": current_user["user_id"]},
+        {"_id": 0}
+    ).sort("timestamp", 1).to_list(100)
+    
+    if not conversations:
+        return {"summary": "No conversation history yet.", "generated": False}
+    
+    # Get API key
+    api_key = os.environ.get('EMERGENT_LLM_KEY')
+    if not api_key:
+        return {"summary": "AI summary not available. Configure API key.", "generated": False}
+    
+    try:
+        from emergentintegrations.llm.chat import LlmChat, UserMessage
+        
+        # Format conversation history
+        conv_text = "\n".join([
+            f"{'Client' if msg['direction'] == 'inbound' else 'You'}: {msg['content']}"
+            for msg in conversations[-20:]  # Last 20 messages
+        ])
+        
+        system_prompt = """You are a helpful assistant that summarizes business conversations.
+Provide a brief, actionable summary that includes:
+1. Key topics discussed
+2. Client's current status/interest level
+3. Any pending action items or follow-ups needed
+4. Important details mentioned (budget, timeline, concerns)
+
+Keep the summary concise (2-4 sentences) and professional."""
+        
+        chat = LlmChat(
+            api_key=api_key,
+            session_id=f"summary-{client_id}",
+            system_message=system_prompt
+        ).with_model("openai", "gpt-5.2")
+        
+        user_message = UserMessage(text=f"Client: {client['name']}\nCompany: {client.get('company', 'N/A')}\n\nConversation:\n{conv_text}\n\nProvide a summary:")
+        response = await chat.send_message(user_message)
+        summary = response.strip()
+        
+        # Save summary to client
+        await db.clients.update_one(
+            {"id": client_id},
+            {"$set": {"ai_summary": summary, "summary_updated_at": datetime.now(timezone.utc).isoformat()}}
+        )
+        
+        return {"summary": summary, "generated": True}
+        
+    except Exception as e:
+        logger.error(f"AI summary error: {e}")
+        return {"summary": f"Could not generate summary: {str(e)}", "generated": False}
+
+@api_router.get("/clients/{client_id}/summary")
+async def get_client_summary(client_id: str, current_user: dict = Depends(get_current_user)):
+    """Get existing AI summary for a client"""
+    client = await db.clients.find_one(
+        {"id": client_id, "user_id": current_user["user_id"]},
+        {"_id": 0, "ai_summary": 1, "summary_updated_at": 1}
+    )
+    if not client:
+        raise HTTPException(status_code=404, detail="Client not found")
+    
+    return {
+        "summary": client.get("ai_summary"),
+        "updated_at": client.get("summary_updated_at")
+    }
+
 # ============== REMINDER ROUTES ==============
 
 @api_router.post("/reminders", response_model=ReminderResponse)
