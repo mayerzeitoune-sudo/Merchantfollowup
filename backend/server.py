@@ -1794,6 +1794,106 @@ async def send_template_message(
         "note": None if provider else "Configure SMS provider to send messages"
     }
 
+# ============== MESSAGE TEMPLATES ROUTES ==============
+
+@api_router.get("/templates/categories")
+async def get_template_categories(current_user: dict = Depends(get_current_user)):
+    """Get available template categories"""
+    return {"categories": TEMPLATE_CATEGORIES}
+
+@api_router.post("/templates", response_model=TemplateResponse)
+async def create_template(data: TemplateCreate, current_user: dict = Depends(get_current_user)):
+    """Create a new message template"""
+    template_id = str(uuid.uuid4())
+    now = datetime.now(timezone.utc).isoformat()
+    
+    # Extract variables from content (format: {variable_name})
+    import re
+    found_vars = re.findall(r'\{(\w+)\}', data.content)
+    variables = list(set(data.variables + found_vars))
+    
+    template_doc = {
+        "id": template_id,
+        "user_id": current_user["user_id"],
+        "name": data.name,
+        "category": data.category,
+        "content": data.content,
+        "variables": variables,
+        "use_count": 0,
+        "created_at": now,
+        "updated_at": now
+    }
+    
+    await db.templates.insert_one(template_doc)
+    if "_id" in template_doc:
+        del template_doc["_id"]
+    return template_doc
+
+@api_router.get("/templates", response_model=List[TemplateResponse])
+async def get_templates(category: Optional[str] = None, current_user: dict = Depends(get_current_user)):
+    """Get all templates, optionally filtered by category"""
+    query = {"user_id": current_user["user_id"]}
+    if category:
+        query["category"] = category
+    
+    templates = await db.templates.find(query, {"_id": 0}).sort("use_count", -1).to_list(100)
+    return templates
+
+@api_router.get("/templates/{template_id}", response_model=TemplateResponse)
+async def get_template(template_id: str, current_user: dict = Depends(get_current_user)):
+    """Get a single template"""
+    template = await db.templates.find_one(
+        {"id": template_id, "user_id": current_user["user_id"]},
+        {"_id": 0}
+    )
+    if not template:
+        raise HTTPException(status_code=404, detail="Template not found")
+    return template
+
+@api_router.put("/templates/{template_id}", response_model=TemplateResponse)
+async def update_template(template_id: str, data: TemplateUpdate, current_user: dict = Depends(get_current_user)):
+    """Update a template"""
+    update_data = {k: v for k, v in data.model_dump().items() if v is not None}
+    
+    if "content" in update_data:
+        import re
+        found_vars = re.findall(r'\{(\w+)\}', update_data["content"])
+        update_data["variables"] = list(set(update_data.get("variables", []) + found_vars))
+    
+    update_data["updated_at"] = datetime.now(timezone.utc).isoformat()
+    
+    result = await db.templates.update_one(
+        {"id": template_id, "user_id": current_user["user_id"]},
+        {"$set": update_data}
+    )
+    
+    if result.matched_count == 0:
+        raise HTTPException(status_code=404, detail="Template not found")
+    
+    template = await db.templates.find_one({"id": template_id}, {"_id": 0})
+    return template
+
+@api_router.delete("/templates/{template_id}")
+async def delete_template(template_id: str, current_user: dict = Depends(get_current_user)):
+    """Delete a template"""
+    result = await db.templates.delete_one(
+        {"id": template_id, "user_id": current_user["user_id"]}
+    )
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Template not found")
+    return {"message": "Template deleted"}
+
+@api_router.post("/templates/{template_id}/use")
+async def use_template(template_id: str, current_user: dict = Depends(get_current_user)):
+    """Increment template use count"""
+    result = await db.templates.update_one(
+        {"id": template_id, "user_id": current_user["user_id"]},
+        {"$inc": {"use_count": 1}}
+    )
+    if result.matched_count == 0:
+        raise HTTPException(status_code=404, detail="Template not found")
+    return {"message": "Use count updated"}
+
 # ============== DASHBOARD STATS ==============
 
 @api_router.get("/dashboard/stats")
