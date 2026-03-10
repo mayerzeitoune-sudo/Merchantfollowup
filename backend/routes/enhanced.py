@@ -17,6 +17,14 @@ import logging
 
 logger = logging.getLogger(__name__)
 
+# AI imports (optional - will fail gracefully if not available)
+try:
+    from emergentintegrations.llm.chat import LlmChat, UserMessage
+    AI_AVAILABLE = True
+except ImportError:
+    AI_AVAILABLE = False
+    logger.warning("AI features not available - emergentintegrations not installed")
+
 # Import models
 from models.enhanced import (
     EnhancedCampaignCreate, EnhancedCampaignUpdate, EnhancedCampaignResponse,
