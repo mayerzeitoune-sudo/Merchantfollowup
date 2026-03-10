@@ -93,7 +93,10 @@ export const phoneNumbersApi = {
 
 // Contacts/Messaging API
 export const contactsApi = {
-  getConversation: (clientId) => axios.get(`${API}/contacts/${clientId}/conversation`),
+  getConversation: (clientId, fromNumber) => axios.get(`${API}/contacts/${clientId}/conversation`, { 
+    params: { from_number: fromNumber } 
+  }),
+  getChains: (clientId) => axios.get(`${API}/contacts/${clientId}/chains`),
   sendSms: (clientId, message, fromNumber) => axios.post(`${API}/contacts/${clientId}/send-sms`, null, { 
     params: { message, from_number: fromNumber } 
   }),
