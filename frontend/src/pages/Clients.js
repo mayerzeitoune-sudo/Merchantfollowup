@@ -115,7 +115,13 @@ const Clients = () => {
       notes: client.notes || '',
       balance: client.balance,
       tags: client.tags || [],
-      birthday: client.birthday || ''
+      birthday: client.birthday || '',
+      address_line1: client.address_line1 || '',
+      address_line2: client.address_line2 || '',
+      city: client.city || '',
+      state: client.state || '',
+      zip_code: client.zip_code || '',
+      country: client.country || 'US'
     });
     setIsDialogOpen(true);
   };
