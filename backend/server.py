@@ -646,6 +646,9 @@ async def create_client(data: ClientCreate, current_user: dict = Depends(get_cur
         "company": data.company,
         "notes": data.notes,
         "balance": data.balance,
+        "tags": data.tags,
+        "birthday": data.birthday,
+        "special_events": [],
         "created_at": now,
         "updated_at": now
     }
@@ -655,12 +658,18 @@ async def create_client(data: ClientCreate, current_user: dict = Depends(get_cur
         del client_doc["_id"]
     return client_doc
 
+@api_router.get("/clients/tags")
+async def get_available_tags(current_user: dict = Depends(get_current_user)):
+    """Get list of available tags for clients"""
+    return {"tags": CLIENT_TAGS}
+
 @api_router.get("/clients", response_model=List[ClientResponse])
-async def get_clients(current_user: dict = Depends(get_current_user)):
-    clients = await db.clients.find(
-        {"user_id": current_user["user_id"]},
-        {"_id": 0}
-    ).to_list(1000)
+async def get_clients(tag: Optional[str] = None, current_user: dict = Depends(get_current_user)):
+    query = {"user_id": current_user["user_id"]}
+    if tag:
+        query["tags"] = tag
+    
+    clients = await db.clients.find(query, {"_id": 0}).to_list(1000)
     return clients
 
 @api_router.get("/clients/{client_id}", response_model=ClientResponse)
