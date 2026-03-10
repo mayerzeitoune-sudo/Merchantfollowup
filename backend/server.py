@@ -333,6 +333,35 @@ async def ai_match_response(incoming_message: str, keywords: List[str]) -> dict:
                 return {"matched": True, "matched_keyword": keyword, "confidence": 0.6}
         return {"matched": False, "matched_keyword": None, "confidence": 0.0}
 
+def calculate_reminder_count(start_date: str, end_date: str, days_of_week: List[str]) -> int:
+    """Calculate total number of reminders based on date range and selected days"""
+    from datetime import datetime, timedelta
+    
+    day_map = {
+        "monday": 0, "tuesday": 1, "wednesday": 2, "thursday": 3,
+        "friday": 4, "saturday": 5, "sunday": 6
+    }
+    
+    selected_days = [day_map[d.lower()] for d in days_of_week if d.lower() in day_map]
+    
+    try:
+        start = datetime.strptime(start_date, "%Y-%m-%d")
+        end = datetime.strptime(end_date, "%Y-%m-%d")
+    except:
+        return 0
+    
+    if end < start:
+        return 0
+    
+    count = 0
+    current = start
+    while current <= end:
+        if current.weekday() in selected_days:
+            count += 1
+        current += timedelta(days=1)
+    
+    return count
+
 # ============== AUTH ROUTES ==============
 
 @api_router.post("/auth/register", response_model=dict)
