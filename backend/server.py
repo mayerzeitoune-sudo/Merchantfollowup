@@ -88,6 +88,8 @@ class ClientCreate(BaseModel):
     company: Optional[str] = None
     notes: Optional[str] = None
     balance: float = 0.0
+    tags: List[str] = []
+    birthday: Optional[str] = None
 
 class ClientUpdate(BaseModel):
     name: Optional[str] = None
@@ -96,6 +98,8 @@ class ClientUpdate(BaseModel):
     company: Optional[str] = None
     notes: Optional[str] = None
     balance: Optional[float] = None
+    tags: Optional[List[str]] = None
+    birthday: Optional[str] = None
 
 class ClientResponse(BaseModel):
     model_config = ConfigDict(extra="ignore")
@@ -107,8 +111,26 @@ class ClientResponse(BaseModel):
     company: Optional[str] = None
     notes: Optional[str] = None
     balance: float = 0.0
+    tags: List[str] = []
+    birthday: Optional[str] = None
+    special_events: List[Dict[str, str]] = []
     created_at: str
     updated_at: str
+
+# Predefined Tags
+CLIENT_TAGS = [
+    "New Lead",
+    "Contacted",
+    "Responded",
+    "Interested",
+    "Not Interested",
+    "Follow Up",
+    "Application Sent",
+    "Docs Submitted",
+    "Approved",
+    "Funded",
+    "Lost Deal"
+]
 
 # Payment Reminder Models
 class ReminderCreate(BaseModel):
