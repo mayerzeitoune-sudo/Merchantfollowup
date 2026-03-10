@@ -16,7 +16,8 @@ import {
   Phone,
   MessageSquare,
   Gift,
-  Globe
+  Globe,
+  FileText
 } from 'lucide-react';
 
 const navItems = [
