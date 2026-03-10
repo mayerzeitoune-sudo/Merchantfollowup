@@ -114,13 +114,17 @@ class ClientResponse(BaseModel):
 class ReminderCreate(BaseModel):
     client_id: str
     amount_due: float
-    due_date: str
+    start_date: str
+    end_date: str
+    days_of_week: List[str] = ["monday", "tuesday", "wednesday", "thursday", "friday"]
     message: Optional[str] = None
     status: str = "pending"
 
 class ReminderUpdate(BaseModel):
     amount_due: Optional[float] = None
-    due_date: Optional[str] = None
+    start_date: Optional[str] = None
+    end_date: Optional[str] = None
+    days_of_week: Optional[List[str]] = None
     message: Optional[str] = None
     status: Optional[str] = None
 
@@ -132,7 +136,11 @@ class ReminderResponse(BaseModel):
     client_name: Optional[str] = None
     client_phone: Optional[str] = None
     amount_due: float
-    due_date: str
+    start_date: str
+    end_date: str
+    days_of_week: List[str] = []
+    total_reminders: int = 0
+    sent_count: int = 0
     message: Optional[str] = None
     status: str
     sent_at: Optional[str] = None
