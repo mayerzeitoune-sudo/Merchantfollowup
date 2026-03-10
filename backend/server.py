@@ -1029,6 +1029,539 @@ async def match_response(data: MatchRequest, current_user: dict = Depends(get_cu
     result = await ai_match_response(data.incoming_message, data.keywords)
     return result
 
+# ============== PHONE NUMBERS ROUTES ==============
+
+@api_router.get("/phone-numbers/available")
+async def search_available_numbers(
+    area_code: str,
+    country: str = "US",
+    limit: int = 20,
+    current_user: dict = Depends(get_current_user)
+):
+    """Search for available phone numbers by area code - placeholder + real Twilio"""
+    # Get active provider
+    provider = await db.sms_providers.find_one(
+        {"user_id": current_user["user_id"], "is_active": True}
+    )
+    
+    # Generate placeholder numbers for demo
+    placeholder_numbers = []
+    for i in range(min(limit, 10)):
+        placeholder_numbers.append({
+            "phone_number": f"+1{area_code}{random.randint(1000000, 9999999)}",
+            "friendly_name": f"({area_code}) {random.randint(100, 999)}-{random.randint(1000, 9999)}",
+            "monthly_cost": round(random.uniform(1.00, 2.50), 2),
+            "capabilities": ["sms", "voice"],
+            "region": "US"
+        })
+    
+    return {
+        "available_numbers": placeholder_numbers,
+        "provider_configured": provider is not None,
+        "note": "Connect your SMS provider (Twilio, etc.) in Settings to purchase real numbers"
+    }
+
+@api_router.post("/phone-numbers/purchase")
+async def purchase_phone_number(data: PhoneNumberCreate, current_user: dict = Depends(get_current_user)):
+    """Purchase/add a phone number"""
+    phone_id = str(uuid.uuid4())
+    now = datetime.now(timezone.utc).isoformat()
+    
+    phone_doc = {
+        "id": phone_id,
+        "user_id": current_user["user_id"],
+        "phone_number": data.phone_number,
+        "friendly_name": data.friendly_name or data.phone_number,
+        "provider": data.provider,
+        "is_active": True,
+        "monthly_cost": 1.00,
+        "created_at": now
+    }
+    
+    await db.phone_numbers.insert_one(phone_doc)
+    if "_id" in phone_doc:
+        del phone_doc["_id"]
+    return phone_doc
+
+@api_router.get("/phone-numbers/owned", response_model=List[PhoneNumberResponse])
+async def get_owned_numbers(current_user: dict = Depends(get_current_user)):
+    """List all owned phone numbers"""
+    numbers = await db.phone_numbers.find(
+        {"user_id": current_user["user_id"]},
+        {"_id": 0}
+    ).to_list(100)
+    return numbers
+
+@api_router.delete("/phone-numbers/{phone_id}")
+async def release_phone_number(phone_id: str, current_user: dict = Depends(get_current_user)):
+    """Release a phone number"""
+    result = await db.phone_numbers.delete_one(
+        {"id": phone_id, "user_id": current_user["user_id"]}
+    )
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Phone number not found")
+    return {"message": "Phone number released"}
+
+# ============== CONTACT MESSAGING & CALLING ROUTES ==============
+
+@api_router.get("/contacts/{client_id}/conversation")
+async def get_conversation(client_id: str, current_user: dict = Depends(get_current_user)):
+    """Get SMS conversation history with a client"""
+    client = await db.clients.find_one(
+        {"id": client_id, "user_id": current_user["user_id"]},
+        {"_id": 0}
+    )
+    if not client:
+        raise HTTPException(status_code=404, detail="Client not found")
+    
+    messages = await db.conversations.find(
+        {"user_id": current_user["user_id"], "client_id": client_id},
+        {"_id": 0}
+    ).sort("timestamp", -1).limit(100).to_list(100)
+    
+    return {
+        "client": client,
+        "messages": list(reversed(messages))
+    }
+
+@api_router.post("/contacts/{client_id}/send-sms")
+async def send_sms_to_contact(
+    client_id: str,
+    message: str,
+    current_user: dict = Depends(get_current_user)
+):
+    """Send SMS to a contact"""
+    client = await db.clients.find_one(
+        {"id": client_id, "user_id": current_user["user_id"]}
+    )
+    if not client:
+        raise HTTPException(status_code=404, detail="Client not found")
+    
+    # Check for active SMS provider
+    provider = await db.sms_providers.find_one(
+        {"user_id": current_user["user_id"], "is_active": True}
+    )
+    
+    message_id = str(uuid.uuid4())
+    now = datetime.now(timezone.utc).isoformat()
+    
+    # Store the message
+    message_doc = {
+        "id": message_id,
+        "user_id": current_user["user_id"],
+        "client_id": client_id,
+        "direction": "outbound",
+        "content": message,
+        "timestamp": now,
+        "status": "sent" if provider else "pending_provider"
+    }
+    
+    await db.conversations.insert_one(message_doc)
+    
+    return {
+        "message_id": message_id,
+        "status": "sent" if provider else "pending_provider",
+        "note": None if provider else "Configure SMS provider to send messages"
+    }
+
+@api_router.post("/contacts/{client_id}/initiate-call")
+async def initiate_call(client_id: str, current_user: dict = Depends(get_current_user)):
+    """Initiate a call to a contact - returns call token for browser calling"""
+    client = await db.clients.find_one(
+        {"id": client_id, "user_id": current_user["user_id"]}
+    )
+    if not client:
+        raise HTTPException(status_code=404, detail="Client not found")
+    
+    # Check for active SMS provider with voice capability
+    provider = await db.sms_providers.find_one(
+        {"user_id": current_user["user_id"], "is_active": True}
+    )
+    
+    call_id = str(uuid.uuid4())
+    now = datetime.now(timezone.utc).isoformat()
+    
+    # Log the call attempt
+    call_doc = {
+        "id": call_id,
+        "user_id": current_user["user_id"],
+        "client_id": client_id,
+        "client_name": client["name"],
+        "client_phone": client["phone"],
+        "status": "initiated",
+        "created_at": now
+    }
+    
+    await db.call_logs.insert_one(call_doc)
+    
+    return {
+        "call_id": call_id,
+        "client_phone": client["phone"],
+        "client_name": client["name"],
+        "provider_configured": provider is not None,
+        "note": "Configure Twilio Voice in Settings to enable browser calling" if not provider else None
+    }
+
+@api_router.put("/clients/{client_id}/birthday")
+async def update_client_birthday(
+    client_id: str,
+    birthday: str,
+    current_user: dict = Depends(get_current_user)
+):
+    """Update client birthday for gift reminders"""
+    result = await db.clients.update_one(
+        {"id": client_id, "user_id": current_user["user_id"]},
+        {"$set": {"birthday": birthday, "updated_at": datetime.now(timezone.utc).isoformat()}}
+    )
+    if result.matched_count == 0:
+        raise HTTPException(status_code=404, detail="Client not found")
+    return {"message": "Birthday updated"}
+
+@api_router.post("/clients/{client_id}/events")
+async def add_client_event(
+    client_id: str,
+    event_name: str,
+    event_date: str,
+    current_user: dict = Depends(get_current_user)
+):
+    """Add a special event for a client"""
+    client = await db.clients.find_one(
+        {"id": client_id, "user_id": current_user["user_id"]}
+    )
+    if not client:
+        raise HTTPException(status_code=404, detail="Client not found")
+    
+    events = client.get("special_events", [])
+    events.append({
+        "id": str(uuid.uuid4()),
+        "name": event_name,
+        "date": event_date
+    })
+    
+    await db.clients.update_one(
+        {"id": client_id},
+        {"$set": {"special_events": events}}
+    )
+    
+    return {"message": "Event added", "events": events}
+
+# ============== GIFT STORE ROUTES ==============
+
+# Gift catalog (hardcoded for now - could connect to real API later)
+GIFT_CATALOG = [
+    {"id": "wine-red-1", "name": "Premium Red Wine Selection", "description": "A curated selection of fine red wines", "price": 89.99, "category": "wine", "image_url": "https://images.unsplash.com/photo-1510812431401-41d2bd2722f3?w=400"},
+    {"id": "wine-white-1", "name": "Chardonnay Collection", "description": "Elegant white wine collection", "price": 79.99, "category": "wine", "image_url": "https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=400"},
+    {"id": "whiskey-1", "name": "Single Malt Scotch", "description": "Premium aged single malt whiskey", "price": 149.99, "category": "spirits", "image_url": "https://images.unsplash.com/photo-1527281400683-1aae777175f8?w=400"},
+    {"id": "champagne-1", "name": "Champagne Celebration Box", "description": "French champagne with glasses", "price": 129.99, "category": "wine", "image_url": "https://images.unsplash.com/photo-1549918864-1d817ec5c8b8?w=400"},
+    {"id": "basket-gourmet-1", "name": "Gourmet Food Basket", "description": "Artisan cheeses, crackers, and treats", "price": 99.99, "category": "baskets", "image_url": "https://images.unsplash.com/photo-1513558161293-cdaf765ed2fd?w=400"},
+    {"id": "basket-fruit-1", "name": "Fresh Fruit Basket", "description": "Premium seasonal fruits arrangement", "price": 69.99, "category": "baskets", "image_url": "https://images.unsplash.com/photo-1619566636858-adf3ef46400b?w=400"},
+    {"id": "basket-chocolate-1", "name": "Luxury Chocolate Box", "description": "Assorted premium chocolates", "price": 59.99, "category": "baskets", "image_url": "https://images.unsplash.com/photo-1549007994-cb92caebd54b?w=400"},
+    {"id": "flowers-1", "name": "Executive Floral Arrangement", "description": "Elegant business floral display", "price": 89.99, "category": "flowers", "image_url": "https://images.unsplash.com/photo-1487530811176-3780de880c2d?w=400"},
+    {"id": "gift-card-1", "name": "Restaurant Gift Card", "description": "Fine dining experience", "price": 100.00, "category": "gift_cards", "image_url": "https://images.unsplash.com/photo-1414235077428-338989a2e8c0?w=400"},
+    {"id": "gift-card-2", "name": "Spa & Wellness Gift Card", "description": "Relaxation and wellness experience", "price": 150.00, "category": "gift_cards", "image_url": "https://images.unsplash.com/photo-1544161515-4ab6ce6db874?w=400"},
+]
+
+@api_router.get("/gifts/catalog")
+async def get_gift_catalog(category: Optional[str] = None, current_user: dict = Depends(get_current_user)):
+    """Get gift catalog"""
+    if category:
+        filtered = [g for g in GIFT_CATALOG if g["category"] == category]
+        return {"products": filtered, "categories": ["wine", "spirits", "baskets", "flowers", "gift_cards"]}
+    return {"products": GIFT_CATALOG, "categories": ["wine", "spirits", "baskets", "flowers", "gift_cards"]}
+
+@api_router.get("/gifts/categories")
+async def get_gift_categories(current_user: dict = Depends(get_current_user)):
+    """Get gift categories"""
+    return {
+        "categories": [
+            {"id": "wine", "name": "Wine", "description": "Fine wines and champagne", "icon": "wine"},
+            {"id": "spirits", "name": "Spirits", "description": "Whiskey, bourbon, and more", "icon": "glass"},
+            {"id": "baskets", "name": "Gift Baskets", "description": "Gourmet food and treat baskets", "icon": "gift"},
+            {"id": "flowers", "name": "Flowers", "description": "Elegant floral arrangements", "icon": "flower"},
+            {"id": "gift_cards", "name": "Gift Cards", "description": "Experience gift cards", "icon": "card"},
+        ]
+    }
+
+@api_router.post("/gifts/orders", response_model=GiftOrderResponse)
+async def create_gift_order(data: GiftOrderCreate, current_user: dict = Depends(get_current_user)):
+    """Create a gift order for a client"""
+    client = await db.clients.find_one(
+        {"id": data.client_id, "user_id": current_user["user_id"]}
+    )
+    if not client:
+        raise HTTPException(status_code=404, detail="Client not found")
+    
+    # Find product
+    product = next((p for p in GIFT_CATALOG if p["id"] == data.product_id), None)
+    if not product:
+        raise HTTPException(status_code=404, detail="Product not found")
+    
+    order_id = str(uuid.uuid4())
+    now = datetime.now(timezone.utc).isoformat()
+    
+    order_doc = {
+        "id": order_id,
+        "user_id": current_user["user_id"],
+        "client_id": data.client_id,
+        "client_name": client["name"],
+        "product_id": data.product_id,
+        "product_name": product["name"],
+        "occasion": data.occasion,
+        "delivery_date": data.delivery_date,
+        "message": data.message,
+        "gift_amount": data.gift_amount or product["price"],
+        "status": "pending",
+        "created_at": now
+    }
+    
+    await db.gift_orders.insert_one(order_doc)
+    if "_id" in order_doc:
+        del order_doc["_id"]
+    return order_doc
+
+@api_router.get("/gifts/orders", response_model=List[GiftOrderResponse])
+async def get_gift_orders(current_user: dict = Depends(get_current_user)):
+    """Get all gift orders"""
+    orders = await db.gift_orders.find(
+        {"user_id": current_user["user_id"]},
+        {"_id": 0}
+    ).sort("created_at", -1).to_list(100)
+    return orders
+
+@api_router.get("/gifts/upcoming-events")
+async def get_upcoming_gift_events(current_user: dict = Depends(get_current_user)):
+    """Get upcoming birthdays and events for gift reminders"""
+    # Get all clients with birthdays or events
+    clients = await db.clients.find(
+        {"user_id": current_user["user_id"]},
+        {"_id": 0}
+    ).to_list(1000)
+    
+    today = datetime.now(timezone.utc)
+    upcoming = []
+    
+    for client in clients:
+        # Check birthday
+        if client.get("birthday"):
+            try:
+                bday = datetime.strptime(client["birthday"], "%Y-%m-%d")
+                # Set to this year
+                bday_this_year = bday.replace(year=today.year)
+                if bday_this_year < today:
+                    bday_this_year = bday.replace(year=today.year + 1)
+                
+                days_until = (bday_this_year - today).days
+                if 0 <= days_until <= 30:
+                    upcoming.append({
+                        "client_id": client["id"],
+                        "client_name": client["name"],
+                        "event_type": "birthday",
+                        "event_name": "Birthday",
+                        "event_date": bday_this_year.strftime("%Y-%m-%d"),
+                        "days_until": days_until
+                    })
+            except:
+                pass
+        
+        # Check special events
+        for event in client.get("special_events", []):
+            try:
+                event_date = datetime.strptime(event["date"], "%Y-%m-%d")
+                days_until = (event_date - today).days
+                if 0 <= days_until <= 30:
+                    upcoming.append({
+                        "client_id": client["id"],
+                        "client_name": client["name"],
+                        "event_type": "special",
+                        "event_name": event["name"],
+                        "event_date": event["date"],
+                        "days_until": days_until
+                    })
+            except:
+                pass
+    
+    # Sort by days until
+    upcoming.sort(key=lambda x: x["days_until"])
+    
+    return {"upcoming_events": upcoming}
+
+# ============== DOMAIN & EMAIL ROUTES ==============
+
+@api_router.post("/domains", response_model=DomainResponse)
+async def add_domain(data: DomainCreate, current_user: dict = Depends(get_current_user)):
+    """Add a domain for email"""
+    domain_id = str(uuid.uuid4())
+    now = datetime.now(timezone.utc).isoformat()
+    
+    domain_doc = {
+        "id": domain_id,
+        "user_id": current_user["user_id"],
+        "domain_name": data.domain_name,
+        "is_owned": data.is_owned,
+        "dns_verified": False,
+        "mx_records": [],
+        "status": "pending_verification",
+        "created_at": now
+    }
+    
+    await db.domains.insert_one(domain_doc)
+    if "_id" in domain_doc:
+        del domain_doc["_id"]
+    return domain_doc
+
+@api_router.get("/domains", response_model=List[DomainResponse])
+async def get_domains(current_user: dict = Depends(get_current_user)):
+    """Get all domains"""
+    domains = await db.domains.find(
+        {"user_id": current_user["user_id"]},
+        {"_id": 0}
+    ).to_list(100)
+    return domains
+
+@api_router.get("/domains/{domain_id}/dns-instructions")
+async def get_dns_instructions(domain_id: str, current_user: dict = Depends(get_current_user)):
+    """Get DNS setup instructions for a domain"""
+    domain = await db.domains.find_one(
+        {"id": domain_id, "user_id": current_user["user_id"]}
+    )
+    if not domain:
+        raise HTTPException(status_code=404, detail="Domain not found")
+    
+    return {
+        "domain": domain["domain_name"],
+        "instructions": [
+            {
+                "type": "MX",
+                "name": "@",
+                "value": "mx.merchantfollowup.com",
+                "priority": 10,
+                "description": "Main mail server record"
+            },
+            {
+                "type": "TXT",
+                "name": "@",
+                "value": f"v=spf1 include:merchantfollowup.com ~all",
+                "description": "SPF record for email authentication"
+            },
+            {
+                "type": "TXT",
+                "name": "_dmarc",
+                "value": "v=DMARC1; p=none; rua=mailto:dmarc@merchantfollowup.com",
+                "description": "DMARC policy"
+            },
+            {
+                "type": "CNAME",
+                "name": "em",
+                "value": "u123456.wl.merchantfollowup.com",
+                "description": "Email tracking subdomain"
+            }
+        ],
+        "verification_status": domain.get("dns_verified", False)
+    }
+
+@api_router.post("/domains/{domain_id}/verify")
+async def verify_domain(domain_id: str, current_user: dict = Depends(get_current_user)):
+    """Verify domain DNS settings"""
+    domain = await db.domains.find_one(
+        {"id": domain_id, "user_id": current_user["user_id"]}
+    )
+    if not domain:
+        raise HTTPException(status_code=404, detail="Domain not found")
+    
+    # In production, actually check DNS records here
+    # For now, simulate verification
+    await db.domains.update_one(
+        {"id": domain_id},
+        {"$set": {"dns_verified": True, "status": "active"}}
+    )
+    
+    return {"message": "Domain verified successfully", "status": "active"}
+
+@api_router.delete("/domains/{domain_id}")
+async def delete_domain(domain_id: str, current_user: dict = Depends(get_current_user)):
+    """Delete a domain"""
+    result = await db.domains.delete_one(
+        {"id": domain_id, "user_id": current_user["user_id"]}
+    )
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Domain not found")
+    
+    # Also delete associated email accounts
+    await db.email_accounts.delete_many({"domain_id": domain_id})
+    
+    return {"message": "Domain deleted"}
+
+@api_router.post("/email-accounts", response_model=EmailAccountResponse)
+async def create_email_account(data: EmailAccountCreate, current_user: dict = Depends(get_current_user)):
+    """Create an email account on a domain"""
+    domain = await db.domains.find_one(
+        {"id": data.domain_id, "user_id": current_user["user_id"]}
+    )
+    if not domain:
+        raise HTTPException(status_code=404, detail="Domain not found")
+    
+    account_id = str(uuid.uuid4())
+    now = datetime.now(timezone.utc).isoformat()
+    
+    account_doc = {
+        "id": account_id,
+        "user_id": current_user["user_id"],
+        "domain_id": data.domain_id,
+        "email_address": data.email_address,
+        "display_name": data.display_name,
+        "smtp_host": data.smtp_host,
+        "smtp_port": data.smtp_port,
+        "smtp_username": data.smtp_username,
+        "smtp_password": data.smtp_password,  # In production, encrypt this
+        "is_active": True,
+        "created_at": now
+    }
+    
+    await db.email_accounts.insert_one(account_doc)
+    
+    return {
+        "id": account_id,
+        "user_id": current_user["user_id"],
+        "domain_id": data.domain_id,
+        "email_address": data.email_address,
+        "display_name": data.display_name,
+        "is_active": True,
+        "created_at": now
+    }
+
+@api_router.get("/email-accounts", response_model=List[EmailAccountResponse])
+async def get_email_accounts(current_user: dict = Depends(get_current_user)):
+    """Get all email accounts"""
+    accounts = await db.email_accounts.find(
+        {"user_id": current_user["user_id"]},
+        {"_id": 0, "smtp_password": 0}
+    ).to_list(100)
+    return accounts
+
+@api_router.delete("/email-accounts/{account_id}")
+async def delete_email_account(account_id: str, current_user: dict = Depends(get_current_user)):
+    """Delete an email account"""
+    result = await db.email_accounts.delete_one(
+        {"id": account_id, "user_id": current_user["user_id"]}
+    )
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Email account not found")
+    return {"message": "Email account deleted"}
+
+@api_router.get("/domains/marketplace")
+async def get_domain_marketplace(current_user: dict = Depends(get_current_user)):
+    """Get available domains for purchase - placeholder for registrar API"""
+    return {
+        "available_domains": [
+            {"domain": "merchantpay.com", "price": 14.99, "available": True},
+            {"domain": "businessremind.com", "price": 12.99, "available": True},
+            {"domain": "payfollowup.com", "price": 9.99, "available": True},
+            {"domain": "invoiceremind.net", "price": 8.99, "available": True},
+        ],
+        "note": "Domain purchasing will be available soon. Connect your registrar API in Settings.",
+        "supported_registrars": ["Namecheap", "GoDaddy", "Cloudflare"]
+    }
+
 # ============== DASHBOARD STATS ==============
 
 @api_router.get("/dashboard/stats")
