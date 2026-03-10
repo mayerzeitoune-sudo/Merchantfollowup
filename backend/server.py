@@ -369,6 +369,41 @@ class EmailAccountResponse(BaseModel):
     is_active: bool = True
     created_at: str
 
+# Message Template Models
+class TemplateCreate(BaseModel):
+    name: str
+    category: str = "general"
+    content: str
+    variables: List[str] = []
+
+class TemplateUpdate(BaseModel):
+    name: Optional[str] = None
+    category: Optional[str] = None
+    content: Optional[str] = None
+    variables: Optional[List[str]] = None
+
+class TemplateResponse(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    id: str
+    user_id: str
+    name: str
+    category: str
+    content: str
+    variables: List[str] = []
+    use_count: int = 0
+    created_at: str
+    updated_at: str
+
+# Predefined template categories
+TEMPLATE_CATEGORIES = [
+    "Payment Reminder",
+    "Follow Up",
+    "Introduction",
+    "Thank You",
+    "Appointment",
+    "General"
+]
+
 # ============== HELPER FUNCTIONS ==============
 
 def generate_otp():
