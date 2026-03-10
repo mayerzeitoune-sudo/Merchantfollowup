@@ -50,6 +50,7 @@ const Contacts = () => {
   const [clients, setClients] = useState([]);
   const [selectedClient, setSelectedClient] = useState(null);
   const [conversation, setConversation] = useState([]);
+  const [conversationChains, setConversationChains] = useState([]);
   const [search, setSearch] = useState('');
   const [tagFilter, setTagFilter] = useState('all');
   const [message, setMessage] = useState('');
@@ -60,6 +61,7 @@ const Contacts = () => {
   // Phone numbers for "send from"
   const [ownedNumbers, setOwnedNumbers] = useState([]);
   const [selectedFromNumber, setSelectedFromNumber] = useState('default');
+  const [activeChain, setActiveChain] = useState('default');
   
   // Template functionality
   const [templates, setTemplates] = useState([]);
@@ -75,9 +77,15 @@ const Contacts = () => {
 
   useEffect(() => {
     if (selectedClient) {
-      fetchConversation(selectedClient.id);
+      fetchConversationChains(selectedClient.id);
     }
   }, [selectedClient]);
+
+  useEffect(() => {
+    if (selectedClient && activeChain) {
+      fetchConversation(selectedClient.id, activeChain);
+    }
+  }, [selectedClient, activeChain]);
 
   const fetchClients = async () => {
     try {
