@@ -401,7 +401,43 @@ const Contacts = () => {
                 </ScrollArea>
 
                 {/* Message Input */}
-                <div className="p-4 border-t">
+                <div className="p-4 border-t space-y-3">
+                  {/* Templates Section */}
+                  {templates.length > 0 && (
+                    <div>
+                      <Label className="text-sm font-medium">Quick Templates</Label>
+                      <ScrollArea className="w-full">
+                        <div className="flex gap-2 py-2">
+                          {templates.slice(0, 6).map((template) => (
+                            <Button
+                              key={template.id}
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleUseTemplate(template)}
+                              className="whitespace-nowrap flex-shrink-0"
+                              data-testid={`quick-template-${template.id}`}
+                            >
+                              <Zap className="h-3 w-3 mr-1" />
+                              {template.name}
+                            </Button>
+                          ))}
+                          {templates.length > 6 && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => setShowTemplateDialog(true)}
+                              className="whitespace-nowrap flex-shrink-0"
+                            >
+                              <MessageCircle className="h-3 w-3 mr-1" />
+                              More Templates
+                            </Button>
+                          )}
+                        </div>
+                      </ScrollArea>
+                    </div>
+                  )}
+                  
+                  {/* Message Input */}
                   <div className="flex gap-2">
                     <Textarea
                       placeholder="Type a message..."
@@ -417,14 +453,25 @@ const Contacts = () => {
                       }}
                       data-testid="message-input"
                     />
-                    <Button
-                      onClick={handleSendMessage}
-                      disabled={sending || !message.trim()}
-                      className="h-auto"
-                      data-testid="send-message-btn"
-                    >
-                      <Send className="h-4 w-4" />
-                    </Button>
+                    <div className="flex flex-col gap-2">
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        onClick={() => setShowTemplateDialog(true)}
+                        title="Use Template"
+                        data-testid="template-btn"
+                      >
+                        <MessageCircle className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        onClick={handleSendMessage}
+                        disabled={sending || !message.trim()}
+                        size="icon"
+                        data-testid="send-message-btn"
+                      >
+                        <Send className="h-4 w-4" />
+                      </Button>
+                    </div>
                   </div>
                 </div>
               </>
