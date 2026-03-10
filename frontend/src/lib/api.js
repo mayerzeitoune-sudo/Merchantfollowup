@@ -22,7 +22,9 @@ export const clientsApi = {
   getTags: () => axios.get(`${API}/clients/tags`),
   updateBirthday: (id, birthday) => axios.put(`${API}/clients/${id}/birthday`, null, { params: { birthday } }),
   addEvent: (id, eventName, eventDate) => axios.post(`${API}/clients/${id}/events`, null, { params: { event_name: eventName, event_date: eventDate } }),
-  updatePipeline: (id, stage) => axios.put(`${API}/clients/${id}/pipeline`, null, { params: { stage } })
+  updatePipeline: (id, stage) => axios.put(`${API}/clients/${id}/pipeline`, null, { params: { stage } }),
+  generateSummary: (id) => axios.post(`${API}/clients/${id}/generate-summary`),
+  getSummary: (id) => axios.get(`${API}/clients/${id}/summary`)
 };
 
 // Reminders API
