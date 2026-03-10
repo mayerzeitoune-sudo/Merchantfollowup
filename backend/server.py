@@ -1194,9 +1194,10 @@ async def get_conversation(client_id: str, current_user: dict = Depends(get_curr
 async def send_sms_to_contact(
     client_id: str,
     message: str,
+    from_number: Optional[str] = None,
     current_user: dict = Depends(get_current_user)
 ):
-    """Send SMS to a contact"""
+    """Send SMS to a contact from a specific phone number"""
     client = await db.clients.find_one(
         {"id": client_id, "user_id": current_user["user_id"]}
     )
@@ -1208,6 +1209,14 @@ async def send_sms_to_contact(
         {"user_id": current_user["user_id"], "is_active": True}
     )
     
+    # Validate from_number if provided
+    if from_number:
+        owned_number = await db.phone_numbers.find_one(
+            {"user_id": current_user["user_id"], "phone_number": from_number}
+        )
+        if not owned_number:
+            raise HTTPException(status_code=400, detail="You don't own this phone number")
+    
     message_id = str(uuid.uuid4())
     now = datetime.now(timezone.utc).isoformat()
     
@@ -1218,6 +1227,7 @@ async def send_sms_to_contact(
         "client_id": client_id,
         "direction": "outbound",
         "content": message,
+        "from_number": from_number,
         "timestamp": now,
         "status": "sent" if provider else "pending_provider"
     }
@@ -1226,6 +1236,7 @@ async def send_sms_to_contact(
     
     return {
         "message_id": message_id,
+        "from_number": from_number,
         "status": "sent" if provider else "pending_provider",
         "note": None if provider else "Configure SMS provider to send messages"
     }
