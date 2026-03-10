@@ -5,11 +5,12 @@ const API = `${BACKEND_URL}/api`;
 
 // Clients API
 export const clientsApi = {
-  getAll: () => axios.get(`${API}/clients`),
+  getAll: (tag) => axios.get(`${API}/clients`, { params: { tag } }),
   getOne: (id) => axios.get(`${API}/clients/${id}`),
   create: (data) => axios.post(`${API}/clients`, data),
   update: (id, data) => axios.put(`${API}/clients/${id}`, data),
   delete: (id) => axios.delete(`${API}/clients/${id}`),
+  getTags: () => axios.get(`${API}/clients/tags`),
   updateBirthday: (id, birthday) => axios.put(`${API}/clients/${id}/birthday`, null, { params: { birthday } }),
   addEvent: (id, eventName, eventDate) => axios.post(`${API}/clients/${id}/events`, null, { params: { event_name: eventName, event_date: eventDate } })
 };
