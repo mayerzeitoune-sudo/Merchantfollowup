@@ -383,7 +383,7 @@ const Contacts = () => {
             {selectedClient ? (
               <>
                 {/* Contact Header */}
-                <CardHeader className="border-b">
+                <CardHeader className="border-b pb-3">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
                       <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center">
@@ -417,6 +417,48 @@ const Contacts = () => {
                     </div>
                   </div>
                 </CardHeader>
+
+                {/* Conversation Chains Tabs */}
+                <div className="px-4 py-2 border-b bg-secondary/30">
+                  <div className="flex items-center gap-2 overflow-x-auto pb-1">
+                    <span className="text-xs text-muted-foreground whitespace-nowrap">Conversations:</span>
+                    {conversationChains.map((chain) => (
+                      <Button
+                        key={chain.from_number}
+                        variant={activeChain === chain.from_number ? "default" : "outline"}
+                        size="sm"
+                        className="whitespace-nowrap h-8"
+                        onClick={() => handleSelectChain(chain.from_number)}
+                        data-testid={`chain-${chain.from_number}`}
+                      >
+                        <Smartphone className="h-3 w-3 mr-1" />
+                        {chain.display_name}
+                        {chain.message_count > 0 && (
+                          <Badge variant="secondary" className="ml-2 h-5 px-1.5 text-xs">
+                            {chain.message_count}
+                          </Badge>
+                        )}
+                      </Button>
+                    ))}
+                    {/* Option to start new chain with different number */}
+                    {ownedNumbers.filter(n => !conversationChains.find(c => c.from_number === n.phone_number)).length > 0 && (
+                      <Select onValueChange={handleStartNewChain}>
+                        <SelectTrigger className="w-[140px] h-8 text-xs">
+                          <span className="text-muted-foreground">+ New chain</span>
+                        </SelectTrigger>
+                        <SelectContent>
+                          {ownedNumbers
+                            .filter(n => !conversationChains.find(c => c.from_number === n.phone_number))
+                            .map((num) => (
+                              <SelectItem key={num.id} value={num.phone_number}>
+                                {num.friendly_name || num.phone_number}
+                              </SelectItem>
+                            ))}
+                        </SelectContent>
+                      </Select>
+                    )}
+                  </div>
+                </div>
 
                 {/* Messages */}
                 <ScrollArea className="flex-1 p-4">
