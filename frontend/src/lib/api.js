@@ -102,3 +102,18 @@ export const aiApi = {
   matchResponse: (incomingMessage, keywords) => 
     axios.post(`${API}/ai/match-response`, { incoming_message: incomingMessage, keywords })
 };
+
+// Templates API
+export const templatesApi = {
+  getAll: (category) => axios.get(`${API}/templates`, { params: { category } }),
+  getOne: (id) => axios.get(`${API}/templates/${id}`),
+  create: (data) => axios.post(`${API}/templates`, data),
+  update: (id, data) => axios.put(`${API}/templates/${id}`, data),
+  delete: (id) => axios.delete(`${API}/templates/${id}`),
+  getCategories: () => axios.get(`${API}/templates/categories`),
+  use: (id) => axios.post(`${API}/templates/${id}/use`),
+  sendToContact: (clientId, templateId, variables) => 
+    axios.post(`${API}/contacts/${clientId}/send-template`, null, { 
+      params: { template_id: templateId, variables: JSON.stringify(variables) } 
+    })
+};
