@@ -1945,7 +1945,12 @@ async def get_dashboard_stats(current_user: dict = Depends(get_current_user)):
 async def root():
     return {"message": "Merchant Follow Up API", "version": "2.0.0"}
 
+# Include the router in the main app
+app.include_router(api_router)
+
 # ============== IMPORT ENHANCED ROUTES ==============
+# Enhanced routes are included AFTER main router to avoid route conflicts
+# The enhanced routes use different path prefixes to avoid conflicts
 import sys
 sys.path.insert(0, str(ROOT_DIR))
 
@@ -1953,13 +1958,11 @@ try:
     from routes.enhanced import router as enhanced_router, set_db, set_auth_dependency
     set_db(db)
     set_auth_dependency(get_current_user)
-    api_router.include_router(enhanced_router, tags=["Enhanced Features"])
+    # Include enhanced router with /api prefix directly on app to ensure proper routing
+    app.include_router(enhanced_router, prefix="/api", tags=["Enhanced Features"])
     logger.info("Enhanced routes loaded successfully")
 except Exception as e:
     logger.warning(f"Could not load enhanced routes: {e}")
-
-# Include the router in the main app
-app.include_router(api_router)
 
 app.add_middleware(
     CORSMiddleware,
