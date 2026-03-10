@@ -1080,6 +1080,9 @@ async def remove_opt_out(phone_number: str, current_user: dict = Depends(get_cur
 @router.post("/ai/suggest")
 async def get_ai_suggestions(data: AISuggestionRequest, current_user: dict = Depends(get_current_user)):
     """Get AI-powered message suggestions"""
+    if not AI_AVAILABLE:
+        return {"suggestions": ["AI features not available. Please contact support."]}
+    
     api_key = os.environ.get('EMERGENT_LLM_KEY')
     if not api_key:
         return {"suggestions": ["Please configure your API key for AI suggestions."]}
@@ -1134,6 +1137,9 @@ Format your response as JSON:
 @router.post("/ai/rewrite")
 async def rewrite_message(message: str, tone: str = "professional", current_user: dict = Depends(get_current_user)):
     """Rewrite a message with AI"""
+    if not AI_AVAILABLE:
+        return {"rewritten": message}
+    
     api_key = os.environ.get('EMERGENT_LLM_KEY')
     if not api_key:
         return {"rewritten": message}
