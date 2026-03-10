@@ -73,17 +73,16 @@ const Register = () => {
           </ul>
         </div>
       </div>
-              Track payments and follow-ups
-            </li>
-          </ul>
-        </div>
-      </div>
 
       {/* Right Panel - Register Form */}
       <div className="flex-1 flex items-center justify-center p-8 bg-white">
         <div className="w-full max-w-md">
           <div className="text-center mb-8 lg:hidden">
-            <h1 className="text-3xl font-bold text-primary font-['Outfit']">Merchant Follow Up</h1>
+            <img 
+              src={logoUrl} 
+              alt="Merchant Follow Up" 
+              className="h-16 w-auto mx-auto"
+            />
           </div>
 
           <Card className="border-0 shadow-none lg:shadow-lg lg:border">
