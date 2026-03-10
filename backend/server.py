@@ -1270,8 +1270,12 @@ async def release_phone_number(phone_id: str, current_user: dict = Depends(get_c
 # ============== CONTACT MESSAGING & CALLING ROUTES ==============
 
 @api_router.get("/contacts/{client_id}/conversation")
-async def get_conversation(client_id: str, current_user: dict = Depends(get_current_user)):
-    """Get SMS conversation history with a client"""
+async def get_conversation(
+    client_id: str, 
+    from_number: Optional[str] = None,
+    current_user: dict = Depends(get_current_user)
+):
+    """Get SMS conversation history with a client, optionally filtered by from_number"""
     client = await db.clients.find_one(
         {"id": client_id, "user_id": current_user["user_id"]},
         {"_id": 0}
@@ -1279,15 +1283,75 @@ async def get_conversation(client_id: str, current_user: dict = Depends(get_curr
     if not client:
         raise HTTPException(status_code=404, detail="Client not found")
     
-    messages = await db.conversations.find(
-        {"user_id": current_user["user_id"], "client_id": client_id},
-        {"_id": 0}
-    ).sort("timestamp", -1).limit(100).to_list(100)
+    # Build query - filter by from_number if specified
+    query = {"user_id": current_user["user_id"], "client_id": client_id}
+    if from_number and from_number != "default":
+        query["from_number"] = from_number
+    elif from_number == "default":
+        query["$or"] = [{"from_number": None}, {"from_number": {"$exists": False}}]
+    
+    messages = await db.conversations.find(query, {"_id": 0}).sort("timestamp", -1).limit(100).to_list(100)
     
     return {
         "client": client,
-        "messages": list(reversed(messages))
+        "messages": list(reversed(messages)),
+        "from_number": from_number
     }
+
+@api_router.get("/contacts/{client_id}/chains")
+async def get_conversation_chains(client_id: str, current_user: dict = Depends(get_current_user)):
+    """Get all conversation chains (by phone number) for a client"""
+    client = await db.clients.find_one(
+        {"id": client_id, "user_id": current_user["user_id"]},
+        {"_id": 0}
+    )
+    if not client:
+        raise HTTPException(status_code=404, detail="Client not found")
+    
+    # Get all unique from_numbers used with this client
+    pipeline = [
+        {"$match": {"user_id": current_user["user_id"], "client_id": client_id}},
+        {"$group": {
+            "_id": "$from_number",
+            "message_count": {"$sum": 1},
+            "last_message": {"$last": "$content"},
+            "last_timestamp": {"$max": "$timestamp"}
+        }},
+        {"$sort": {"last_timestamp": -1}}
+    ]
+    
+    chains_raw = await db.conversations.aggregate(pipeline).to_list(50)
+    
+    # Get owned phone numbers for display names
+    owned_numbers = await db.phone_numbers.find(
+        {"user_id": current_user["user_id"]},
+        {"_id": 0, "phone_number": 1, "friendly_name": 1}
+    ).to_list(50)
+    
+    number_names = {n["phone_number"]: n.get("friendly_name", n["phone_number"]) for n in owned_numbers}
+    
+    chains = []
+    for chain in chains_raw:
+        from_num = chain["_id"]
+        chains.append({
+            "from_number": from_num or "default",
+            "display_name": number_names.get(from_num, "Default Number") if from_num else "Default Number",
+            "message_count": chain["message_count"],
+            "last_message": chain["last_message"],
+            "last_timestamp": chain["last_timestamp"]
+        })
+    
+    # If no chains exist, add default
+    if not chains:
+        chains.append({
+            "from_number": "default",
+            "display_name": "Default Number",
+            "message_count": 0,
+            "last_message": None,
+            "last_timestamp": None
+        })
+    
+    return {"client": client, "chains": chains}
 
 @api_router.post("/contacts/{client_id}/send-sms")
 async def send_sms_to_contact(
