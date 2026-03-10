@@ -116,9 +116,24 @@ const Contacts = () => {
     }
   };
 
-  const fetchConversation = async (clientId) => {
+  const fetchConversationChains = async (clientId) => {
     try {
-      const response = await contactsApi.getConversation(clientId);
+      const response = await contactsApi.getChains(clientId);
+      setConversationChains(response.data.chains || []);
+      // Set active chain to the most recent one or default
+      if (response.data.chains?.length > 0) {
+        setActiveChain(response.data.chains[0].from_number);
+        setSelectedFromNumber(response.data.chains[0].from_number);
+      }
+    } catch (error) {
+      console.error('Failed to fetch conversation chains');
+      setConversationChains([{ from_number: 'default', display_name: 'Default Number', message_count: 0 }]);
+    }
+  };
+
+  const fetchConversation = async (clientId, fromNumber = null) => {
+    try {
+      const response = await contactsApi.getConversation(clientId, fromNumber);
       setConversation(response.data.messages || []);
     } catch (error) {
       console.error('Failed to fetch conversation');
