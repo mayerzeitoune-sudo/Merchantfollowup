@@ -113,7 +113,8 @@ export const templatesApi = {
   getCategories: () => axios.get(`${API}/templates/categories`),
   use: (id) => axios.post(`${API}/templates/${id}/use`),
   sendToContact: (clientId, templateId, variables) => 
-    axios.post(`${API}/contacts/${clientId}/send-template`, null, { 
-      params: { template_id: templateId, variables: JSON.stringify(variables) } 
+    axios.post(`${API}/contacts/${clientId}/send-template`, { 
+      template_id: templateId, 
+      variables: variables 
     })
 };
