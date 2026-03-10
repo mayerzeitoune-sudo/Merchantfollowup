@@ -24,6 +24,7 @@ const navItems = [
   { path: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { path: '/clients', label: 'Clients', icon: Users },
   { path: '/contacts', label: 'Messages', icon: MessageSquare },
+  { path: '/templates', label: 'Templates', icon: FileText },
   { path: '/reminders', label: 'Reminders', icon: Bell },
   { path: '/calendar', label: 'Calendar', icon: Calendar },
   { path: '/campaigns', label: 'Campaigns', icon: Zap },
