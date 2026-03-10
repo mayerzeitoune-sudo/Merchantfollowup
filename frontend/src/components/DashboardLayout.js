@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { Button } from '../components/ui/button';
+import { Badge } from '../components/ui/badge';
 import { 
   LayoutDashboard, 
   Users, 
@@ -17,20 +18,32 @@ import {
   MessageSquare,
   Gift,
   Globe,
-  FileText
+  FileText,
+  BarChart3,
+  UserPlus,
+  Target,
+  Shield,
+  RefreshCw
 } from 'lucide-react';
 
 const navItems = [
   { path: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { path: '/clients', label: 'Clients', icon: Users },
-  { path: '/contacts', label: 'Messages', icon: MessageSquare },
+  { path: '/contacts', label: 'Inbox', icon: MessageSquare },
   { path: '/templates', label: 'Templates', icon: FileText },
   { path: '/reminders', label: 'Reminders', icon: Bell },
   { path: '/calendar', label: 'Calendar', icon: Calendar },
-  { path: '/campaigns', label: 'Campaigns', icon: Zap },
+  { divider: true, label: 'Automation' },
+  { path: '/drip-campaigns', label: 'Drip Campaigns', icon: Zap, badge: 'New' },
+  { path: '/revival', label: 'Lead Revival', icon: RefreshCw },
+  { divider: true, label: 'Growth' },
+  { path: '/lead-capture', label: 'Lead Capture', icon: UserPlus },
+  { path: '/analytics', label: 'Analytics', icon: BarChart3 },
+  { divider: true, label: 'Settings' },
+  { path: '/compliance', label: 'SMS Compliance', icon: Shield },
   { path: '/phone-numbers', label: 'Phone Numbers', icon: Phone },
-  { path: '/gift-store', label: 'Gift Store', icon: Gift },
   { path: '/domains', label: 'Domains & Email', icon: Globe },
+  { path: '/gift-store', label: 'Gift Store', icon: Gift },
   { path: '/settings', label: 'Settings', icon: Settings },
 ];
 
@@ -71,13 +84,13 @@ const DashboardLayout = ({ children }) => {
       {/* Sidebar */}
       <aside className={`
         fixed top-0 left-0 h-screen w-64 bg-white border-r border-border z-50
-        transform transition-transform duration-300 ease-in-out
+        transform transition-transform duration-300 ease-in-out overflow-y-auto
         lg:translate-x-0
         ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}
       `}>
         <div className="flex flex-col h-full">
           {/* Logo */}
-          <div className="h-16 flex items-center justify-between px-4 border-b border-border">
+          <div className="h-16 flex items-center justify-between px-4 border-b border-border sticky top-0 bg-white z-10">
             <Link to="/dashboard" className="flex items-center gap-2">
               <div className="h-8 w-8 rounded-md bg-primary flex items-center justify-center">
                 <span className="text-white font-bold text-sm">MF</span>
@@ -94,7 +107,17 @@ const DashboardLayout = ({ children }) => {
 
           {/* Navigation */}
           <nav className="flex-1 p-4 space-y-1">
-            {navItems.map((item) => {
+            {navItems.map((item, index) => {
+              if (item.divider) {
+                return (
+                  <div key={index} className="pt-4 pb-2">
+                    <p className="px-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                      {item.label}
+                    </p>
+                  </div>
+                );
+              }
+              
               const isActive = location.pathname === item.path;
               const Icon = item.icon;
               return (
@@ -110,10 +133,15 @@ const DashboardLayout = ({ children }) => {
                       : 'text-muted-foreground hover:bg-secondary hover:text-foreground'
                     }
                   `}
-                  data-testid={`nav-${item.label.toLowerCase()}`}
+                  data-testid={`nav-${item.label.toLowerCase().replace(/\s+/g, '-')}`}
                 >
                   <Icon className="h-5 w-5" />
                   {item.label}
+                  {item.badge && !isActive && (
+                    <Badge className="ml-auto bg-orange-500 text-white text-[10px] px-1.5 py-0">
+                      {item.badge}
+                    </Badge>
+                  )}
                   {isActive && <ChevronRight className="h-4 w-4 ml-auto" />}
                 </Link>
               );
@@ -121,7 +149,7 @@ const DashboardLayout = ({ children }) => {
           </nav>
 
           {/* User Section */}
-          <div className="p-4 border-t border-border">
+          <div className="p-4 border-t border-border sticky bottom-0 bg-white">
             <div className="flex items-center gap-3 mb-4">
               <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
                 <span className="text-primary font-semibold">
