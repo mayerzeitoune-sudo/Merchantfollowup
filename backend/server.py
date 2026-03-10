@@ -585,6 +585,9 @@ async def create_reminder(data: ReminderCreate, current_user: dict = Depends(get
     if not client:
         raise HTTPException(status_code=404, detail="Client not found")
     
+    # Calculate total reminders
+    total_reminders = calculate_reminder_count(data.start_date, data.end_date, data.days_of_week)
+    
     reminder_id = str(uuid.uuid4())
     now = datetime.now(timezone.utc).isoformat()
     
@@ -595,7 +598,11 @@ async def create_reminder(data: ReminderCreate, current_user: dict = Depends(get
         "client_name": client["name"],
         "client_phone": client["phone"],
         "amount_due": data.amount_due,
-        "due_date": data.due_date,
+        "start_date": data.start_date,
+        "end_date": data.end_date,
+        "days_of_week": data.days_of_week,
+        "total_reminders": total_reminders,
+        "sent_count": 0,
         "message": data.message,
         "status": data.status,
         "sent_at": None,
