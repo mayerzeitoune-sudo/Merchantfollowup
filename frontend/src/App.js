@@ -81,6 +81,7 @@ function AppRoutes() {
       <Route path="/campaigns" element={<ProtectedRoute><Campaigns /></ProtectedRoute>} />
       <Route path="/phone-numbers" element={<ProtectedRoute><PhoneNumbers /></ProtectedRoute>} />
       <Route path="/contacts" element={<ProtectedRoute><Contacts /></ProtectedRoute>} />
+      <Route path="/templates" element={<ProtectedRoute><Templates /></ProtectedRoute>} />
       <Route path="/gift-store" element={<ProtectedRoute><GiftStore /></ProtectedRoute>} />
       <Route path="/domains" element={<ProtectedRoute><Domains /></ProtectedRoute>} />
       <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
