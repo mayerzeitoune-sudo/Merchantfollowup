@@ -159,7 +159,22 @@ const Clients = () => {
 
   const resetForm = () => {
     setEditingClient(null);
-    setFormData({ name: '', email: '', phone: '', company: '', notes: '', balance: 0, tags: [], birthday: '' });
+    setFormData({ 
+      name: '', 
+      email: '', 
+      phone: '', 
+      company: '', 
+      notes: '', 
+      balance: 0, 
+      tags: [], 
+      birthday: '',
+      address_line1: '',
+      address_line2: '',
+      city: '',
+      state: '',
+      zip_code: '',
+      country: 'US'
+    });
   };
 
   const toggleTag = (tag) => {
