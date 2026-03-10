@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import DashboardLayout from '../components/DashboardLayout';
 import { Card, CardContent } from '../components/ui/card';
 import { Button } from '../components/ui/button';
@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../components/ui/table';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '../components/ui/dropdown-menu';
 import { Badge } from '../components/ui/badge';
+import { Checkbox } from '../components/ui/checkbox';
 import { 
   Plus, 
   Search, 
@@ -21,10 +22,22 @@ import {
   CheckCircle,
   XCircle,
   DollarSign,
-  Calendar
+  Calendar,
+  CalendarDays,
+  MessageSquare
 } from 'lucide-react';
 import { remindersApi, clientsApi } from '../lib/api';
 import { toast } from 'sonner';
+
+const DAYS_OF_WEEK = [
+  { id: 'monday', label: 'Mon' },
+  { id: 'tuesday', label: 'Tue' },
+  { id: 'wednesday', label: 'Wed' },
+  { id: 'thursday', label: 'Thu' },
+  { id: 'friday', label: 'Fri' },
+  { id: 'saturday', label: 'Sat' },
+  { id: 'sunday', label: 'Sun' },
+];
 
 const Reminders = () => {
   const [reminders, setReminders] = useState([]);
@@ -37,13 +50,48 @@ const Reminders = () => {
   const [formData, setFormData] = useState({
     client_id: '',
     amount_due: '',
-    due_date: '',
+    start_date: '',
+    end_date: '',
+    days_of_week: ['monday', 'tuesday', 'wednesday', 'thursday', 'friday'],
     message: ''
   });
 
   useEffect(() => {
     fetchData();
   }, []);
+
+  // Calculate total reminders based on form data
+  const calculatedReminders = useMemo(() => {
+    if (!formData.start_date || !formData.end_date || formData.days_of_week.length === 0) {
+      return 0;
+    }
+
+    const dayMap = {
+      monday: 0, tuesday: 1, wednesday: 2, thursday: 3,
+      friday: 4, saturday: 5, sunday: 6
+    };
+
+    const selectedDays = formData.days_of_week.map(d => dayMap[d.toLowerCase()]);
+    
+    try {
+      const start = new Date(formData.start_date);
+      const end = new Date(formData.end_date);
+      
+      if (end < start) return 0;
+      
+      let count = 0;
+      const current = new Date(start);
+      while (current <= end) {
+        if (selectedDays.includes(current.getDay() === 0 ? 6 : current.getDay() - 1)) {
+          count++;
+        }
+        current.setDate(current.getDate() + 1);
+      }
+      return count;
+    } catch {
+      return 0;
+    }
+  }, [formData.start_date, formData.end_date, formData.days_of_week]);
 
   const fetchData = async () => {
     try {
@@ -62,6 +110,12 @@ const Reminders = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    
+    if (formData.days_of_week.length === 0) {
+      toast.error('Please select at least one day');
+      return;
+    }
+    
     try {
       const payload = {
         ...formData,
@@ -73,7 +127,7 @@ const Reminders = () => {
         toast.success('Reminder updated');
       } else {
         await remindersApi.create(payload);
-        toast.success('Reminder created');
+        toast.success(`Reminder schedule created with ${calculatedReminders} reminders`);
       }
       setIsDialogOpen(false);
       resetForm();
@@ -88,14 +142,16 @@ const Reminders = () => {
     setFormData({
       client_id: reminder.client_id,
       amount_due: reminder.amount_due.toString(),
-      due_date: reminder.due_date,
+      start_date: reminder.start_date || '',
+      end_date: reminder.end_date || '',
+      days_of_week: reminder.days_of_week || ['monday', 'tuesday', 'wednesday', 'thursday', 'friday'],
       message: reminder.message || ''
     });
     setIsDialogOpen(true);
   };
 
   const handleDelete = async (id) => {
-    if (!window.confirm('Are you sure you want to delete this reminder?')) return;
+    if (!window.confirm('Are you sure you want to delete this reminder schedule?')) return;
     try {
       await remindersApi.delete(id);
       toast.success('Reminder deleted');
@@ -117,7 +173,23 @@ const Reminders = () => {
 
   const resetForm = () => {
     setEditingReminder(null);
-    setFormData({ client_id: '', amount_due: '', due_date: '', message: '' });
+    setFormData({ 
+      client_id: '', 
+      amount_due: '', 
+      start_date: '', 
+      end_date: '',
+      days_of_week: ['monday', 'tuesday', 'wednesday', 'thursday', 'friday'],
+      message: '' 
+    });
+  };
+
+  const toggleDay = (day) => {
+    setFormData(prev => ({
+      ...prev,
+      days_of_week: prev.days_of_week.includes(day)
+        ? prev.days_of_week.filter(d => d !== day)
+        : [...prev.days_of_week, day]
+    }));
   };
 
   const getStatusBadge = (status) => {
@@ -126,6 +198,10 @@ const Reminders = () => {
         return <Badge variant="outline" className="text-orange-600 border-orange-200 bg-orange-50"><Clock className="h-3 w-3 mr-1" />Pending</Badge>;
       case 'sent':
         return <Badge variant="outline" className="text-green-600 border-green-200 bg-green-50"><CheckCircle className="h-3 w-3 mr-1" />Sent</Badge>;
+      case 'active':
+        return <Badge variant="outline" className="text-blue-600 border-blue-200 bg-blue-50"><Clock className="h-3 w-3 mr-1" />Active</Badge>;
+      case 'completed':
+        return <Badge variant="outline" className="text-green-600 border-green-200 bg-green-50"><CheckCircle className="h-3 w-3 mr-1" />Completed</Badge>;
       case 'failed':
         return <Badge variant="outline" className="text-red-600 border-red-200 bg-red-50"><XCircle className="h-3 w-3 mr-1" />Failed</Badge>;
       default:
@@ -140,6 +216,18 @@ const Reminders = () => {
     return matchesSearch && matchesStatus;
   });
 
+  const formatDateRange = (start, end) => {
+    if (!start || !end) return '-';
+    return `${new Date(start).toLocaleDateString()} - ${new Date(end).toLocaleDateString()}`;
+  };
+
+  const formatDays = (days) => {
+    if (!days || days.length === 0) return '-';
+    if (days.length === 7) return 'Every day';
+    if (days.length === 5 && !days.includes('saturday') && !days.includes('sunday')) return 'Weekdays';
+    return days.map(d => d.charAt(0).toUpperCase() + d.slice(1, 3)).join(', ');
+  };
+
   return (
     <DashboardLayout>
       <div className="space-y-6" data-testid="reminders-page">
@@ -147,22 +235,22 @@ const Reminders = () => {
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
             <h1 className="text-3xl font-bold font-['Outfit']">Payment Reminders</h1>
-            <p className="text-muted-foreground mt-1">Schedule and track payment reminders</p>
+            <p className="text-muted-foreground mt-1">Schedule recurring payment reminders</p>
           </div>
           <Dialog open={isDialogOpen} onOpenChange={(open) => { setIsDialogOpen(open); if (!open) resetForm(); }}>
             <DialogTrigger asChild>
               <Button className="bg-primary hover:bg-primary/90" data-testid="add-reminder-btn">
                 <Plus className="h-4 w-4 mr-2" />
-                New Reminder
+                New Reminder Schedule
               </Button>
             </DialogTrigger>
-            <DialogContent className="sm:max-w-md">
+            <DialogContent className="sm:max-w-lg">
               <DialogHeader>
                 <DialogTitle className="font-['Outfit']">
-                  {editingReminder ? 'Edit Reminder' : 'Create Reminder'}
+                  {editingReminder ? 'Edit Reminder Schedule' : 'Create Reminder Schedule'}
                 </DialogTitle>
                 <DialogDescription>
-                  {editingReminder ? 'Update reminder details' : 'Set up a new payment reminder'}
+                  {editingReminder ? 'Update reminder details' : 'Set up recurring payment reminders'}
                 </DialogDescription>
               </DialogHeader>
               <form onSubmit={handleSubmit} className="space-y-4 mt-4">
@@ -203,21 +291,84 @@ const Reminders = () => {
                   </div>
                 </div>
                 
-                <div className="space-y-2">
-                  <Label htmlFor="due_date">Due Date *</Label>
-                  <div className="relative">
-                    <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                    <Input
-                      id="due_date"
-                      type="date"
-                      value={formData.due_date}
-                      onChange={(e) => setFormData({ ...formData, due_date: e.target.value })}
-                      className="pl-10"
-                      required
-                      data-testid="reminder-date-input"
-                    />
+                {/* Date Range */}
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="start_date">Start Date *</Label>
+                    <div className="relative">
+                      <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                      <Input
+                        id="start_date"
+                        type="date"
+                        value={formData.start_date}
+                        onChange={(e) => setFormData({ ...formData, start_date: e.target.value })}
+                        className="pl-10"
+                        required
+                        data-testid="reminder-start-date-input"
+                      />
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="end_date">End Date *</Label>
+                    <div className="relative">
+                      <CalendarDays className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                      <Input
+                        id="end_date"
+                        type="date"
+                        value={formData.end_date}
+                        onChange={(e) => setFormData({ ...formData, end_date: e.target.value })}
+                        className="pl-10"
+                        required
+                        data-testid="reminder-end-date-input"
+                      />
+                    </div>
                   </div>
                 </div>
+
+                {/* Days of Week */}
+                <div className="space-y-3">
+                  <Label>Send Reminders On *</Label>
+                  <div className="flex flex-wrap gap-2">
+                    {DAYS_OF_WEEK.map((day) => (
+                      <div
+                        key={day.id}
+                        className={`
+                          flex items-center justify-center w-12 h-10 rounded-md border cursor-pointer transition-all
+                          ${formData.days_of_week.includes(day.id) 
+                            ? 'bg-primary text-white border-primary' 
+                            : 'bg-white text-muted-foreground border-input hover:border-primary'
+                          }
+                        `}
+                        onClick={() => toggleDay(day.id)}
+                        data-testid={`day-${day.id}`}
+                      >
+                        <span className="text-sm font-medium">{day.label}</span>
+                      </div>
+                    ))}
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Click to toggle days when reminders will be sent
+                  </p>
+                </div>
+
+                {/* Calculated Reminders Preview */}
+                {(formData.start_date && formData.end_date && formData.days_of_week.length > 0) && (
+                  <div className="p-4 bg-primary/5 border border-primary/20 rounded-lg">
+                    <div className="flex items-center gap-3">
+                      <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
+                        <MessageSquare className="h-5 w-5 text-primary" />
+                      </div>
+                      <div>
+                        <p className="text-2xl font-bold text-primary font-['Outfit']">
+                          {calculatedReminders}
+                        </p>
+                        <p className="text-sm text-muted-foreground">
+                          reminders will be sent
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
                 
                 <div className="space-y-2">
                   <Label htmlFor="message">Custom Message</Label>
@@ -225,18 +376,26 @@ const Reminders = () => {
                     id="message"
                     value={formData.message}
                     onChange={(e) => setFormData({ ...formData, message: e.target.value })}
-                    placeholder="Hi {name}, this is a reminder about your payment of ${amount} due on {date}..."
+                    placeholder="Hi {name}, this is a reminder about your payment of ${amount}..."
                     rows={3}
                     data-testid="reminder-message-input"
                   />
+                  <p className="text-xs text-muted-foreground">
+                    Use {'{name}'}, {'{amount}'} as placeholders
+                  </p>
                 </div>
                 
                 <div className="flex gap-3 pt-4">
                   <Button type="button" variant="outline" className="flex-1" onClick={() => setIsDialogOpen(false)}>
                     Cancel
                   </Button>
-                  <Button type="submit" className="flex-1 bg-primary hover:bg-primary/90" data-testid="save-reminder-btn">
-                    {editingReminder ? 'Update' : 'Create'}
+                  <Button 
+                    type="submit" 
+                    className="flex-1 bg-primary hover:bg-primary/90" 
+                    disabled={formData.days_of_week.length === 0}
+                    data-testid="save-reminder-btn"
+                  >
+                    {editingReminder ? 'Update' : 'Create Schedule'}
                   </Button>
                 </div>
               </form>
@@ -263,7 +422,8 @@ const Reminders = () => {
             <SelectContent>
               <SelectItem value="all">All Status</SelectItem>
               <SelectItem value="pending">Pending</SelectItem>
-              <SelectItem value="sent">Sent</SelectItem>
+              <SelectItem value="active">Active</SelectItem>
+              <SelectItem value="completed">Completed</SelectItem>
               <SelectItem value="failed">Failed</SelectItem>
             </SelectContent>
           </Select>
@@ -278,23 +438,24 @@ const Reminders = () => {
                   <TableRow className="bg-muted/50">
                     <TableHead className="font-semibold">Client</TableHead>
                     <TableHead className="font-semibold">Amount</TableHead>
-                    <TableHead className="font-semibold">Due Date</TableHead>
+                    <TableHead className="font-semibold">Date Range</TableHead>
+                    <TableHead className="font-semibold">Days</TableHead>
+                    <TableHead className="font-semibold text-center">Reminders</TableHead>
                     <TableHead className="font-semibold">Status</TableHead>
-                    <TableHead className="font-semibold hidden md:table-cell">Sent At</TableHead>
                     <TableHead className="w-24"></TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {loading ? (
                     <TableRow>
-                      <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                      <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
                         Loading...
                       </TableCell>
                     </TableRow>
                   ) : filteredReminders.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
-                        {search || statusFilter !== 'all' ? 'No reminders found' : 'No reminders yet'}
+                      <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                        {search || statusFilter !== 'all' ? 'No reminders found' : 'No reminder schedules yet'}
                       </TableCell>
                     </TableRow>
                   ) : (
@@ -309,14 +470,20 @@ const Reminders = () => {
                         <TableCell className="font-semibold text-primary">
                           ${reminder.amount_due.toFixed(2)}
                         </TableCell>
-                        <TableCell>
-                          {new Date(reminder.due_date).toLocaleDateString()}
+                        <TableCell className="text-sm">
+                          {formatDateRange(reminder.start_date, reminder.end_date)}
+                        </TableCell>
+                        <TableCell className="text-sm text-muted-foreground">
+                          {formatDays(reminder.days_of_week)}
+                        </TableCell>
+                        <TableCell className="text-center">
+                          <div className="flex flex-col items-center">
+                            <span className="font-semibold">{reminder.sent_count || 0}/{reminder.total_reminders || 0}</span>
+                            <span className="text-xs text-muted-foreground">sent</span>
+                          </div>
                         </TableCell>
                         <TableCell>
                           {getStatusBadge(reminder.status)}
-                        </TableCell>
-                        <TableCell className="hidden md:table-cell text-muted-foreground">
-                          {reminder.sent_at ? new Date(reminder.sent_at).toLocaleString() : '-'}
                         </TableCell>
                         <TableCell>
                           <div className="flex items-center gap-1">
