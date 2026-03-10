@@ -503,30 +503,13 @@ const Contacts = () => {
 
                 {/* Message Input */}
                 <div className="p-4 border-t space-y-3">
-                  {/* Phone Number Selector */}
-                  <div className="flex items-center gap-3">
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                      <Smartphone className="h-4 w-4" />
-                      <span>Send from:</span>
-                    </div>
-                    <Select value={selectedFromNumber} onValueChange={setSelectedFromNumber}>
-                      <SelectTrigger className="w-[200px]" data-testid="from-number-select">
-                        <SelectValue placeholder="Select number" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="default">Default Number</SelectItem>
-                        {ownedNumbers.map((num) => (
-                          <SelectItem key={num.id} value={num.phone_number}>
-                            {num.friendly_name || num.phone_number}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    {ownedNumbers.length === 0 && (
-                      <span className="text-xs text-muted-foreground">
-                        <a href="/phone-numbers" className="text-primary hover:underline">Buy numbers</a> to send from different lines
-                      </span>
-                    )}
+                  {/* Current Chain Indicator */}
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <Smartphone className="h-4 w-4" />
+                    <span>Sending from:</span>
+                    <Badge variant="secondary">
+                      {conversationChains.find(c => c.from_number === activeChain)?.display_name || 'Default Number'}
+                    </Badge>
                   </div>
 
                   {/* Templates Section */}
