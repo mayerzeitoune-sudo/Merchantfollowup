@@ -524,21 +524,21 @@ const Clients = () => {
                     filteredClients.map((client) => (
                       <TableRow key={client.id} className="hover:bg-muted/50">
                         <TableCell>
-                          <div className="flex items-center gap-3">
+                          <Link to={`/clients/${client.id}`} className="flex items-center gap-3 hover:opacity-80">
                             <div className="h-9 w-9 rounded-full bg-primary/10 flex items-center justify-center">
                               <span className="text-primary font-medium text-sm">
                                 {client.name.charAt(0).toUpperCase()}
                               </span>
                             </div>
                             <div>
-                              <span className="font-medium">{client.name}</span>
+                              <span className="font-medium hover:text-primary">{client.name}</span>
                               {client.notes && (
                                 <p className="text-xs text-muted-foreground truncate max-w-[200px]">
                                   {client.notes}
                                 </p>
                               )}
                             </div>
-                          </div>
+                          </Link>
                         </TableCell>
                         <TableCell>{client.phone}</TableCell>
                         <TableCell>
