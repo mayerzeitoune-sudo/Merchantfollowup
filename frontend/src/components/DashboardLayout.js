@@ -94,10 +94,11 @@ const DashboardLayout = ({ children }) => {
           {/* Logo */}
           <div className="h-16 flex items-center justify-between px-4 border-b border-border sticky top-0 bg-white z-10">
             <Link to="/dashboard" className="flex items-center gap-2">
-              <div className="h-8 w-8 rounded-md bg-primary flex items-center justify-center">
-                <span className="text-white font-bold text-sm">MF</span>
-              </div>
-              <span className="font-bold text-lg font-['Outfit']">Merchant</span>
+              <img 
+                src={logoUrl} 
+                alt="Merchant Follow Up" 
+                className="h-10 w-auto"
+              />
             </Link>
             <button
               onClick={() => setSidebarOpen(false)}
