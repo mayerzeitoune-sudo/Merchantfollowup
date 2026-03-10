@@ -9,7 +9,9 @@ export const clientsApi = {
   getOne: (id) => axios.get(`${API}/clients/${id}`),
   create: (data) => axios.post(`${API}/clients`, data),
   update: (id, data) => axios.put(`${API}/clients/${id}`, data),
-  delete: (id) => axios.delete(`${API}/clients/${id}`)
+  delete: (id) => axios.delete(`${API}/clients/${id}`),
+  updateBirthday: (id, birthday) => axios.put(`${API}/clients/${id}/birthday`, null, { params: { birthday } }),
+  addEvent: (id, eventName, eventDate) => axios.post(`${API}/clients/${id}/events`, null, { params: { event_name: eventName, event_date: eventDate } })
 };
 
 // Reminders API
@@ -46,6 +48,47 @@ export const smsProvidersApi = {
   create: (data) => axios.post(`${API}/sms-providers`, data),
   delete: (id) => axios.delete(`${API}/sms-providers/${id}`),
   activate: (id) => axios.put(`${API}/sms-providers/${id}/activate`)
+};
+
+// Phone Numbers API
+export const phoneNumbersApi = {
+  searchAvailable: (areaCode, country = 'US', limit = 20) => 
+    axios.get(`${API}/phone-numbers/available`, { params: { area_code: areaCode, country, limit } }),
+  purchase: (data) => axios.post(`${API}/phone-numbers/purchase`, data),
+  getOwned: () => axios.get(`${API}/phone-numbers/owned`),
+  release: (id) => axios.delete(`${API}/phone-numbers/${id}`)
+};
+
+// Contacts/Messaging API
+export const contactsApi = {
+  getConversation: (clientId) => axios.get(`${API}/contacts/${clientId}/conversation`),
+  sendSms: (clientId, message) => axios.post(`${API}/contacts/${clientId}/send-sms`, null, { params: { message } }),
+  initiateCall: (clientId) => axios.post(`${API}/contacts/${clientId}/initiate-call`)
+};
+
+// Gift Store API
+export const giftsApi = {
+  getCatalog: (category) => axios.get(`${API}/gifts/catalog`, { params: { category } }),
+  getCategories: () => axios.get(`${API}/gifts/categories`),
+  createOrder: (data) => axios.post(`${API}/gifts/orders`, data),
+  getOrders: () => axios.get(`${API}/gifts/orders`),
+  getUpcomingEvents: () => axios.get(`${API}/gifts/upcoming-events`)
+};
+
+// Domains & Email API
+export const domainsApi = {
+  getAll: () => axios.get(`${API}/domains`),
+  create: (data) => axios.post(`${API}/domains`, data),
+  getDnsInstructions: (id) => axios.get(`${API}/domains/${id}/dns-instructions`),
+  verify: (id) => axios.post(`${API}/domains/${id}/verify`),
+  delete: (id) => axios.delete(`${API}/domains/${id}`),
+  getMarketplace: () => axios.get(`${API}/domains/marketplace`)
+};
+
+export const emailAccountsApi = {
+  getAll: () => axios.get(`${API}/email-accounts`),
+  create: (data) => axios.post(`${API}/email-accounts`, data),
+  delete: (id) => axios.delete(`${API}/email-accounts/${id}`)
 };
 
 // Dashboard API
