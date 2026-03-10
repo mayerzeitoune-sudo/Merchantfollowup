@@ -486,6 +486,129 @@ const Contacts = () => {
             )}
           </Card>
         </div>
+
+        {/* Template Selection Dialog */}
+        <Dialog open={showTemplateDialog} onOpenChange={setShowTemplateDialog}>
+          <DialogContent className="max-w-4xl max-h-[80vh]">
+            <DialogHeader>
+              <DialogTitle>Choose a Template</DialogTitle>
+              <DialogDescription>
+                Select a message template to send to {selectedClient?.name}
+              </DialogDescription>
+            </DialogHeader>
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 max-h-[60vh] overflow-hidden">
+              {/* Template List */}
+              <div>
+                <Label className="text-sm font-medium mb-3 block">Available Templates</Label>
+                <ScrollArea className="h-[50vh]">
+                  <div className="space-y-2 pr-4">
+                    {templates.map((template) => (
+                      <Card
+                        key={template.id}
+                        className={`cursor-pointer transition-colors ${
+                          selectedTemplate?.id === template.id ? 'ring-2 ring-primary' : ''
+                        }`}
+                        onClick={() => setSelectedTemplate(template)}
+                      >
+                        <CardContent className="p-3">
+                          <div className="flex items-start justify-between mb-2">
+                            <h4 className="font-medium text-sm">{template.name}</h4>
+                            <Badge variant="outline" className="text-xs">
+                              {template.category}
+                            </Badge>
+                          </div>
+                          <p className="text-xs text-muted-foreground line-clamp-2">
+                            {template.content}
+                          </p>
+                          {template.variables.length > 0 && (
+                            <div className="flex flex-wrap gap-1 mt-2">
+                              {template.variables.slice(0, 3).map((variable) => (
+                                <Badge key={variable} variant="outline" className="text-xs">
+                                  {variable}
+                                </Badge>
+                              ))}
+                              {template.variables.length > 3 && (
+                                <Badge variant="outline" className="text-xs">
+                                  +{template.variables.length - 3}
+                                </Badge>
+                              )}
+                            </div>
+                          )}
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
+                </ScrollArea>
+              </div>
+
+              {/* Template Preview & Variables */}
+              <div>
+                {selectedTemplate ? (
+                  <div className="space-y-4">
+                    <div>
+                      <Label className="text-sm font-medium">Preview</Label>
+                      <Card className="mt-2">
+                        <CardContent className="p-3">
+                          <p className="text-sm whitespace-pre-wrap">
+                            {previewTemplateContent()}
+                          </p>
+                        </CardContent>
+                      </Card>
+                    </div>
+
+                    {/* Variable Inputs */}
+                    {Object.keys(templateVariables).length > 0 && (
+                      <div>
+                        <Label className="text-sm font-medium">Fill in Variables</Label>
+                        <div className="space-y-3 mt-2">
+                          {Object.keys(templateVariables).map((variable) => (
+                            <div key={variable}>
+                              <Label htmlFor={variable} className="text-xs">
+                                {variable.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                              </Label>
+                              <Input
+                                id={variable}
+                                value={templateVariables[variable]}
+                                onChange={(e) => setTemplateVariables(prev => ({
+                                  ...prev,
+                                  [variable]: e.target.value
+                                }))}
+                                placeholder={`Enter ${variable.replace(/_/g, ' ')}`}
+                                className="text-sm"
+                              />
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <div className="flex items-center justify-center h-full text-muted-foreground">
+                    <div className="text-center">
+                      <MessageCircle className="h-12 w-12 mx-auto mb-2 opacity-50" />
+                      <p>Select a template to preview</p>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => {
+                setShowTemplateDialog(false);
+                setSelectedTemplate(null);
+                setTemplateVariables({});
+              }}>
+                Cancel
+              </Button>
+              <Button 
+                onClick={handleSendTemplate} 
+                disabled={!selectedTemplate || sending}
+              >
+                {sending ? 'Sending...' : 'Send Template'}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     </DashboardLayout>
   );
