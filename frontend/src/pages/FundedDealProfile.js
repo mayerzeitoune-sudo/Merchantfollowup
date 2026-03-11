@@ -163,6 +163,16 @@ const FundedDealProfile = () => {
     }
   };
 
+  const handleDeleteDeal = async () => {
+    try {
+      await fundedApi.delete(dealId);
+      toast.success('Deal deleted');
+      navigate('/funded');
+    } catch (error) {
+      toast.error('Failed to delete deal');
+    }
+  };
+
   const handleSendReminder = async (type) => {
     const reminderTemplates = {
       '3_days_before': `Hi ${deal?.client_name}, this is a reminder that your payment of $${deal?.payment_amount?.toLocaleString()} is due soon. Let us know if you need anything.`,
