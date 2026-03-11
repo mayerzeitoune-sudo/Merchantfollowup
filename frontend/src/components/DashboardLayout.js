@@ -111,11 +111,11 @@ const DashboardLayout = ({ children }) => {
           {/* Logo */}
           <div className="h-20 flex items-center justify-between px-4 border-b border-border sticky top-0 bg-white z-10">
             <Link to="/dashboard" className="flex items-center gap-3 group">
-              <div className="relative bg-black rounded-lg p-1.5">
+              <div className="relative">
                 <img 
                   src={logoUrl} 
                   alt="Merchant Follow Up" 
-                  className="h-10 w-auto transition-transform duration-200 group-hover:scale-105"
+                  className="h-12 w-auto transition-transform duration-200 group-hover:scale-105"
                 />
               </div>
               <div className="flex flex-col">
