@@ -918,6 +918,69 @@ const Contacts = () => {
             </DialogFooter>
           </DialogContent>
         </Dialog>
+
+        {/* Simulate Reply Dialog (for testing) */}
+        <Dialog open={showSimulateDialog} onOpenChange={setShowSimulateDialog}>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <TestTube2 className="h-5 w-5 text-orange-500" />
+                Simulate Customer Reply
+              </DialogTitle>
+              <DialogDescription>
+                Test how inbound replies appear in the inbox. This simulates a customer responding to your last message.
+              </DialogDescription>
+            </DialogHeader>
+            
+            <div className="space-y-4">
+              {/* Show last outbound message context */}
+              {conversation.filter(m => m.direction === 'outbound').slice(-1)[0] && (
+                <div className="p-3 bg-secondary/50 rounded-lg">
+                  <Label className="text-xs text-muted-foreground">Last message you sent:</Label>
+                  <p className="text-sm mt-1 italic">
+                    "{conversation.filter(m => m.direction === 'outbound').slice(-1)[0]?.content?.substring(0, 100)}..."
+                  </p>
+                  {conversation.filter(m => m.direction === 'outbound').slice(-1)[0]?.campaign_name && (
+                    <Badge variant="secondary" className="mt-2 text-xs">
+                      <Zap className="h-3 w-3 mr-1" />
+                      {conversation.filter(m => m.direction === 'outbound').slice(-1)[0]?.campaign_name}
+                    </Badge>
+                  )}
+                </div>
+              )}
+              
+              <div>
+                <Label htmlFor="simulate-reply">Customer's Reply</Label>
+                <Textarea
+                  id="simulate-reply"
+                  placeholder="Type what the customer would reply..."
+                  value={simulateReplyText}
+                  onChange={(e) => setSimulateReplyText(e.target.value)}
+                  className="mt-2"
+                  rows={3}
+                  data-testid="simulate-reply-input"
+                />
+              </div>
+            </div>
+            
+            <DialogFooter>
+              <Button variant="outline" onClick={() => {
+                setShowSimulateDialog(false);
+                setSimulateReplyText('');
+              }}>
+                Cancel
+              </Button>
+              <Button 
+                onClick={handleSimulateReply}
+                disabled={!simulateReplyText.trim()}
+                data-testid="simulate-reply-submit"
+              >
+                <Reply className="h-4 w-4 mr-2" />
+                Simulate Reply
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     </DashboardLayout>
   );
