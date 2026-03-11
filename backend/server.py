@@ -125,6 +125,7 @@ class ClientResponse(BaseModel):
     phone: str
     company: Optional[str] = None
     notes: Optional[str] = None
+    note_logs: List[Dict] = []
     balance: float = 0.0
     tags: List[str] = []
     pipeline_stage: Optional[str] = "new_lead"
