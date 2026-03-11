@@ -2145,6 +2145,28 @@ async def send_sms_to_contact(
     if not client:
         raise HTTPException(status_code=404, detail="Client not found")
     
+    # Replace template variables with client data
+    def replace_variables(text, client_data):
+        replacements = {
+            '{name}': client_data.get('name', ''),
+            '{first_name}': client_data.get('name', '').split()[0] if client_data.get('name') else '',
+            '{company}': client_data.get('company', ''),
+            '{phone}': client_data.get('phone', ''),
+            '{email}': client_data.get('email', ''),
+            '{balance}': f"${client_data.get('balance', 0):.2f}",
+            '{amount}': f"${client_data.get('balance', 0):.2f}",
+            '{date}': datetime.now(timezone.utc).strftime('%B %d, %Y'),
+            '{due_date}': datetime.now(timezone.utc).strftime('%B %d, %Y'),
+            '{client_name}': client_data.get('name', ''),
+        }
+        result = text
+        for var, value in replacements.items():
+            result = result.replace(var, str(value))
+        return result
+    
+    # Process the message to replace variables
+    processed_message = replace_variables(message, client)
+    
     # Check for active SMS provider
     provider = await db.sms_providers.find_one(
         {"user_id": current_user["user_id"], "is_active": True}
@@ -2161,13 +2183,13 @@ async def send_sms_to_contact(
     message_id = str(uuid.uuid4())
     now = datetime.now(timezone.utc).isoformat()
     
-    # Store the message
+    # Store the message with processed content
     message_doc = {
         "id": message_id,
         "user_id": current_user["user_id"],
         "client_id": client_id,
         "direction": "outbound",
-        "content": message,
+        "content": processed_message,
         "from_number": from_number,
         "timestamp": now,
         "status": "sent" if provider else "pending_provider"
