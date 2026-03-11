@@ -166,16 +166,6 @@ export const dashboardApi = {
   getStats: () => axios.get(`${API}/dashboard/stats`)
 };
 
-// AI API (Enhanced)
-export const aiApi = {
-  matchResponse: (incomingMessage, keywords) => 
-    axios.post(`${API}/ai/match-response`, { incoming_message: incomingMessage, keywords }),
-  suggest: (conversationContext, tone, action) => 
-    axios.post(`${API}/ai/suggest`, { conversation_context: conversationContext, tone, action }),
-  rewrite: (message, tone) => 
-    axios.post(`${API}/ai/rewrite`, null, { params: { message, tone } })
-};
-
 // Lead Capture API
 export const leadsApi = {
   getForms: () => axios.get(`${API}/leads/forms`),
