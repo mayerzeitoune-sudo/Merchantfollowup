@@ -3402,6 +3402,47 @@ async def get_funded_analytics(
         "by_rep": [{"rep": k, "amount": v} for k, v in by_rep.items()]
     }
 
+# ============== ONBOARDING / SMS REGISTRATION ==============
+@api_router.post("/onboarding/submit")
+async def submit_onboarding(data: dict, current_user: dict = Depends(get_current_user)):
+    """Submit SMS onboarding data for Twilio A2P 10DLC registration"""
+    onboarding_record = {
+        "id": str(uuid.uuid4()),
+        "user_id": current_user["user_id"],
+        "submitted_at": datetime.now(timezone.utc).isoformat(),
+        "status": "pending",
+        "brand_status": "pending",
+        "campaign_status": "pending",
+        **data
+    }
+    
+    db.sms_onboarding.insert_one(onboarding_record)
+    
+    return {
+        "message": "Onboarding submitted successfully",
+        "id": onboarding_record["id"],
+        "status": "pending"
+    }
+
+@api_router.get("/onboarding/status")
+async def get_onboarding_status(current_user: dict = Depends(get_current_user)):
+    """Get SMS registration status"""
+    onboarding = db.sms_onboarding.find_one(
+        {"user_id": current_user["user_id"]},
+        {"_id": 0}
+    )
+    
+    if not onboarding:
+        return {"status": "not_started", "onboarding": None}
+    
+    return {
+        "status": onboarding.get("status", "pending"),
+        "brand_status": onboarding.get("brand_status", "pending"),
+        "campaign_status": onboarding.get("campaign_status", "pending"),
+        "phone_number": onboarding.get("selected_phone_number"),
+        "onboarding": onboarding
+    }
+
 # ============== IMPORT ENHANCED ROUTES ==============
 # Enhanced routes must be included BEFORE main router to ensure proper route matching
 # Routes like /campaigns/enhanced must be matched before /campaigns/{campaign_id}
