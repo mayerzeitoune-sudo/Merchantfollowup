@@ -215,7 +215,8 @@ async def gmail_auth_callback(code: str = None, state: str = None, error: str = 
         return RedirectResponse(f"{FRONTEND_URL}/settings?gmail_error=invalid_state")
     
     user_id = state_doc["user_id"]
-    logger.info(f"Found user_id: {user_id} for state")
+    code_verifier = state_doc.get("code_verifier")
+    logger.info(f"Found user_id: {user_id} for state, code_verifier present: {code_verifier is not None}")
     
     # Clean up state
     await db.oauth_states.delete_one({"state": state})
@@ -234,6 +235,10 @@ async def gmail_auth_callback(code: str = None, state: str = None, error: str = 
         logger.info(f"Using redirect URI: {redirect_uri}")
         
         flow = get_oauth_flow(state)
+        
+        # Set the code_verifier if we have one
+        if code_verifier:
+            flow.code_verifier = code_verifier
         
         try:
             with warnings.catch_warnings():
