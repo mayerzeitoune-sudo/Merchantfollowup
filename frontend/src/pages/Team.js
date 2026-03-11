@@ -75,19 +75,36 @@ const Team = () => {
   };
 
   const handleInvite = async () => {
-    if (!newInvite.email) {
-      toast.error('Please enter an email address');
+    if (!newInvite.email || !newInvite.name) {
+      toast.error('Please enter name and email address');
+      return;
+    }
+    
+    if (newInvite.createDirectly && !newInvite.password) {
+      toast.error('Please enter a password for the new user');
       return;
     }
     
     try {
-      await teamApi.inviteMember(newInvite);
-      toast.success('Invitation sent!');
+      if (newInvite.createDirectly) {
+        // Create user directly
+        await teamApi.createMember({
+          name: newInvite.name,
+          email: newInvite.email,
+          password: newInvite.password,
+          role: newInvite.role
+        });
+        toast.success('User created! Login details will be sent via email.');
+      } else {
+        // Send invitation
+        await teamApi.inviteMember(newInvite);
+        toast.success('Invitation sent!');
+      }
       setInviteDialogOpen(false);
-      setNewInvite({ email: '', role: 'agent', name: '' });
+      setNewInvite({ email: '', role: 'agent', name: '', password: '', createDirectly: true });
       fetchTeamData();
     } catch (error) {
-      toast.error(error.response?.data?.detail || 'Failed to send invitation');
+      toast.error(error.response?.data?.detail || 'Failed to add team member');
     }
   };
 
