@@ -21,8 +21,35 @@ Build a comprehensive SMS platform "Merchant Follow Up" for automated payment re
 - **Client Management**: CRUD operations, tags, notes, pipeline stages, balance tracking, address field
 - **Message Templates**: Create/edit templates, variable substitution, quick send from inbox
 - **Branding**: Company logo integrated into Login, Register pages, and Dashboard sidebar with professional styling
-- **Tag Management (NEW)**: Inline tag editing on Client Profile page, Inbox/Contacts page with visual editor
-- **Phone Number Tracking (NEW)**: Template sending and call initiation now properly track which from_number is being used
+- **Tag Management**: Inline tag editing on Client Profile page, Inbox/Contacts page with visual editor
+- **Phone Number Tracking**: Template sending and call initiation now properly track which from_number is being used
+
+#### Deal Pipeline (NEW - Dec 2025)
+- **Kanban Board**: Drag-and-drop interface with 9 stages
+  - New Lead → Contacted → Interested → Application Sent → Docs Submitted → Approved → Funded → Dead → Future
+- **Pipeline Stats**: Total deals, pipeline value, funded deals, win rate
+- **Client Cards**: Show name, phone, tags, deal value
+- **Quick Actions**: View profile, send message from pipeline
+
+#### AI Deal Assistant (NEW - Dec 2025)
+- **Auto Message Generation**: Generate follow-up, intro, closing, reminder messages
+- **Tone Rewriting**: Professional, friendly, urgent tone options
+- **Deal Analysis**: Health score (1-10), status (hot/warm/cold/dead), risk factors
+- **Next Action Suggestions**: AI-powered recommendations
+- **Win Probability**: Percentage-based deal likelihood
+
+#### Lead Capture Forms (NEW - Dec 2025)
+- **Embeddable Forms**: Create custom forms with configurable fields
+- **CSV Import**: Bulk import contacts with auto-tagging
+- **Webhooks**: Receive leads via API from Zapier, Make, etc.
+- **Auto-tagging**: Automatically assign tags to new leads
+
+#### Team Collaboration (NEW - Dec 2025)
+- **Multi-User Support**: Team members with shared access
+- **Role-Based Permissions**: Admin, Agent, Viewer roles
+- **Team Invitations**: Email-based invite system
+- **Team Stats Dashboard**: Activity metrics per team member
+- **Contact Assignment**: Assign contacts to specific team members
 
 #### Smart Drip Campaigns (NEW)
 - Multi-step automated sequences
