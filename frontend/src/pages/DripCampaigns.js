@@ -47,9 +47,20 @@ const DripCampaigns = () => {
   const [enrollDialogOpen, setEnrollDialogOpen] = useState(false);
   const [clients, setClients] = useState([]);
   const [selectedClients, setSelectedClients] = useState([]);
-  const [tags, setTags] = useState([]);
   const [expandedCampaign, setExpandedCampaign] = useState(null);
   const [enrollments, setEnrollments] = useState([]);
+  
+  // Tags that match Pipeline stages
+  const AVAILABLE_TAGS = [
+    { value: "New Lead", color: "bg-blue-100 text-blue-700" },
+    { value: "Interested", color: "bg-cyan-100 text-cyan-700" },
+    { value: "Application Sent", color: "bg-indigo-100 text-indigo-700" },
+    { value: "Docs Submitted", color: "bg-orange-100 text-orange-700" },
+    { value: "Approved", color: "bg-emerald-100 text-emerald-700" },
+    { value: "Funded", color: "bg-green-100 text-green-800" },
+    { value: "Dead", color: "bg-red-100 text-red-700" },
+    { value: "Future", color: "bg-gray-100 text-gray-700" },
+  ];
   
   // AI Assistant state
   const [aiDialogOpen, setAiDialogOpen] = useState(false);
