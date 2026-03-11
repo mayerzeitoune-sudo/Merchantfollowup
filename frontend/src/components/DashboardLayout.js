@@ -23,18 +23,20 @@ import {
   UserPlus,
   Target,
   Shield,
-  RefreshCw
+  RefreshCw,
+  Kanban
 } from 'lucide-react';
 
 const navItems = [
   { path: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
+  { path: '/pipeline', label: 'Pipeline', icon: Kanban, badge: 'New' },
   { path: '/clients', label: 'Clients', icon: Users },
   { path: '/contacts', label: 'Inbox', icon: MessageSquare },
   { path: '/templates', label: 'Templates', icon: FileText },
   { path: '/reminders', label: 'Reminders', icon: Bell },
   { path: '/calendar', label: 'Calendar', icon: Calendar },
   { divider: true, label: 'Automation' },
-  { path: '/drip-campaigns', label: 'Drip Campaigns', icon: Zap, badge: 'New' },
+  { path: '/drip-campaigns', label: 'Drip Campaigns', icon: Zap },
   { path: '/revival', label: 'Lead Revival', icon: RefreshCw },
   { divider: true, label: 'Growth' },
   { path: '/lead-capture', label: 'Lead Capture', icon: UserPlus },
