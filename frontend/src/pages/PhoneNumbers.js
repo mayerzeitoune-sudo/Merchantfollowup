@@ -223,10 +223,24 @@ const PhoneNumbers = () => {
         {/* Owned Numbers */}
         <Card>
           <CardHeader>
-            <CardTitle className="font-['Outfit']">Your Phone Numbers</CardTitle>
-            <CardDescription>
-              Phone numbers you own for SMS and voice
-            </CardDescription>
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle className="font-['Outfit']">Your Phone Numbers</CardTitle>
+                <CardDescription>
+                  Phone numbers you own for SMS and voice
+                </CardDescription>
+              </div>
+              {selectedNumbers.length > 0 && (
+                <Button 
+                  variant="destructive" 
+                  size="sm"
+                  onClick={() => setBulkDeleteDialogOpen(true)}
+                >
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  Delete Selected ({selectedNumbers.length})
+                </Button>
+              )}
+            </div>
           </CardHeader>
           <CardContent>
             {loading ? (
@@ -240,52 +254,116 @@ const PhoneNumbers = () => {
                 </p>
               </div>
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {ownedNumbers.map((number) => (
-                  <div 
-                    key={number.id}
-                    className="p-4 border rounded-lg hover:shadow-md transition-shadow"
-                  >
-                    <div className="flex items-start justify-between">
-                      <div className="flex items-center gap-3">
-                        <div className="h-12 w-12 rounded-lg bg-primary/10 flex items-center justify-center">
-                          <Phone className="h-6 w-6 text-primary" />
+              <>
+                {/* Select All */}
+                <div className="flex items-center gap-2 mb-4 pb-4 border-b">
+                  <Checkbox
+                    checked={selectedNumbers.length === ownedNumbers.length && ownedNumbers.length > 0}
+                    onCheckedChange={toggleSelectAll}
+                  />
+                  <span className="text-sm text-muted-foreground">
+                    Select All ({ownedNumbers.length})
+                  </span>
+                </div>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {ownedNumbers.map((number) => (
+                    <div 
+                      key={number.id}
+                      className={`p-4 border rounded-lg hover:shadow-md transition-shadow ${selectedNumbers.includes(number.id) ? 'border-primary bg-primary/5' : ''}`}
+                    >
+                      <div className="flex items-start justify-between">
+                        <div className="flex items-center gap-3">
+                          <Checkbox
+                            checked={selectedNumbers.includes(number.id)}
+                            onCheckedChange={() => toggleSelectNumber(number.id)}
+                          />
+                          <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center">
+                            <Phone className="h-5 w-5 text-primary" />
+                          </div>
+                          <div>
+                            <p className="font-semibold">{number.friendly_name || number.phone_number}</p>
+                            <p className="text-sm text-muted-foreground">{number.phone_number}</p>
+                          </div>
                         </div>
-                        <div>
-                          <p className="font-semibold">{number.friendly_name || number.phone_number}</p>
-                          <p className="text-sm text-muted-foreground">{number.phone_number}</p>
+                        {number.is_active && (
+                          <Badge className="bg-green-100 text-green-700">
+                            <CheckCircle className="h-3 w-3 mr-1" />
+                            Active
+                          </Badge>
+                        )}
+                      </div>
+                      <div className="mt-4 flex items-center justify-between">
+                        <div className="flex gap-2">
+                          <Badge variant="outline" className="text-xs">SMS</Badge>
+                          <Badge variant="outline" className="text-xs">Voice</Badge>
                         </div>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                          onClick={() => {
+                            setNumberToDelete(number);
+                            setDeleteDialogOpen(true);
+                          }}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
                       </div>
-                      {number.is_active && (
-                        <Badge className="bg-green-100 text-green-700">
-                          <CheckCircle className="h-3 w-3 mr-1" />
-                          Active
-                        </Badge>
-                      )}
+                      <p className="text-xs text-muted-foreground mt-3">
+                        Provider: {number.provider} • ${number.monthly_cost}/mo
+                      </p>
                     </div>
-                    <div className="mt-4 flex items-center justify-between">
-                      <div className="flex gap-2">
-                        <Badge variant="outline" className="text-xs">SMS</Badge>
-                        <Badge variant="outline" className="text-xs">Voice</Badge>
-                      </div>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="text-destructive hover:text-destructive"
-                        onClick={() => handleRelease(number.id)}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
-                    <p className="text-xs text-muted-foreground mt-3">
-                      Provider: {number.provider} • ${number.monthly_cost}/mo
-                    </p>
-                  </div>
-                ))}
-              </div>
+                  ))}
+                </div>
+              </>
             )}
           </CardContent>
         </Card>
+
+        {/* Single Delete Confirmation */}
+        <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Release Phone Number</AlertDialogTitle>
+              <AlertDialogDescription>
+                Are you sure you want to release <strong>{numberToDelete?.phone_number}</strong>? 
+                This action cannot be undone.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel onClick={() => setNumberToDelete(null)}>Cancel</AlertDialogCancel>
+              <AlertDialogAction 
+                onClick={() => handleRelease(numberToDelete?.id)} 
+                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              >
+                Release
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+
+        {/* Bulk Delete Confirmation */}
+        <AlertDialog open={bulkDeleteDialogOpen} onOpenChange={setBulkDeleteDialogOpen}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Release {selectedNumbers.length} Phone Number(s)</AlertDialogTitle>
+              <AlertDialogDescription>
+                Are you sure you want to release {selectedNumbers.length} phone number(s)? 
+                This action cannot be undone.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction 
+                onClick={handleBulkDelete} 
+                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              >
+                Release {selectedNumbers.length} Number(s)
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
     </DashboardLayout>
   );
