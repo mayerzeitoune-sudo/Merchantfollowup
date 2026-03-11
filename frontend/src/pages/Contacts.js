@@ -527,24 +527,32 @@ const Contacts = () => {
                 <div className="px-4 py-2 border-b bg-secondary/30">
                   <div className="flex items-center gap-2 overflow-x-auto pb-1">
                     <span className="text-xs text-muted-foreground whitespace-nowrap">Conversations:</span>
-                    {conversationChains.map((chain) => (
-                      <Button
-                        key={chain.from_number}
-                        variant={activeChain === chain.from_number ? "default" : "outline"}
-                        size="sm"
-                        className="whitespace-nowrap h-8"
-                        onClick={() => handleSelectChain(chain.from_number)}
-                        data-testid={`chain-${chain.from_number}`}
-                      >
-                        <Smartphone className="h-3 w-3 mr-1" />
-                        {chain.display_name}
-                        {chain.message_count > 0 && (
-                          <Badge variant="secondary" className="ml-2 h-5 px-1.5 text-xs">
-                            {chain.message_count}
-                          </Badge>
-                        )}
-                      </Button>
-                    ))}
+                    {conversationChains.map((chain) => {
+                      const isDefault = ownedNumbers.find(n => n.phone_number === chain.from_number && n.is_default);
+                      return (
+                        <Button
+                          key={chain.from_number}
+                          variant={activeChain === chain.from_number ? "default" : "outline"}
+                          size="sm"
+                          className="whitespace-nowrap h-8"
+                          onClick={() => handleSelectChain(chain.from_number)}
+                          data-testid={`chain-${chain.from_number}`}
+                        >
+                          <Smartphone className="h-3 w-3 mr-1" />
+                          {chain.display_name}
+                          {isDefault && (
+                            <Badge className="ml-1 h-4 px-1 text-[10px] bg-orange-100 text-orange-700">
+                              Default
+                            </Badge>
+                          )}
+                          {chain.message_count > 0 && (
+                            <Badge variant="secondary" className="ml-2 h-5 px-1.5 text-xs">
+                              {chain.message_count}
+                            </Badge>
+                          )}
+                        </Button>
+                      );
+                    })}
                     {/* Option to start new chain with different number */}
                     {ownedNumbers.filter(n => !conversationChains.find(c => c.from_number === n.phone_number)).length > 0 && (
                       <Select onValueChange={handleStartNewChain}>
@@ -557,6 +565,7 @@ const Contacts = () => {
                             .map((num) => (
                               <SelectItem key={num.id} value={num.phone_number}>
                                 {num.friendly_name || num.phone_number}
+                                {num.is_default && " (Default)"}
                               </SelectItem>
                             ))}
                         </SelectContent>
