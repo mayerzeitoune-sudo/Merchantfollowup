@@ -56,6 +56,18 @@ const FundedDealProfile = () => {
   const [message, setMessage] = useState('');
   const [sending, setSending] = useState(false);
   const [templates, setTemplates] = useState([]);
+  
+  // Edit Deal Dialog state
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [editFormData, setEditFormData] = useState({
+    funded_amount: 0,
+    total_payback: 0,
+    payment_amount: 0,
+    payment_frequency: 'daily',
+    deal_type: '',
+    notes: ''
+  });
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     fetchDeal();
