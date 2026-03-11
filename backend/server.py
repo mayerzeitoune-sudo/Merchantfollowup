@@ -1188,6 +1188,161 @@ async def import_csv_leads(file: UploadFile, auto_tags: str = "", current_user: 
     
     return {"imported": imported, "errors": errors}
 
+# ============== TEAM ROUTES ==============
+
+@api_router.get("/team/members")
+async def get_team_members(current_user: dict = Depends(get_current_user)):
+    """Get all team members"""
+    # Get the team_id from current user or create one
+    user = await db.users.find_one({"id": current_user["user_id"]}, {"_id": 0})
+    team_id = user.get("team_id") or current_user["user_id"]
+    
+    # Get all members with same team_id
+    members = await db.users.find(
+        {"$or": [{"team_id": team_id}, {"id": team_id}]},
+        {"_id": 0, "hashed_password": 0, "otp": 0}
+    ).to_list(100)
+    
+    # Add stats for each member
+    for member in members:
+        member["clients_count"] = await db.clients.count_documents({"user_id": member["id"]})
+        member["messages_sent"] = await db.conversations.count_documents(
+            {"user_id": member["id"], "direction": "outbound"}
+        )
+    
+    return members
+
+@api_router.get("/team/invites")
+async def get_team_invites(current_user: dict = Depends(get_current_user)):
+    """Get pending team invitations"""
+    user = await db.users.find_one({"id": current_user["user_id"]}, {"_id": 0})
+    if user.get("role") != "admin":
+        return []
+    
+    team_id = user.get("team_id") or current_user["user_id"]
+    invites = await db.team_invites.find(
+        {"team_id": team_id, "status": "pending"},
+        {"_id": 0}
+    ).to_list(100)
+    return invites
+
+@api_router.get("/team/stats")
+async def get_team_stats(current_user: dict = Depends(get_current_user)):
+    """Get team statistics"""
+    user = await db.users.find_one({"id": current_user["user_id"]}, {"_id": 0})
+    team_id = user.get("team_id") or current_user["user_id"]
+    
+    # Get team member IDs
+    members = await db.users.find(
+        {"$or": [{"team_id": team_id}, {"id": team_id}]},
+        {"id": 1}
+    ).to_list(100)
+    member_ids = [m["id"] for m in members]
+    
+    total_deals = await db.clients.count_documents({"user_id": {"$in": member_ids}})
+    messages_sent = await db.conversations.count_documents(
+        {"user_id": {"$in": member_ids}, "direction": "outbound"}
+    )
+    
+    # Calculate pipeline value
+    pipeline = await db.clients.aggregate([
+        {"$match": {"user_id": {"$in": member_ids}}},
+        {"$group": {"_id": None, "total": {"$sum": "$balance"}}}
+    ]).to_list(1)
+    pipeline_value = pipeline[0]["total"] if pipeline else 0
+    
+    return {
+        "total_members": len(member_ids),
+        "total_deals": total_deals,
+        "messages_sent": messages_sent,
+        "pipeline_value": pipeline_value
+    }
+
+@api_router.post("/team/invite")
+async def invite_team_member(data: dict, current_user: dict = Depends(get_current_user)):
+    """Invite a new team member"""
+    user = await db.users.find_one({"id": current_user["user_id"]}, {"_id": 0})
+    if user.get("role") != "admin":
+        raise HTTPException(status_code=403, detail="Only admins can invite members")
+    
+    team_id = user.get("team_id") or current_user["user_id"]
+    
+    # Check if email already exists
+    existing = await db.users.find_one({"email": data.get("email")})
+    if existing:
+        raise HTTPException(status_code=400, detail="User with this email already exists")
+    
+    invite_id = str(uuid.uuid4())
+    now = datetime.now(timezone.utc).isoformat()
+    
+    invite_doc = {
+        "id": invite_id,
+        "team_id": team_id,
+        "email": data.get("email"),
+        "name": data.get("name", ""),
+        "role": data.get("role", "agent"),
+        "status": "pending",
+        "invited_by": current_user["user_id"],
+        "created_at": now
+    }
+    
+    await db.team_invites.insert_one(invite_doc)
+    if "_id" in invite_doc:
+        del invite_doc["_id"]
+    return invite_doc
+
+@api_router.put("/team/members/{member_id}/role")
+async def update_member_role(member_id: str, role: str, current_user: dict = Depends(get_current_user)):
+    """Update a team member's role"""
+    user = await db.users.find_one({"id": current_user["user_id"]}, {"_id": 0})
+    if user.get("role") != "admin":
+        raise HTTPException(status_code=403, detail="Only admins can update roles")
+    
+    valid_roles = ["admin", "agent", "viewer"]
+    if role not in valid_roles:
+        raise HTTPException(status_code=400, detail=f"Invalid role. Must be one of: {valid_roles}")
+    
+    result = await db.users.update_one(
+        {"id": member_id},
+        {"$set": {"role": role}}
+    )
+    
+    if result.matched_count == 0:
+        raise HTTPException(status_code=404, detail="Member not found")
+    
+    return {"message": "Role updated"}
+
+@api_router.delete("/team/members/{member_id}")
+async def remove_team_member(member_id: str, current_user: dict = Depends(get_current_user)):
+    """Remove a team member"""
+    user = await db.users.find_one({"id": current_user["user_id"]}, {"_id": 0})
+    if user.get("role") != "admin":
+        raise HTTPException(status_code=403, detail="Only admins can remove members")
+    
+    if member_id == current_user["user_id"]:
+        raise HTTPException(status_code=400, detail="Cannot remove yourself")
+    
+    # Remove team_id from member (they become independent)
+    await db.users.update_one(
+        {"id": member_id},
+        {"$unset": {"team_id": ""}}
+    )
+    
+    return {"message": "Member removed from team"}
+
+@api_router.delete("/team/invites/{invite_id}")
+async def cancel_team_invite(invite_id: str, current_user: dict = Depends(get_current_user)):
+    """Cancel a pending invitation"""
+    user = await db.users.find_one({"id": current_user["user_id"]}, {"_id": 0})
+    if user.get("role") != "admin":
+        raise HTTPException(status_code=403, detail="Only admins can cancel invites")
+    
+    result = await db.team_invites.delete_one({"id": invite_id})
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Invite not found")
+    
+    return {"message": "Invitation cancelled"}
+
 # ============== REMINDER ROUTES ==============
 
 @api_router.post("/reminders", response_model=ReminderResponse)
