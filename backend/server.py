@@ -1405,13 +1405,26 @@ async def send_sms_to_contact(
     }
 
 @api_router.post("/contacts/{client_id}/initiate-call")
-async def initiate_call(client_id: str, current_user: dict = Depends(get_current_user)):
+async def initiate_call(
+    client_id: str, 
+    from_number: Optional[str] = None,
+    current_user: dict = Depends(get_current_user)
+):
     """Initiate a call to a contact - returns call token for browser calling"""
     client = await db.clients.find_one(
         {"id": client_id, "user_id": current_user["user_id"]}
     )
     if not client:
         raise HTTPException(status_code=404, detail="Client not found")
+    
+    # Validate from_number if provided
+    caller_id = None
+    if from_number:
+        phone_num = await db.phone_numbers.find_one(
+            {"user_id": current_user["user_id"], "phone_number": from_number}
+        )
+        if phone_num:
+            caller_id = from_number
     
     # Check for active SMS provider with voice capability
     provider = await db.sms_providers.find_one(
@@ -1421,13 +1434,14 @@ async def initiate_call(client_id: str, current_user: dict = Depends(get_current
     call_id = str(uuid.uuid4())
     now = datetime.now(timezone.utc).isoformat()
     
-    # Log the call attempt
+    # Log the call attempt with from_number
     call_doc = {
         "id": call_id,
         "user_id": current_user["user_id"],
         "client_id": client_id,
         "client_name": client["name"],
         "client_phone": client["phone"],
+        "from_number": caller_id,
         "status": "initiated",
         "created_at": now
     }
@@ -1438,6 +1452,7 @@ async def initiate_call(client_id: str, current_user: dict = Depends(get_current
         "call_id": call_id,
         "client_phone": client["phone"],
         "client_name": client["name"],
+        "from_number": caller_id,
         "provider_configured": provider is not None,
         "note": "Configure Twilio Voice in Settings to enable browser calling" if not provider else None
     }
