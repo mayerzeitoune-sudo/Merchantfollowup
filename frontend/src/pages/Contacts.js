@@ -75,6 +75,10 @@ const Contacts = () => {
   
   // Tag editing
   const [showTagEditor, setShowTagEditor] = useState(false);
+  
+  // Simulate reply dialog
+  const [showSimulateDialog, setShowSimulateDialog] = useState(false);
+  const [simulateReplyText, setSimulateReplyText] = useState('');
 
   useEffect(() => {
     fetchClients();
