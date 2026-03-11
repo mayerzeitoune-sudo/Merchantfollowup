@@ -397,7 +397,10 @@ const Templates = () => {
                       variant="outline"
                       size="sm"
                       className="text-destructive hover:text-destructive"
-                      onClick={() => handleDelete(template.id)}
+                      onClick={() => {
+                        setTemplateToDelete(template);
+                        setDeleteDialogOpen(true);
+                      }}
                     >
                       <Trash2 className="h-3 w-3" />
                     </Button>
@@ -408,6 +411,27 @@ const Templates = () => {
           </div>
         )}
       </div>
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Template</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete "{templateToDelete?.name}"? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setTemplateToDelete(null)}>Cancel</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={() => handleDelete(templateToDelete?.id)}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {/* AI Assistant Dialog */}
       <Dialog open={aiDialogOpen} onOpenChange={handleAiDialogClose}>
