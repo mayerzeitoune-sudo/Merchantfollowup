@@ -164,6 +164,10 @@ async def update_enhanced_campaign(campaign_id: str, data: EnhancedCampaignUpdat
         update_data["target_tags"] = data.target_tags
     if data.status is not None:
         update_data["status"] = data.status.value if hasattr(data.status, 'value') else data.status
+    if data.duration_days is not None:
+        update_data["duration_days"] = data.duration_days
+    if data.use_funded_term is not None:
+        update_data["use_funded_term"] = data.use_funded_term
     
     update_data["updated_at"] = datetime.now(timezone.utc).isoformat()
     
