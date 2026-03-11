@@ -138,19 +138,16 @@ class ClientResponse(BaseModel):
     created_at: str
     updated_at: str
 
-# Predefined Tags
+# Predefined Tags (matching pipeline stages)
 CLIENT_TAGS = [
     "New Lead",
-    "Contacted",
-    "Responded",
     "Interested",
-    "Not Interested",
-    "Follow Up",
     "Application Sent",
     "Docs Submitted",
     "Approved",
     "Funded",
-    "Lost Deal"
+    "Dead",
+    "Future"
 ]
 
 # Payment Reminder Models

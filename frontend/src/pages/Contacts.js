@@ -32,17 +32,14 @@ import { clientsApi, contactsApi, templatesApi, phoneNumbersApi } from '../lib/a
 import { toast } from 'sonner';
 
 const AVAILABLE_TAGS = [
-  { value: "New Lead", color: "bg-blue-100 text-blue-700" },
-  { value: "Contacted", color: "bg-purple-100 text-purple-700" },
-  { value: "Responded", color: "bg-cyan-100 text-cyan-700" },
-  { value: "Interested", color: "bg-green-100 text-green-700" },
-  { value: "Not Interested", color: "bg-gray-100 text-gray-700" },
-  { value: "Follow Up", color: "bg-yellow-100 text-yellow-700" },
-  { value: "Application Sent", color: "bg-indigo-100 text-indigo-700" },
-  { value: "Docs Submitted", color: "bg-orange-100 text-orange-700" },
-  { value: "Approved", color: "bg-emerald-100 text-emerald-700" },
-  { value: "Funded", color: "bg-green-100 text-green-800" },
-  { value: "Lost Deal", color: "bg-red-100 text-red-700" },
+  { value: "New Lead", color: "bg-blue-100 text-blue-700", stage: "new_lead" },
+  { value: "Interested", color: "bg-cyan-100 text-cyan-700", stage: "interested" },
+  { value: "Application Sent", color: "bg-indigo-100 text-indigo-700", stage: "application_sent" },
+  { value: "Docs Submitted", color: "bg-orange-100 text-orange-700", stage: "docs_submitted" },
+  { value: "Approved", color: "bg-emerald-100 text-emerald-700", stage: "approved" },
+  { value: "Funded", color: "bg-green-100 text-green-800", stage: "funded" },
+  { value: "Dead", color: "bg-red-100 text-red-700", stage: "dead" },
+  { value: "Future", color: "bg-gray-100 text-gray-700", stage: "future" },
 ];
 
 const getTagColor = (tag) => {
