@@ -119,10 +119,11 @@ const Templates = () => {
   };
 
   const handleDelete = async (id) => {
-    if (!window.confirm('Delete this template?')) return;
     try {
       await templatesApi.delete(id);
       toast.success('Template deleted');
+      setDeleteDialogOpen(false);
+      setTemplateToDelete(null);
       fetchTemplates();
     } catch (error) {
       toast.error('Failed to delete');
