@@ -111,13 +111,7 @@ const LandingPage = () => {
           <div className="flex items-center justify-between h-16">
             {/* Logo */}
             <div className="flex items-center gap-3">
-              <div className="h-10 w-10 rounded-lg bg-gradient-to-br from-orange-500 to-orange-600 flex items-center justify-center">
-                <MessageSquare className="h-6 w-6 text-white" />
-              </div>
-              <div>
-                <h1 className="text-xl font-bold text-gray-900 font-['Outfit']">Merchant</h1>
-                <p className="text-xs text-orange-600 font-medium -mt-1">FOLLOW UP</p>
-              </div>
+              <img src={logoUrl} alt="Merchant Follow Up" className="h-10 w-auto" />
             </div>
 
             {/* Navigation Links */}
