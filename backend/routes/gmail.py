@@ -61,7 +61,18 @@ class EmailFilter(BaseModel):
 
 def get_redirect_uri():
     """Get the OAuth redirect URI based on environment"""
-    backend_url = os.environ.get("REACT_APP_BACKEND_URL", FRONTEND_URL)
+    # Read from frontend .env if not set in backend
+    backend_url = os.environ.get("BACKEND_URL")
+    if not backend_url:
+        # Try to read from frontend .env
+        try:
+            with open('/app/frontend/.env', 'r') as f:
+                for line in f:
+                    if line.startswith('REACT_APP_BACKEND_URL='):
+                        backend_url = line.split('=', 1)[1].strip()
+                        break
+        except:
+            backend_url = FRONTEND_URL
     return f"{backend_url}/api/gmail/callback"
 
 
