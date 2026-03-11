@@ -110,9 +110,7 @@ export const contactsApi = {
     params: { from_number: fromNumber } 
   }),
   getChains: (clientId) => axios.get(`${API}/contacts/${clientId}/chains`),
-  sendSms: (clientId, message, fromNumber) => axios.post(`${API}/contacts/${clientId}/send-sms`, null, { 
-    params: { message, from_number: fromNumber } 
-  }),
+  sendSms: (clientId, data) => axios.post(`${API}/contacts/${clientId}/send-sms`, data),
   initiateCall: (clientId, fromNumber) => axios.post(`${API}/contacts/${clientId}/initiate-call`, null, {
     params: { from_number: fromNumber }
   })
