@@ -43,10 +43,11 @@ Build a comprehensive SMS platform "Merchant Follow Up" for automated payment re
 - **Note History**: Complete history of all notes with creation dates and authors
 
 #### AI Content Generation (NEW - March 2026)
-- **Templates AI Assistant**: Generate message templates with AI, multiple tone options
+- **Templates AI Assistant**: Generate message templates with AI, multiple tone options including "Automated/Robotic"
 - **Drip Campaigns AI Assistant**: AI-generated multi-step sequences with customizable goals
+- **Drip Campaign Triggers AI**: AI generates keyword triggers and auto-response messages
 - **Lead Revival AI Assistant**: AI-powered revival messages with inactive period and approach options
-- **AI Chat**: Ask AI for help with content in all three areas
+- **AI Chat**: Ask AI for help with content in all areas
 
 #### Core Features
 - **Authentication**: JWT-based login/register, OTP verification, role-based access
