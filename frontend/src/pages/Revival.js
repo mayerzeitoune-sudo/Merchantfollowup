@@ -297,6 +297,7 @@ const Revival = () => {
               </DialogFooter>
             </DialogContent>
           </Dialog>
+          </div>
         </div>
 
         {/* Info Card */}
