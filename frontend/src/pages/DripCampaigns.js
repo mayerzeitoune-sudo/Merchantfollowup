@@ -60,6 +60,9 @@ const DripCampaigns = () => {
   const [aiChatMessages, setAiChatMessages] = useState([]);
   const [aiInput, setAiInput] = useState('');
   
+  // AI Trigger state
+  const [aiTriggerLoading, setAiTriggerLoading] = useState(false);
+  
   // Form state
   const [formData, setFormData] = useState({
     name: '',
