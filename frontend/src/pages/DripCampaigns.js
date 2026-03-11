@@ -508,13 +508,78 @@ const DripCampaigns = () => {
                             const newTags = formData.target_tags.includes(tag.value)
                               ? formData.target_tags.filter(t => t !== tag.value)
                               : [...formData.target_tags, tag.value];
-                            setFormData({ ...formData, target_tags: newTags });
+                            // Auto-enable funded term when Funded tag is selected
+                            const isFundedSelected = newTags.includes('Funded');
+                            setFormData({ 
+                              ...formData, 
+                              target_tags: newTags,
+                              use_funded_term: isFundedSelected ? true : formData.use_funded_term
+                            });
                           }}
                         >
                           {tag.value}
                         </Badge>
                       ))}
                     </div>
+                  </div>
+                  
+                  {/* Campaign Duration Settings */}
+                  <div className="space-y-4 p-4 rounded-lg bg-secondary/50">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <Label className="text-base font-medium">Campaign Duration</Label>
+                        <p className="text-sm text-muted-foreground">
+                          How long should this campaign run per contact
+                        </p>
+                      </div>
+                    </div>
+                    
+                    {formData.target_tags.includes('Funded') && (
+                      <div className="flex items-center justify-between p-3 rounded-lg bg-green-50 border border-green-200">
+                        <div>
+                          <p className="font-medium text-green-800">Use Funded Deal Term</p>
+                          <p className="text-sm text-green-600">
+                            Campaign duration will match each client's funding term
+                          </p>
+                        </div>
+                        <Switch
+                          checked={formData.use_funded_term}
+                          onCheckedChange={(checked) => setFormData({ ...formData, use_funded_term: checked })}
+                        />
+                      </div>
+                    )}
+                    
+                    {!formData.use_funded_term && (
+                      <div className="space-y-2">
+                        <Label>Fixed Duration (Days)</Label>
+                        <Select
+                          value={String(formData.duration_days)}
+                          onValueChange={(value) => setFormData({ ...formData, duration_days: parseInt(value) })}
+                        >
+                          <SelectTrigger>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="7">7 days (1 week)</SelectItem>
+                            <SelectItem value="14">14 days (2 weeks)</SelectItem>
+                            <SelectItem value="21">21 days (3 weeks)</SelectItem>
+                            <SelectItem value="30">30 days (1 month)</SelectItem>
+                            <SelectItem value="45">45 days</SelectItem>
+                            <SelectItem value="60">60 days (2 months)</SelectItem>
+                            <SelectItem value="90">90 days (3 months)</SelectItem>
+                            <SelectItem value="120">120 days (4 months)</SelectItem>
+                            <SelectItem value="180">180 days (6 months)</SelectItem>
+                            <SelectItem value="270">270 days (9 months)</SelectItem>
+                            <SelectItem value="365">365 days (1 year)</SelectItem>
+                            <SelectItem value="548">548 days (18 months)</SelectItem>
+                            <SelectItem value="730">730 days (2 years)</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <p className="text-xs text-muted-foreground">
+                          Messages scheduled after this duration will not be sent
+                        </p>
+                      </div>
+                    )}
                   </div>
                 </TabsContent>
                 
