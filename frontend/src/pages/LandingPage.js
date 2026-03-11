@@ -255,9 +255,9 @@ const LandingPage = () => {
       </section>
 
       {/* Features Section */}
-      <section id="features" className="py-24 px-4 sm:px-6 lg:px-8">
+      <section id="features" className="py-20 px-4 sm:px-6 lg:px-8">
         <div className="max-w-7xl mx-auto">
-          <div className="text-center mb-16">
+          <div className="text-center mb-12">
             <Badge className="mb-4 bg-blue-100 text-blue-700 hover:bg-blue-100">Features</Badge>
             <h2 className="text-4xl font-bold text-gray-900 font-['Outfit']">
               Everything You Need to Close More Deals
@@ -286,42 +286,10 @@ const LandingPage = () => {
         </div>
       </section>
 
-      {/* Industries Section */}
-      <section id="industries" className="py-24 px-4 sm:px-6 lg:px-8 bg-gray-50">
+      {/* Product Screenshots Section - MOVED UP */}
+      <section id="product" className="py-20 px-4 sm:px-6 lg:px-8 bg-gray-50">
         <div className="max-w-7xl mx-auto">
-          <div className="text-center mb-16">
-            <Badge className="mb-4 bg-green-100 text-green-700 hover:bg-green-100">Industries</Badge>
-            <h2 className="text-4xl font-bold text-gray-900 font-['Outfit']">
-              Built for Every Industry
-            </h2>
-            <p className="mt-4 text-lg text-gray-600 max-w-2xl mx-auto">
-              Whether you're in real estate, insurance, healthcare, or any service business, 
-              Merchant Follow Up adapts to your workflow.
-            </p>
-          </div>
-
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-            {industries.map((industry, index) => {
-              const Icon = industry.icon;
-              return (
-                <Card key={index} className="border-0 shadow-md hover:shadow-lg transition-all duration-300 hover:-translate-y-1 cursor-pointer">
-                  <CardContent className="p-6 text-center">
-                    <div className={`h-14 w-14 rounded-full ${industry.color} flex items-center justify-center mx-auto mb-3`}>
-                      <Icon className="h-7 w-7" />
-                    </div>
-                    <p className="font-medium text-gray-900 text-sm">{industry.name}</p>
-                  </CardContent>
-                </Card>
-              );
-            })}
-          </div>
-        </div>
-      </section>
-
-      {/* Product Screenshots Section */}
-      <section id="product" className="py-24 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-7xl mx-auto">
-          <div className="text-center mb-16">
+          <div className="text-center mb-12">
             <Badge className="mb-4 bg-purple-100 text-purple-700 hover:bg-purple-100">Product Tour</Badge>
             <h2 className="text-4xl font-bold text-gray-900 font-['Outfit']">
               See Merchant Follow Up in Action
@@ -355,8 +323,8 @@ const LandingPage = () => {
                   </li>
                 </ul>
               </div>
-              <div className="rounded-2xl overflow-hidden shadow-xl border bg-gradient-to-br from-slate-100 to-slate-200 p-6">
-                <div className="bg-white rounded-xl p-4">
+              <div className="rounded-2xl overflow-hidden shadow-xl border bg-white p-6">
+                <div className="bg-white rounded-xl">
                   <div className="flex items-center justify-between mb-4">
                     <h4 className="font-semibold">Deal Pipeline</h4>
                     <div className="flex gap-2">
@@ -394,11 +362,11 @@ const LandingPage = () => {
             </div>
           </div>
 
-          {/* Inbox & Multiple Numbers Screenshot - NEW */}
+          {/* Inbox & Multiple Numbers Screenshot */}
           <div className="mb-16">
             <div className="grid lg:grid-cols-2 gap-12 items-center">
-              <div className="rounded-2xl overflow-hidden shadow-xl border bg-gradient-to-br from-slate-100 to-slate-200 p-6">
-                <div className="bg-white rounded-xl p-4">
+              <div className="rounded-2xl overflow-hidden shadow-xl border bg-white p-6">
+                <div className="bg-white rounded-xl">
                   <div className="flex items-center justify-between mb-4">
                     <h4 className="font-semibold flex items-center gap-2">
                       <Inbox className="h-4 w-4" />
@@ -479,8 +447,8 @@ const LandingPage = () => {
           {/* Clients Screenshot */}
           <div className="mb-16">
             <div className="grid lg:grid-cols-2 gap-12 items-center">
-              <div className="order-2 lg:order-1 rounded-2xl overflow-hidden shadow-xl border bg-gradient-to-br from-slate-100 to-slate-200 p-6">
-                <div className="bg-white rounded-xl p-4">
+              <div className="order-2 lg:order-1 rounded-2xl overflow-hidden shadow-xl border bg-white p-6">
+                <div className="bg-white rounded-xl">
                   <h4 className="font-semibold mb-4">Clients</h4>
                   <div className="space-y-3">
                     {[
@@ -554,8 +522,8 @@ const LandingPage = () => {
                   </li>
                 </ul>
               </div>
-              <div className="rounded-2xl overflow-hidden shadow-xl border bg-gradient-to-br from-slate-100 to-slate-200 p-6">
-                <div className="bg-white rounded-xl p-4">
+              <div className="rounded-2xl overflow-hidden shadow-xl border bg-white p-6">
+                <div className="bg-white rounded-xl">
                   <h4 className="font-semibold mb-4">Drip Campaign Builder</h4>
                   <div className="space-y-3">
                     {[
@@ -577,6 +545,38 @@ const LandingPage = () => {
                 </div>
               </div>
             </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Industries Section - MOVED DOWN */}
+      <section id="industries" className="py-20 px-4 sm:px-6 lg:px-8">
+        <div className="max-w-7xl mx-auto">
+          <div className="text-center mb-12">
+            <Badge className="mb-4 bg-green-100 text-green-700 hover:bg-green-100">Industries</Badge>
+            <h2 className="text-4xl font-bold text-gray-900 font-['Outfit']">
+              Built for Every Industry
+            </h2>
+            <p className="mt-4 text-lg text-gray-600 max-w-2xl mx-auto">
+              Whether you're in real estate, insurance, healthcare, or any service business, 
+              Merchant Follow Up adapts to your workflow.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+            {industries.map((industry, index) => {
+              const Icon = industry.icon;
+              return (
+                <Card key={index} className="border-0 shadow-md hover:shadow-lg transition-all duration-300 hover:-translate-y-1 cursor-pointer">
+                  <CardContent className="p-6 text-center">
+                    <div className={`h-14 w-14 rounded-full ${industry.color} flex items-center justify-center mx-auto mb-3`}>
+                      <Icon className="h-7 w-7" />
+                    </div>
+                    <p className="font-medium text-gray-900 text-sm">{industry.name}</p>
+                  </CardContent>
+                </Card>
+              );
+            })}
           </div>
         </div>
       </section>
