@@ -422,18 +422,19 @@ const Contacts = () => {
                         <CardTitle className="font-['Outfit']">{selectedClient.name}</CardTitle>
                         <CardDescription className="flex items-center gap-2">
                           {selectedClient.phone}
-                          {selectedClient.tags?.length > 0 && (
-                            <span className="text-muted-foreground">•</span>
-                          )}
-                          {selectedClient.tags?.slice(0, 2).map((tag) => (
-                            <Badge key={tag} className={`text-xs ${getTagColor(tag)}`}>
-                              {tag}
-                            </Badge>
-                          ))}
                         </CardDescription>
                       </div>
                     </div>
                     <div className="flex gap-2">
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        onClick={() => setShowTagEditor(!showTagEditor)}
+                        title="Edit Tags"
+                        data-testid="edit-tags-btn"
+                      >
+                        <Tag className="h-4 w-4" />
+                      </Button>
                       <Button
                         variant="outline"
                         size="icon"
@@ -444,6 +445,74 @@ const Contacts = () => {
                         <PhoneCall className="h-4 w-4" />
                       </Button>
                     </div>
+                  </div>
+                  
+                  {/* Tags Display and Editor */}
+                  <div className="mt-3">
+                    <div className="flex flex-wrap gap-1 items-center">
+                      {selectedClient.tags?.length > 0 ? (
+                        selectedClient.tags.map((tag) => (
+                          <Badge 
+                            key={tag} 
+                            className={`text-xs cursor-pointer ${getTagColor(tag)}`}
+                            onClick={() => showTagEditor && handleQuickTagUpdate(tag)}
+                          >
+                            {tag}
+                            {showTagEditor && <X className="h-3 w-3 ml-1" />}
+                          </Badge>
+                        ))
+                      ) : (
+                        <span className="text-xs text-muted-foreground">No tags</span>
+                      )}
+                      {!showTagEditor && selectedClient.tags?.length > 0 && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-6 px-2 text-xs"
+                          onClick={() => setShowTagEditor(true)}
+                        >
+                          <Pencil className="h-3 w-3 mr-1" />
+                          Edit
+                        </Button>
+                      )}
+                    </div>
+                    
+                    {/* Tag Editor Dropdown */}
+                    {showTagEditor && (
+                      <div className="mt-2 p-3 bg-secondary/50 rounded-lg">
+                        <div className="flex items-center justify-between mb-2">
+                          <Label className="text-xs font-medium">Click to add/remove tags:</Label>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-6 px-2"
+                            onClick={() => setShowTagEditor(false)}
+                          >
+                            <X className="h-3 w-3" />
+                          </Button>
+                        </div>
+                        <div className="flex flex-wrap gap-1">
+                          {AVAILABLE_TAGS.map((tag) => (
+                            <Badge
+                              key={tag.value}
+                              variant="outline"
+                              className={`cursor-pointer text-xs transition-all ${
+                                selectedClient.tags?.includes(tag.value)
+                                  ? tag.color + ' border-transparent'
+                                  : 'hover:bg-secondary'
+                              }`}
+                              onClick={() => handleQuickTagUpdate(tag.value)}
+                              data-testid={`inbox-tag-${tag.value.toLowerCase().replace(/\s/g, '-')}`}
+                            >
+                              {selectedClient.tags?.includes(tag.value) && (
+                                <X className="h-3 w-3 mr-1" />
+                              )}
+                              {tag.value}
+                            </Badge>
+                          ))}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </CardHeader>
 
