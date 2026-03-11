@@ -42,15 +42,20 @@ const Team = () => {
   const [members, setMembers] = useState([]);
   const [invites, setInvites] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [addUserDialogOpen, setAddUserDialogOpen] = useState(false);
   const [inviteDialogOpen, setInviteDialogOpen] = useState(false);
   const [teamStats, setTeamStats] = useState(null);
   
-  const [newInvite, setNewInvite] = useState({
+  const [newUser, setNewUser] = useState({
     email: '',
     role: 'agent',
     name: '',
-    password: '',
-    createDirectly: true
+    password: ''
+  });
+
+  const [newInvite, setNewInvite] = useState({
+    email: '',
+    role: 'agent'
   });
 
   useEffect(() => {
