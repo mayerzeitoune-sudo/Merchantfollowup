@@ -27,7 +27,10 @@ import {
   Bell,
   MessageSquare,
   ExternalLink,
-  Award
+  Award,
+  Trash2,
+  Edit,
+  MoreHorizontal
 } from 'lucide-react';
 import { fundedApi, clientsApi, teamApi } from '../lib/api';
 import { toast } from 'sonner';
