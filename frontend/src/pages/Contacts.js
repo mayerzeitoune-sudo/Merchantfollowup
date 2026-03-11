@@ -705,6 +705,18 @@ const Contacts = () => {
                 Select a message template to send to {selectedClient?.name}
               </DialogDescription>
             </DialogHeader>
+            
+            {/* From Number Indicator */}
+            <div className="flex items-center gap-2 p-3 bg-secondary/50 rounded-lg">
+              <Smartphone className="h-4 w-4 text-muted-foreground" />
+              <span className="text-sm text-muted-foreground">Sending from:</span>
+              <Badge variant="secondary">
+                {conversationChains.find(c => c.from_number === selectedFromNumber)?.display_name || 
+                 ownedNumbers.find(n => n.phone_number === selectedFromNumber)?.friendly_name ||
+                 selectedFromNumber === 'default' ? 'Default Number' : selectedFromNumber}
+              </Badge>
+            </div>
+            
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 max-h-[60vh] overflow-hidden">
               {/* Template List */}
               <div>
