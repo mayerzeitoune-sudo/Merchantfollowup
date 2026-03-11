@@ -203,24 +203,34 @@ const Team = () => {
                     Invite Member
                   </Button>
                 </DialogTrigger>
-                <DialogContent>
+                <DialogContent className="max-w-lg">
                   <DialogHeader>
                     <DialogTitle>Invite Team Member</DialogTitle>
                     <DialogDescription>
-                      Send an email invitation to join your team
+                      Compose and send an email invitation to join your team
                     </DialogDescription>
                   </DialogHeader>
                   
                   <div className="space-y-4 mt-4">
-                    <div className="space-y-2">
-                      <Label>Email Address *</Label>
-                      <Input
-                        type="email"
-                        value={newInvite.email}
-                        onChange={(e) => setNewInvite({ ...newInvite, email: e.target.value })}
-                        placeholder="colleague@company.com"
-                        data-testid="invite-email-input"
-                      />
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label>Name</Label>
+                        <Input
+                          value={newInvite.name}
+                          onChange={(e) => setNewInvite({ ...newInvite, name: e.target.value })}
+                          placeholder="John Doe"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Email Address *</Label>
+                        <Input
+                          type="email"
+                          value={newInvite.email}
+                          onChange={(e) => setNewInvite({ ...newInvite, email: e.target.value })}
+                          placeholder="colleague@company.com"
+                          data-testid="invite-email-input"
+                        />
+                      </div>
                     </div>
                     
                     <div className="space-y-2">
@@ -238,6 +248,40 @@ const Team = () => {
                             </SelectItem>
                           ))}
                         </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div className="border-t pt-4">
+                      <Label className="text-base font-medium flex items-center gap-2 mb-3">
+                        <Send className="h-4 w-4" />
+                        Compose Email
+                      </Label>
+                      
+                      <div className="space-y-3">
+                        <div className="space-y-2">
+                          <Label>Subject</Label>
+                          <Input
+                            value={newInvite.subject}
+                            onChange={(e) => setNewInvite({ ...newInvite, subject: e.target.value })}
+                            placeholder="You're Invited to Join Merchant Followup"
+                          />
+                        </div>
+                        
+                        <div className="space-y-2">
+                          <Label>Message *</Label>
+                          <Textarea
+                            value={newInvite.message}
+                            onChange={(e) => setNewInvite({ ...newInvite, message: e.target.value })}
+                            placeholder="Write your personalized invitation message here..."
+                            rows={5}
+                          />
+                          <p className="text-xs text-muted-foreground">
+                            This message will be included in the invitation email along with a sign-up link.
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
                       </Select>
                     </div>
                   </div>
