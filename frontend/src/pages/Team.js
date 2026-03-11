@@ -79,37 +79,47 @@ const Team = () => {
     }
   };
 
-  const handleInvite = async () => {
-    if (!newInvite.email || !newInvite.name) {
+  const handleAddUser = async () => {
+    if (!newUser.email || !newUser.name) {
       toast.error('Please enter name and email address');
       return;
     }
     
-    if (newInvite.createDirectly && !newInvite.password) {
+    if (!newUser.password) {
       toast.error('Please enter a password for the new user');
       return;
     }
     
     try {
-      if (newInvite.createDirectly) {
-        // Create user directly
-        await teamApi.createMember({
-          name: newInvite.name,
-          email: newInvite.email,
-          password: newInvite.password,
-          role: newInvite.role
-        });
-        toast.success('User created! Login details will be sent via email.');
-      } else {
-        // Send invitation
-        await teamApi.inviteMember(newInvite);
-        toast.success('Invitation sent!');
-      }
-      setInviteDialogOpen(false);
-      setNewInvite({ email: '', role: 'agent', name: '', password: '', createDirectly: true });
+      await teamApi.createMember({
+        name: newUser.name,
+        email: newUser.email,
+        password: newUser.password,
+        role: newUser.role
+      });
+      toast.success('User created successfully!');
+      setAddUserDialogOpen(false);
+      setNewUser({ email: '', role: 'agent', name: '', password: '' });
       fetchTeamData();
     } catch (error) {
-      toast.error(error.response?.data?.detail || 'Failed to add team member');
+      toast.error(error.response?.data?.detail || 'Failed to create user');
+    }
+  };
+
+  const handleInvite = async () => {
+    if (!newInvite.email) {
+      toast.error('Please enter an email address');
+      return;
+    }
+    
+    try {
+      await teamApi.inviteMember(newInvite);
+      toast.success('Invitation sent!');
+      setInviteDialogOpen(false);
+      setNewInvite({ email: '', role: 'agent' });
+      fetchTeamData();
+    } catch (error) {
+      toast.error(error.response?.data?.detail || 'Failed to send invitation');
     }
   };
 
