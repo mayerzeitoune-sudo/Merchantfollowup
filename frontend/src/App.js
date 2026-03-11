@@ -113,6 +113,7 @@ function AppRoutes() {
       <Route path="/team" element={<ProtectedRoute><Team /></ProtectedRoute>} />
       <Route path="/funded" element={<ProtectedRoute><FundedDeals /></ProtectedRoute>} />
       <Route path="/funded/:dealId" element={<ProtectedRoute><FundedDealProfile /></ProtectedRoute>} />
+      <Route path="/onboarding" element={<ProtectedRoute><OnboardingPage /></ProtectedRoute>} />
       
       {/* Default redirect */}
       <Route path="*" element={<Navigate to="/" replace />} />
