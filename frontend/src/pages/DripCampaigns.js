@@ -33,7 +33,8 @@ import {
   Sparkles,
   Wand2,
   Send,
-  Loader2
+  Loader2,
+  X
 } from 'lucide-react';
 import { enhancedCampaignsApi, clientsApi, segmentsApi, aiApi } from '../lib/api';
 import { toast } from 'sonner';
