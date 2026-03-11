@@ -106,7 +106,9 @@ const Clients = () => {
       resetForm();
       fetchClients();
     } catch (error) {
-      toast.error(error.response?.data?.detail || 'Operation failed');
+      const detail = error.response?.data?.detail;
+      const message = typeof detail === 'string' ? detail : Array.isArray(detail) ? detail[0]?.msg || 'Operation failed' : 'Operation failed';
+      toast.error(message);
     }
   };
 
