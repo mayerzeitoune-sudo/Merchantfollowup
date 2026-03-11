@@ -62,6 +62,7 @@ const ClientProfile = () => {
   const [savingNotes, setSavingNotes] = useState(false);
   const [aiSummary, setAiSummary] = useState(null);
   const [generatingSummary, setGeneratingSummary] = useState(false);
+  const [showTagEditor, setShowTagEditor] = useState(false);
 
   useEffect(() => {
     if (clientId) {
