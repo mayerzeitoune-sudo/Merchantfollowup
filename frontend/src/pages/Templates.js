@@ -52,6 +52,14 @@ const Templates = () => {
     category: 'General',
     content: ''
   });
+  
+  // AI Assistant state
+  const [aiDialogOpen, setAiDialogOpen] = useState(false);
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiChatMessages, setAiChatMessages] = useState([]);
+  const [aiInput, setAiInput] = useState('');
+  const [aiTemplateType, setAiTemplateType] = useState('follow_up');
+  const [aiTone, setAiTone] = useState('professional');
 
   useEffect(() => {
     fetchTemplates();
