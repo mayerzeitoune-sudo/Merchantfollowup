@@ -61,6 +61,17 @@ const Templates = () => {
   const [aiTemplateType, setAiTemplateType] = useState('follow_up');
   const [aiTone, setAiTone] = useState('professional');
 
+  // Reset AI options when dialog closes
+  const handleAiDialogClose = (open) => {
+    setAiDialogOpen(open);
+    if (!open) {
+      setAiTemplateType('follow_up');
+      setAiTone('professional');
+      setAiInput('');
+      setAiChatMessages([]);
+    }
+  };
+
   useEffect(() => {
     fetchTemplates();
   }, [categoryFilter]);
