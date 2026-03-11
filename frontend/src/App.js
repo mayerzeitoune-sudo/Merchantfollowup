@@ -103,6 +103,7 @@ function AppRoutes() {
       <Route path="/lead-capture" element={<ProtectedRoute><LeadCapture /></ProtectedRoute>} />
       <Route path="/compliance" element={<ProtectedRoute><Compliance /></ProtectedRoute>} />
       <Route path="/revival" element={<ProtectedRoute><Revival /></ProtectedRoute>} />
+      <Route path="/team" element={<ProtectedRoute><Team /></ProtectedRoute>} />
       
       {/* Default redirect */}
       <Route path="/" element={<Navigate to="/login" replace />} />
