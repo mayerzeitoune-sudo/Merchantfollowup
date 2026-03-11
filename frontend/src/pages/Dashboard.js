@@ -4,6 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../co
 import { Button } from '../components/ui/button';
 import { Badge } from '../components/ui/badge';
 import { ScrollArea } from '../components/ui/scroll-area';
+import { Progress } from '../components/ui/progress';
 import { 
   Users, 
   Bell, 
@@ -21,11 +22,20 @@ import {
   Phone,
   Mail,
   Target,
-  RefreshCw
+  RefreshCw,
+  Building2,
+  FileText,
+  Shield,
+  CheckCircle,
+  Circle,
+  Loader2
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { dashboardApi, remindersApi, followupsApi, analyticsApi, notificationsApi, fundedApi } from '../lib/api';
 import { toast } from 'sonner';
+import axios from 'axios';
+
+const API = process.env.REACT_APP_BACKEND_URL;
 
 const Dashboard = () => {
   const [stats, setStats] = useState({
@@ -43,6 +53,7 @@ const Dashboard = () => {
   const [notifications, setNotifications] = useState([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [fundedStats, setFundedStats] = useState(null);
+  const [onboardingStatus, setOnboardingStatus] = useState(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
