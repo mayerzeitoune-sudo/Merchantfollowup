@@ -34,7 +34,9 @@ Build a comprehensive SMS platform "Merchant Follow Up" for automated payment re
 
 #### Funded Deals Editing (NEW - March 2026)
 - **Edit Deal Dialog**: Full edit functionality for deal information (amounts, frequency, type, notes)
+- **Delete Funded Deals**: Delete functionality from both list view and detail view with confirmation dialog
 - **Editable Payment Amounts**: Payment schedule amounts can now be edited inline
+- **Payment Status Auto-Update**: Clicking cleared/missed checkboxes automatically updates payment status
 - **Real-time Updates**: Changes save immediately with confirmation toasts
 
 #### Client Notes System (NEW - March 2026)
