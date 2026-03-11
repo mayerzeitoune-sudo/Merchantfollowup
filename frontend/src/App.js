@@ -27,6 +27,7 @@ import Analytics from "./pages/Analytics";
 import LeadCapture from "./pages/LeadCapture";
 import Compliance from "./pages/Compliance";
 import Revival from "./pages/Revival";
+import Team from "./pages/Team";
 
 // Protected Route Component
 const ProtectedRoute = ({ children }) => {
