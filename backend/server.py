@@ -969,6 +969,234 @@ Rewrite:"""
         logger.error(f"AI rewrite error: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
+@api_router.post("/ai/generate-template")
+async def ai_generate_template(request_data: dict, current_user: dict = Depends(get_current_user)):
+    """Generate a message template using AI"""
+    template_type = request_data.get("type", "follow_up")  # payment_reminder, follow_up, introduction, thank_you, appointment
+    context = request_data.get("context", "")
+    tone = request_data.get("tone", "professional")
+    
+    api_key = os.environ.get('EMERGENT_LLM_KEY')
+    if not api_key:
+        raise HTTPException(status_code=500, detail="AI not configured")
+    
+    try:
+        from emergentintegrations.llm.chat import LlmChat, UserMessage
+        
+        template_prompts = {
+            "payment_reminder": "Create an SMS payment reminder template. Include {client_name}, {amount}, and {due_date} variables.",
+            "follow_up": "Create a follow-up SMS template for checking in with a lead. Include {client_name} variable.",
+            "introduction": "Create an introduction SMS template for reaching out to a new lead. Include {client_name} and {company_name} variables.",
+            "thank_you": "Create a thank you SMS template. Include {client_name} variable.",
+            "appointment": "Create an appointment confirmation/reminder SMS template. Include {client_name}, {date}, and {time} variables.",
+            "closing": "Create a deal closing SMS template. Include {client_name} variable.",
+            "cold_outreach": "Create a cold outreach SMS template for generating new business. Include {client_name} variable."
+        }
+        
+        tone_instructions = {
+            "professional": "Use a formal, business-appropriate tone.",
+            "friendly": "Use a warm, conversational but still professional tone.",
+            "urgent": "Add urgency and time-sensitivity to the message.",
+            "casual": "Use a relaxed, approachable tone."
+        }
+        
+        chat = LlmChat(
+            api_key=api_key,
+            session_id=f"ai_template_{uuid.uuid4()}",
+            system_message="You are an expert SMS marketing copywriter. Create concise, effective SMS templates under 160 characters. Use variables in {curly_braces} format. Don't use excessive emojis."
+        ).with_model("openai", "gpt-5.2")
+        
+        prompt = f"""{template_prompts.get(template_type, template_prompts['follow_up'])}
+
+{tone_instructions.get(tone, tone_instructions['professional'])}
+
+{f'Additional context: {context}' if context else ''}
+
+Generate ONLY the template text with variables, nothing else."""
+        
+        user_message = UserMessage(text=prompt)
+        response = await chat.send_message(user_message)
+        
+        # Extract variables from template
+        import re
+        variables = re.findall(r'\{(\w+)\}', response)
+        
+        return {
+            "template": response.strip(),
+            "variables": list(set(variables)),
+            "type": template_type,
+            "tone": tone
+        }
+        
+    except Exception as e:
+        logger.error(f"AI generate template error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@api_router.post("/ai/generate-drip-sequence")
+async def ai_generate_drip_sequence(request_data: dict, current_user: dict = Depends(get_current_user)):
+    """Generate a drip campaign sequence using AI"""
+    goal = request_data.get("goal", "nurture")  # nurture, convert, onboard, re-engage
+    num_messages = request_data.get("num_messages", 5)
+    industry = request_data.get("industry", "general business")
+    context = request_data.get("context", "")
+    
+    api_key = os.environ.get('EMERGENT_LLM_KEY')
+    if not api_key:
+        raise HTTPException(status_code=500, detail="AI not configured")
+    
+    try:
+        from emergentintegrations.llm.chat import LlmChat, UserMessage
+        
+        goal_prompts = {
+            "nurture": "Create a nurturing sequence that builds trust and keeps the lead engaged over time.",
+            "convert": "Create a conversion-focused sequence that moves leads toward making a decision.",
+            "onboard": "Create an onboarding sequence that welcomes new clients and helps them get started.",
+            "re-engage": "Create a re-engagement sequence that brings back cold or inactive leads.",
+            "payment": "Create a payment reminder sequence that encourages timely payments.",
+            "upsell": "Create an upsell sequence for existing clients about additional services."
+        }
+        
+        chat = LlmChat(
+            api_key=api_key,
+            session_id=f"ai_drip_{uuid.uuid4()}",
+            system_message="You are an expert marketing automation specialist. Create effective drip campaign sequences with proper timing and messaging strategy."
+        ).with_model("openai", "gpt-5.2")
+        
+        prompt = f"""Create a {num_messages}-message drip campaign sequence for {industry}.
+
+Goal: {goal_prompts.get(goal, goal_prompts['nurture'])}
+
+{f'Additional context: {context}' if context else ''}
+
+Return a JSON array with this exact format:
+[
+  {{"step": 1, "delay_days": 0, "delay_hours": 0, "subject": "optional subject for email", "message": "the SMS/email message content", "channel": "sms"}},
+  {{"step": 2, "delay_days": 2, "delay_hours": 0, "subject": "", "message": "follow up message", "channel": "sms"}}
+]
+
+Use {{client_name}} for personalization. Keep SMS messages under 160 characters.
+Return ONLY the JSON array, no other text."""
+        
+        user_message = UserMessage(text=prompt)
+        response = await chat.send_message(user_message)
+        
+        # Parse JSON response
+        import json
+        try:
+            # Clean up response
+            json_str = response.strip()
+            if "```json" in json_str:
+                json_str = json_str.split("```json")[1].split("```")[0]
+            elif "```" in json_str:
+                json_str = json_str.split("```")[1].split("```")[0]
+            sequence = json.loads(json_str)
+        except:
+            sequence = [{"step": 1, "delay_days": 0, "message": response.strip(), "channel": "sms"}]
+        
+        return {
+            "sequence": sequence,
+            "goal": goal,
+            "num_messages": len(sequence)
+        }
+        
+    except Exception as e:
+        logger.error(f"AI generate drip sequence error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@api_router.post("/ai/generate-revival-message")
+async def ai_generate_revival_message(request_data: dict, current_user: dict = Depends(get_current_user)):
+    """Generate a lead revival message using AI"""
+    days_inactive = request_data.get("days_inactive", 30)
+    last_stage = request_data.get("last_stage", "unknown")
+    industry = request_data.get("industry", "general business")
+    approach = request_data.get("approach", "value")  # value, urgency, curiosity, personal
+    context = request_data.get("context", "")
+    
+    api_key = os.environ.get('EMERGENT_LLM_KEY')
+    if not api_key:
+        raise HTTPException(status_code=500, detail="AI not configured")
+    
+    try:
+        from emergentintegrations.llm.chat import LlmChat, UserMessage
+        
+        approach_prompts = {
+            "value": "Focus on providing new value or helpful information to re-engage them.",
+            "urgency": "Create urgency with limited-time offers or expiring opportunities.",
+            "curiosity": "Spark curiosity with intriguing questions or updates.",
+            "personal": "Take a personal, caring approach checking in on them.",
+            "offer": "Lead with a special offer or incentive to re-engage."
+        }
+        
+        chat = LlmChat(
+            api_key=api_key,
+            session_id=f"ai_revival_{uuid.uuid4()}",
+            system_message="You are an expert at re-engaging cold leads. Create compelling messages that bring back inactive prospects without being pushy."
+        ).with_model("openai", "gpt-5.2")
+        
+        prompt = f"""Create a revival message for leads who have been inactive for {days_inactive} days.
+
+Last known stage: {last_stage}
+Industry: {industry}
+Approach: {approach_prompts.get(approach, approach_prompts['value'])}
+
+{f'Additional context: {context}' if context else ''}
+
+Create an SMS message (under 160 characters) that will re-engage this cold lead.
+Use {{client_name}} for personalization.
+
+Generate ONLY the message text, nothing else."""
+        
+        user_message = UserMessage(text=prompt)
+        response = await chat.send_message(user_message)
+        
+        return {
+            "message": response.strip(),
+            "days_inactive": days_inactive,
+            "approach": approach
+        }
+        
+    except Exception as e:
+        logger.error(f"AI generate revival message error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@api_router.post("/ai/chat")
+async def ai_chat(request_data: dict, current_user: dict = Depends(get_current_user)):
+    """General AI chat for asking questions and getting help"""
+    message = request_data.get("message", "")
+    context = request_data.get("context", "general")  # templates, drip_campaigns, revival, general
+    
+    if not message:
+        raise HTTPException(status_code=400, detail="Message required")
+    
+    api_key = os.environ.get('EMERGENT_LLM_KEY')
+    if not api_key:
+        raise HTTPException(status_code=500, detail="AI not configured")
+    
+    try:
+        from emergentintegrations.llm.chat import LlmChat, UserMessage
+        
+        context_prompts = {
+            "templates": "You are helping with SMS/email message templates. Help create, improve, or suggest templates for various scenarios.",
+            "drip_campaigns": "You are helping with drip campaign automation. Help design sequences, timing, and messaging strategy.",
+            "revival": "You are helping with lead revival campaigns. Help create re-engagement strategies for cold leads.",
+            "general": "You are a helpful assistant for a CRM and SMS marketing platform."
+        }
+        
+        chat = LlmChat(
+            api_key=api_key,
+            session_id=f"ai_chat_{current_user['user_id']}_{context}",
+            system_message=f"{context_prompts.get(context, context_prompts['general'])} Be concise and actionable in your responses."
+        ).with_model("openai", "gpt-5.2")
+        
+        user_message = UserMessage(text=message)
+        response = await chat.send_message(user_message)
+        
+        return {"response": response.strip(), "context": context}
+        
+    except Exception as e:
+        logger.error(f"AI chat error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
 @api_router.post("/ai/analyze-deal")
 async def ai_analyze_deal(request_data: dict, current_user: dict = Depends(get_current_user)):
     """Analyze deal health and suggest next actions"""
