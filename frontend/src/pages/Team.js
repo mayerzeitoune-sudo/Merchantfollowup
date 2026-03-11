@@ -91,13 +91,22 @@ const Team = () => {
     }
     
     try {
-      await teamApi.createMember({
+      const response = await teamApi.createMember({
         name: newUser.name,
         email: newUser.email,
         password: newUser.password,
         role: newUser.role
       });
-      toast.success('User created successfully!');
+      
+      if (response.data.email_sent) {
+        toast.success(`User created! Login details sent to ${newUser.email}`);
+      } else if (response.data.email_error) {
+        toast.success('User created successfully!');
+        toast.warning(`Could not send email: ${response.data.email_error}. Please share credentials manually.`);
+      } else {
+        toast.success('User created! Connect Gmail in Settings to send invitation emails automatically.');
+      }
+      
       setAddUserDialogOpen(false);
       setNewUser({ email: '', role: 'agent', name: '', password: '' });
       fetchTeamData();
