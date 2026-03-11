@@ -259,6 +259,7 @@ Build a comprehensive SMS platform "Merchant Follow Up" for automated payment re
 - Actual SMS sending (pending provider credentials)
 
 ## Recent Changes Log
+- **March 11, 2026**: Fixed payment reminder delete button (converted from window.confirm to AlertDialog), removed Net Profit from Dashboard, updated funded deals cards to 3-column layout
 - **March 11, 2026**: Added rate calculation feature to Create Funded Deal form - auto-calculates Total Payback and Payment Amount based on funded amount, rate %, and term
 - **March 11, 2026**: Fixed conversation messages combining issue on Client Profile - added dropdown to filter by phone number chain, messages now show phone number labels when viewing "All Conversations"
 - **March 11, 2026**: Fixed delete buttons (onClick → onSelect), Added AI Assistant to Revival page, Fixed AI Dialog in DripCampaigns, Fixed error handling for validation errors
