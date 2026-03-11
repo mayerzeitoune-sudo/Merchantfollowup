@@ -220,6 +220,59 @@ const DripCampaigns = () => {
     });
   };
 
+  // AI Functions
+  const handleAiGenerateSequence = async () => {
+    setAiLoading(true);
+    try {
+      const response = await aiApi.generateDripSequence(aiGoal, aiNumMessages, aiIndustry, '');
+      setAiGeneratedSequence(response.data.sequence);
+      toast.success('Sequence generated!');
+    } catch (error) {
+      toast.error('Failed to generate sequence');
+    } finally {
+      setAiLoading(false);
+    }
+  };
+
+  const handleAiChat = async () => {
+    if (!aiInput.trim()) return;
+    
+    const userMessage = { role: 'user', content: aiInput };
+    setAiChatMessages(prev => [...prev, userMessage]);
+    setAiInput('');
+    setAiLoading(true);
+    
+    try {
+      const response = await aiApi.chat(aiInput, 'drip_campaigns');
+      const assistantMessage = { role: 'assistant', content: response.data.response };
+      setAiChatMessages(prev => [...prev, assistantMessage]);
+    } catch (error) {
+      toast.error('AI request failed');
+    } finally {
+      setAiLoading(false);
+    }
+  };
+
+  const handleUseAiSequence = () => {
+    if (!aiGeneratedSequence) return;
+    
+    const steps = aiGeneratedSequence.map((step, index) => ({
+      id: `step-${Date.now()}-${index}`,
+      order: index,
+      channel: step.channel || 'sms',
+      message: step.message,
+      delay_days: step.delay_days || 0,
+      delay_hours: step.delay_hours || 0,
+      delay_minutes: 0,
+      subject: step.subject || ''
+    }));
+    
+    setFormData(prev => ({ ...prev, steps }));
+    setAiDialogOpen(false);
+    setIsDialogOpen(true);
+    toast.success('Sequence added to campaign');
+  };
+
   const addStep = () => {
     setFormData({
       ...formData,
