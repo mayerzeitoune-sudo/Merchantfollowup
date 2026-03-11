@@ -237,6 +237,7 @@ export const teamApi = {
   getInvites: () => axios.get(`${API}/team/invites`),
   getStats: () => axios.get(`${API}/team/stats`),
   inviteMember: (data) => axios.post(`${API}/team/invite`, data),
+  createMember: (data) => axios.post(`${API}/team/create-member`, data),
   updateMemberRole: (memberId, role) => axios.put(`${API}/team/members/${memberId}/role`, null, { params: { role } }),
   removeMember: (memberId) => axios.delete(`${API}/team/members/${memberId}`),
   cancelInvite: (inviteId) => axios.delete(`${API}/team/invites/${inviteId}`)
