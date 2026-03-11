@@ -485,7 +485,7 @@ const LandingPage = () => {
                   <div className="space-y-3">
                     {[
                       { name: 'Sarah Johnson', tag: 'Interested', company: 'ABC Corp' },
-                      { name: 'Mike Williams', tag: 'Funded', company: 'XYZ Inc' },
+                      { name: 'Mike Williams', tag: 'Won', company: 'XYZ Inc' },
                       { name: 'Emily Davis', tag: 'New Lead', company: 'Tech Solutions' }
                     ].map((client, i) => (
                       <div key={i} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
@@ -498,7 +498,7 @@ const LandingPage = () => {
                             <p className="text-xs text-gray-500">{client.company}</p>
                           </div>
                         </div>
-                        <Badge className={client.tag === 'Funded' ? 'bg-green-100 text-green-700' : client.tag === 'Interested' ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-700'}>
+                        <Badge className={client.tag === 'Won' ? 'bg-green-100 text-green-700' : client.tag === 'Interested' ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-700'}>
                           {client.tag}
                         </Badge>
                       </div>
