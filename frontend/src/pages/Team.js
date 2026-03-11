@@ -57,7 +57,10 @@ const Team = () => {
 
   const [newInvite, setNewInvite] = useState({
     email: '',
-    role: 'agent'
+    name: '',
+    role: 'agent',
+    subject: 'You\'re Invited to Join Merchant Followup',
+    message: ''
   });
 
   useEffect(() => {
