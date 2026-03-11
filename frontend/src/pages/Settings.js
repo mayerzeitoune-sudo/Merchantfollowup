@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import DashboardLayout from '../components/DashboardLayout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
 import { Button } from '../components/ui/button';
@@ -16,9 +17,12 @@ import {
   Trash2,
   CheckCircle,
   AlertCircle,
-  ExternalLink
+  ExternalLink,
+  Mail,
+  Link,
+  Unlink
 } from 'lucide-react';
-import { smsProvidersApi } from '../lib/api';
+import { smsProvidersApi, gmailApi } from '../lib/api';
 import { useAuth } from '../context/AuthContext';
 import { toast } from 'sonner';
 
