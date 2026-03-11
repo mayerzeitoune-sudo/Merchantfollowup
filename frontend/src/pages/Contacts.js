@@ -27,7 +27,9 @@ import {
   Tag,
   X,
   Pencil,
-  ArrowRight
+  ArrowRight,
+  Reply,
+  TestTube2
 } from 'lucide-react';
 import { clientsApi, contactsApi, templatesApi, phoneNumbersApi } from '../lib/api';
 import { toast } from 'sonner';
