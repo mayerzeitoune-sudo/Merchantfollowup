@@ -744,6 +744,25 @@ async def update_client(client_id: str, data: ClientUpdate, current_user: dict =
     update_data = {k: v for k, v in data.model_dump().items() if v is not None}
     update_data["updated_at"] = datetime.now(timezone.utc).isoformat()
     
+    # Sync tags with pipeline stage
+    TAG_TO_STAGE = {
+        'New Lead': 'new_lead',
+        'Interested': 'interested',
+        'Application Sent': 'application_sent',
+        'Docs Submitted': 'docs_submitted',
+        'Approved': 'approved',
+        'Funded': 'funded',
+        'Dead': 'dead',
+        'Future': 'future',
+    }
+    
+    # If tags are being updated, check if we need to update pipeline_stage
+    if 'tags' in update_data and update_data['tags']:
+        for tag in update_data['tags']:
+            if tag in TAG_TO_STAGE:
+                update_data['pipeline_stage'] = TAG_TO_STAGE[tag]
+                break  # Use the first stage tag found
+    
     result = await db.clients.update_one(
         {"id": client_id, "user_id": current_user["user_id"]},
         {"$set": update_data}
