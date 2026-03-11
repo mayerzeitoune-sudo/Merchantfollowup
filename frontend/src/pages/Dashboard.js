@@ -197,7 +197,7 @@ const Dashboard = () => {
                 <div>
                   <p className="text-sm font-medium opacity-90">Total Funded</p>
                   <p className="text-3xl font-bold mt-1 font-['Outfit']">
-                    ${loading ? '-' : (fundedStats?.total_funded || 0).toLocaleString('en-US', { minimumFractionDigits: 0 })}
+                    ${loading ? '-' : (fundedStats?.total_funded_volume || 0).toLocaleString('en-US', { minimumFractionDigits: 0 })}
                   </p>
                 </div>
                 <div className="h-12 w-12 rounded-full bg-white/20 flex items-center justify-center">
@@ -229,7 +229,7 @@ const Dashboard = () => {
                 <div>
                   <p className="text-sm font-medium opacity-90">Remaining Balance</p>
                   <p className="text-3xl font-bold mt-1 font-['Outfit']">
-                    ${loading ? '-' : (fundedStats?.total_remaining || 0).toLocaleString('en-US', { minimumFractionDigits: 0 })}
+                    ${loading ? '-' : (fundedStats?.total_outstanding || 0).toLocaleString('en-US', { minimumFractionDigits: 0 })}
                   </p>
                 </div>
                 <div className="h-12 w-12 rounded-full bg-white/20 flex items-center justify-center">
