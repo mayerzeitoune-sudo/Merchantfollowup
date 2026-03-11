@@ -98,6 +98,30 @@ const Settings = () => {
     }
   };
 
+  const handleSendEmail = async () => {
+    if (!emailForm.to || !emailForm.subject || !emailForm.body) {
+      toast.error('Please fill in all fields');
+      return;
+    }
+    
+    setSendingEmail(true);
+    try {
+      await gmailApi.sendEmail(token, {
+        to: emailForm.to,
+        subject: emailForm.subject,
+        body: emailForm.body,
+        html: false
+      });
+      toast.success('Email sent successfully!');
+      setComposeOpen(false);
+      setEmailForm({ to: '', subject: '', body: '' });
+    } catch (error) {
+      toast.error(error.response?.data?.detail || 'Failed to send email');
+    } finally {
+      setSendingEmail(false);
+    }
+  };
+
   const fetchProviders = async () => {
     try {
       const response = await smsProvidersApi.getAll();
