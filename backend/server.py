@@ -1557,7 +1557,7 @@ async def get_team_stats(current_user: dict = Depends(get_current_user)):
 
 @api_router.post("/team/invite")
 async def invite_team_member(data: dict, current_user: dict = Depends(get_current_user)):
-    """Invite a new team member"""
+    """Invite a new team member via email"""
     user = await db.users.find_one({"id": current_user["user_id"]}, {"_id": 0})
     if user.get("role") != "admin":
         raise HTTPException(status_code=403, detail="Only admins can invite members")
@@ -1586,7 +1586,69 @@ async def invite_team_member(data: dict, current_user: dict = Depends(get_curren
     await db.team_invites.insert_one(invite_doc)
     if "_id" in invite_doc:
         del invite_doc["_id"]
-    return invite_doc
+    
+    # Send invitation email via Gmail if message provided
+    email_sent = False
+    email_error = None
+    custom_message = data.get("message", "")
+    
+    if custom_message:
+        try:
+            from routes.gmail import get_gmail_credentials
+            from googleapiclient.discovery import build
+            import base64
+            from email.mime.text import MIMEText
+            from email.mime.multipart import MIMEMultipart
+            
+            creds = await get_gmail_credentials(current_user["user_id"])
+            if creds:
+                service = build('gmail', 'v1', credentials=creds)
+                
+                # Build email with custom message
+                html_body = f"""
+                <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+                    <h2 style="color: #ea580c;">You're Invited to Merchant Followup!</h2>
+                    <p>Hi{' ' + data.get('name') if data.get('name') else ''},</p>
+                    <div style="background: #f5f5f5; padding: 20px; border-radius: 8px; margin: 20px 0; white-space: pre-wrap;">
+{custom_message}
+                    </div>
+                    <p>
+                        <a href="https://merchantfollowup.com/register?invite={invite_id}" 
+                           style="background: #ea580c; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block;">
+                            Accept Invitation
+                        </a>
+                    </p>
+                    <p style="color: #666; font-size: 12px; margin-top: 30px;">
+                        This invitation was sent from Merchant Followup.
+                    </p>
+                </div>
+                """
+                
+                message = MIMEMultipart('alternative')
+                message['to'] = data.get("email")
+                message['subject'] = data.get("subject", "You're Invited to Join Merchant Followup")
+                
+                text_part = MIMEText(custom_message, 'plain')
+                html_part = MIMEText(html_body, 'html')
+                
+                message.attach(text_part)
+                message.attach(html_part)
+                
+                raw_message = base64.urlsafe_b64encode(message.as_bytes()).decode('utf-8')
+                sent = service.users().messages().send(userId='me', body={'raw': raw_message}).execute()
+                email_sent = True
+                logger.info(f"Invitation email sent to {data.get('email')}")
+            else:
+                email_error = "Gmail not connected"
+        except Exception as e:
+            logger.error(f"Failed to send invitation email: {e}")
+            email_error = str(e)
+    
+    return {
+        **invite_doc,
+        "email_sent": email_sent,
+        "email_error": email_error
+    }
 
 @api_router.post("/team/create-member")
 async def create_team_member(data: dict, current_user: dict = Depends(get_current_user)):
