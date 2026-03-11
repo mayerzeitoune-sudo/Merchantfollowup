@@ -28,6 +28,8 @@ import LeadCapture from "./pages/LeadCapture";
 import Compliance from "./pages/Compliance";
 import Revival from "./pages/Revival";
 import Team from "./pages/Team";
+import FundedDeals from "./pages/FundedDeals";
+import FundedDealProfile from "./pages/FundedDealProfile";
 
 // Protected Route Component
 const ProtectedRoute = ({ children }) => {
