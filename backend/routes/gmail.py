@@ -177,10 +177,14 @@ async def gmail_auth_start(token: str = Query(..., description="JWT token for us
         include_granted_scopes='true'
     )
     
-    # Store state with user_id for callback verification
+    # Store state with user_id and code_verifier for callback verification
+    # The flow object has the code_verifier after authorization_url is called
+    code_verifier = flow.code_verifier if hasattr(flow, 'code_verifier') else None
+    
     await db.oauth_states.insert_one({
         "state": state,
         "user_id": user_id,
+        "code_verifier": code_verifier,
         "created_at": datetime.now(timezone.utc),
         "expires_at": datetime.now(timezone.utc) + timedelta(minutes=10)
     })
