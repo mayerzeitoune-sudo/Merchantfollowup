@@ -71,6 +71,9 @@ const Contacts = () => {
   const [showTemplateDialog, setShowTemplateDialog] = useState(false);
   const [selectedTemplate, setSelectedTemplate] = useState(null);
   const [templateVariables, setTemplateVariables] = useState({});
+  
+  // Tag editing
+  const [showTagEditor, setShowTagEditor] = useState(false);
 
   useEffect(() => {
     fetchClients();
