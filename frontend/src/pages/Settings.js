@@ -42,6 +42,9 @@ const Settings = () => {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [gmailStatus, setGmailStatus] = useState({ connected: false, email: null });
   const [gmailLoading, setGmailLoading] = useState(true);
+  const [composeOpen, setComposeOpen] = useState(false);
+  const [sendingEmail, setSendingEmail] = useState(false);
+  const [emailForm, setEmailForm] = useState({ to: '', subject: '', body: '' });
   const [formData, setFormData] = useState({
     provider: '',
     account_sid: '',
