@@ -344,19 +344,26 @@ const DripCampaigns = () => {
             <h1 className="text-3xl font-bold font-['Outfit']">Drip Campaigns</h1>
             <p className="text-muted-foreground mt-1">Automated follow-up sequences that stop on reply</p>
           </div>
-          <Dialog open={isDialogOpen} onOpenChange={(open) => {
-            setIsDialogOpen(open);
-            if (!open) {
-              setSelectedCampaign(null);
-              resetForm();
-            }
-          }}>
-            <DialogTrigger asChild>
-              <Button className="bg-primary hover:bg-primary/90" data-testid="create-campaign-btn">
-                <Plus className="h-4 w-4 mr-2" />
-                New Campaign
-              </Button>
-            </DialogTrigger>
+          <div className="flex gap-2">
+            {/* AI Assistant Button */}
+            <Button variant="outline" onClick={() => setAiDialogOpen(true)} data-testid="ai-drip-btn">
+              <Sparkles className="h-4 w-4 mr-2 text-purple-500" />
+              AI Assistant
+            </Button>
+            
+            <Dialog open={isDialogOpen} onOpenChange={(open) => {
+              setIsDialogOpen(open);
+              if (!open) {
+                setSelectedCampaign(null);
+                resetForm();
+              }
+            }}>
+              <DialogTrigger asChild>
+                <Button className="bg-primary hover:bg-primary/90" data-testid="create-campaign-btn">
+                  <Plus className="h-4 w-4 mr-2" />
+                  New Campaign
+                </Button>
+              </DialogTrigger>
             <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
               <DialogHeader>
                 <DialogTitle className="font-['Outfit']">
