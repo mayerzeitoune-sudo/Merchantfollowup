@@ -99,7 +99,9 @@ export const phoneNumbersApi = {
     axios.get(`${API}/phone-numbers/available`, { params: { area_code: areaCode, country, limit } }),
   purchase: (data) => axios.post(`${API}/phone-numbers/purchase`, data),
   getOwned: () => axios.get(`${API}/phone-numbers/owned`),
-  release: (id) => axios.delete(`${API}/phone-numbers/${id}`)
+  release: (id) => axios.delete(`${API}/phone-numbers/${id}`),
+  setDefault: (id) => axios.put(`${API}/phone-numbers/${id}/set-default`),
+  getDefault: () => axios.get(`${API}/phone-numbers/default`)
 };
 
 // Contacts/Messaging API
