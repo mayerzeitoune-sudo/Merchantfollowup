@@ -1,0 +1,668 @@
+import React, { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
+import DashboardLayout from '../components/DashboardLayout';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
+import { Button } from '../components/ui/button';
+import { Input } from '../components/ui/input';
+import { Label } from '../components/ui/label';
+import { Badge } from '../components/ui/badge';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '../components/ui/dialog';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
+import { ScrollArea } from '../components/ui/scroll-area';
+import { 
+  DollarSign, 
+  TrendingUp, 
+  AlertTriangle,
+  CheckCircle2,
+  Clock,
+  Users,
+  Calendar,
+  FileText,
+  Plus,
+  Search,
+  Filter,
+  BarChart3,
+  ArrowRight,
+  Bell,
+  MessageSquare,
+  ExternalLink,
+  Award
+} from 'lucide-react';
+import { fundedApi, clientsApi, teamApi } from '../lib/api';
+import { toast } from 'sonner';
+
+const DEAL_TYPES = ["MCA", "Term Loan", "Line of Credit", "Equipment Financing", "Revenue Based", "Invoice Factoring"];
+const PAYMENT_FREQUENCIES = [
+  { value: "daily", label: "Daily" },
+  { value: "weekly", label: "Weekly" },
+  { value: "bi-weekly", label: "Bi-Weekly" },
+  { value: "monthly", label: "Monthly" }
+];
+
+const getStatusColor = (status) => {
+  const colors = {
+    current: "bg-green-100 text-green-700",
+    upcoming: "bg-blue-100 text-blue-700",
+    due_today: "bg-yellow-100 text-yellow-700",
+    late: "bg-orange-100 text-orange-700",
+    severely_late: "bg-red-100 text-red-700",
+    paid_off: "bg-emerald-100 text-emerald-700",
+    active: "bg-blue-100 text-blue-700"
+  };
+  return colors[status] || "bg-gray-100 text-gray-700";
+};
+
+const FundedDeals = () => {
+  const [deals, setDeals] = useState([]);
+  const [stats, setStats] = useState(null);
+  const [collectionsQueue, setCollectionsQueue] = useState([]);
+  const [recentDeals, setRecentDeals] = useState([]);
+  const [milestones, setMilestones] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState('');
+  const [filters, setFilters] = useState({});
+  const [showNewDealDialog, setShowNewDealDialog] = useState(false);
+  const [clients, setClients] = useState([]);
+  const [teamMembers, setTeamMembers] = useState([]);
+  
+  const [newDeal, setNewDeal] = useState({
+    client_id: '',
+    client_name: '',
+    business_name: '',
+    deal_type: 'MCA',
+    funded_amount: '',
+    funding_date: new Date().toISOString().split('T')[0],
+    payback_amount: '',
+    payment_frequency: 'weekly',
+    num_payments: '',
+    payment_amount: '',
+    start_date: new Date().toISOString().split('T')[0],
+    assigned_rep: '',
+    notes: ''
+  });
+
+  useEffect(() => {
+    fetchData();
+  }, [filters]);
+
+  const fetchData = async () => {
+    setLoading(true);
+    try {
+      const [dealsRes, statsRes, queueRes, recentRes, milestonesRes, clientsRes, teamRes] = await Promise.all([
+        fundedApi.getAll(filters),
+        fundedApi.getStats(),
+        fundedApi.getCollectionsQueue(),
+        fundedApi.getRecent(),
+        fundedApi.getMilestones(),
+        clientsApi.getAll(),
+        teamApi.getMembers().catch(() => ({ data: [] }))
+      ]);
+      
+      setDeals(dealsRes.data || []);
+      setStats(statsRes.data || {});
+      setCollectionsQueue(queueRes.data || []);
+      setRecentDeals(recentRes.data || []);
+      setMilestones(milestonesRes.data || []);
+      setClients(clientsRes.data || []);
+      setTeamMembers(teamRes.data || []);
+    } catch (error) {
+      console.error('Error fetching data:', error);
+      toast.error('Failed to load funded deals');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleCreateDeal = async () => {
+    if (!newDeal.client_id || !newDeal.funded_amount || !newDeal.payback_amount) {
+      toast.error('Please fill in required fields');
+      return;
+    }
+    
+    try {
+      // Find client name
+      const client = clients.find(c => c.id === newDeal.client_id);
+      const rep = teamMembers.find(m => m.id === newDeal.assigned_rep);
+      
+      await fundedApi.create({
+        ...newDeal,
+        client_name: client?.name || '',
+        funded_amount: parseFloat(newDeal.funded_amount),
+        payback_amount: parseFloat(newDeal.payback_amount),
+        num_payments: parseInt(newDeal.num_payments),
+        payment_amount: parseFloat(newDeal.payment_amount),
+        assigned_rep_name: rep?.name || ''
+      });
+      
+      toast.success('Funded deal created!');
+      setShowNewDealDialog(false);
+      setNewDeal({
+        client_id: '',
+        client_name: '',
+        business_name: '',
+        deal_type: 'MCA',
+        funded_amount: '',
+        funding_date: new Date().toISOString().split('T')[0],
+        payback_amount: '',
+        payment_frequency: 'weekly',
+        num_payments: '',
+        payment_amount: '',
+        start_date: new Date().toISOString().split('T')[0],
+        assigned_rep: '',
+        notes: ''
+      });
+      fetchData();
+    } catch (error) {
+      toast.error(error.response?.data?.detail || 'Failed to create deal');
+    }
+  };
+
+  const handleAcknowledgeMilestone = async (dealId) => {
+    try {
+      await fundedApi.acknowledgeMilestone(dealId);
+      toast.success('Milestone acknowledged');
+      fetchData();
+    } catch (error) {
+      toast.error('Failed to acknowledge milestone');
+    }
+  };
+
+  const filteredDeals = deals.filter(deal =>
+    search === '' ||
+    deal.client_name?.toLowerCase().includes(search.toLowerCase()) ||
+    deal.business_name?.toLowerCase().includes(search.toLowerCase())
+  );
+
+  return (
+    <DashboardLayout>
+      <div className="space-y-6" data-testid="funded-deals-page">
+        {/* Header */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div>
+            <h1 className="text-3xl font-bold font-['Outfit']">Funded Deals & Book Value</h1>
+            <p className="text-muted-foreground mt-1">Track closed revenue, collections, and payment status</p>
+          </div>
+          <Dialog open={showNewDealDialog} onOpenChange={setShowNewDealDialog}>
+            <DialogTrigger asChild>
+              <Button data-testid="new-funded-deal-btn">
+                <Plus className="h-4 w-4 mr-2" />
+                New Funded Deal
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+              <DialogHeader>
+                <DialogTitle>Create Funded Deal</DialogTitle>
+                <DialogDescription>Record a new funded deal to track payments</DialogDescription>
+              </DialogHeader>
+              
+              <div className="grid grid-cols-2 gap-4 mt-4">
+                <div className="col-span-2 space-y-2">
+                  <Label>Client *</Label>
+                  <Select value={newDeal.client_id} onValueChange={(v) => setNewDeal({...newDeal, client_id: v})}>
+                    <SelectTrigger><SelectValue placeholder="Select client" /></SelectTrigger>
+                    <SelectContent>
+                      {clients.map(c => (
+                        <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                
+                <div className="space-y-2">
+                  <Label>Business Name</Label>
+                  <Input value={newDeal.business_name} onChange={(e) => setNewDeal({...newDeal, business_name: e.target.value})} />
+                </div>
+                
+                <div className="space-y-2">
+                  <Label>Deal Type *</Label>
+                  <Select value={newDeal.deal_type} onValueChange={(v) => setNewDeal({...newDeal, deal_type: v})}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      {DEAL_TYPES.map(t => (
+                        <SelectItem key={t} value={t}>{t}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                
+                <div className="space-y-2">
+                  <Label>Funded Amount *</Label>
+                  <Input type="number" value={newDeal.funded_amount} onChange={(e) => setNewDeal({...newDeal, funded_amount: e.target.value})} placeholder="$0.00" />
+                </div>
+                
+                <div className="space-y-2">
+                  <Label>Funding Date *</Label>
+                  <Input type="date" value={newDeal.funding_date} onChange={(e) => setNewDeal({...newDeal, funding_date: e.target.value})} />
+                </div>
+                
+                <div className="space-y-2">
+                  <Label>Total Payback Amount *</Label>
+                  <Input type="number" value={newDeal.payback_amount} onChange={(e) => setNewDeal({...newDeal, payback_amount: e.target.value})} placeholder="$0.00" />
+                </div>
+                
+                <div className="space-y-2">
+                  <Label>Payment Frequency *</Label>
+                  <Select value={newDeal.payment_frequency} onValueChange={(v) => setNewDeal({...newDeal, payment_frequency: v})}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      {PAYMENT_FREQUENCIES.map(f => (
+                        <SelectItem key={f.value} value={f.value}>{f.label}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                
+                <div className="space-y-2">
+                  <Label>Number of Payments *</Label>
+                  <Input type="number" value={newDeal.num_payments} onChange={(e) => setNewDeal({...newDeal, num_payments: e.target.value})} />
+                </div>
+                
+                <div className="space-y-2">
+                  <Label>Payment Amount *</Label>
+                  <Input type="number" value={newDeal.payment_amount} onChange={(e) => setNewDeal({...newDeal, payment_amount: e.target.value})} placeholder="$0.00" />
+                </div>
+                
+                <div className="space-y-2">
+                  <Label>First Payment Date *</Label>
+                  <Input type="date" value={newDeal.start_date} onChange={(e) => setNewDeal({...newDeal, start_date: e.target.value})} />
+                </div>
+                
+                <div className="space-y-2">
+                  <Label>Assigned Rep</Label>
+                  <Select value={newDeal.assigned_rep} onValueChange={(v) => setNewDeal({...newDeal, assigned_rep: v})}>
+                    <SelectTrigger><SelectValue placeholder="Select rep" /></SelectTrigger>
+                    <SelectContent>
+                      {teamMembers.map(m => (
+                        <SelectItem key={m.id} value={m.id}>{m.name || m.email}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                
+                <div className="col-span-2 space-y-2">
+                  <Label>Notes</Label>
+                  <Input value={newDeal.notes} onChange={(e) => setNewDeal({...newDeal, notes: e.target.value})} />
+                </div>
+              </div>
+              
+              <DialogFooter className="mt-4">
+                <Button variant="outline" onClick={() => setShowNewDealDialog(false)}>Cancel</Button>
+                <Button onClick={handleCreateDeal}>Create Deal</Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+        </div>
+
+        {/* Stats Cards */}
+        {stats && (
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+            <Card>
+              <CardContent className="pt-4">
+                <div className="flex items-center gap-2">
+                  <DollarSign className="h-5 w-5 text-green-600" />
+                  <div>
+                    <p className="text-xl font-bold">${(stats.total_funded_volume || 0).toLocaleString()}</p>
+                    <p className="text-xs text-muted-foreground">Funded Volume</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="pt-4">
+                <div className="flex items-center gap-2">
+                  <FileText className="h-5 w-5 text-blue-600" />
+                  <div>
+                    <p className="text-xl font-bold">{stats.active_deals || 0}</p>
+                    <p className="text-xs text-muted-foreground">Active Deals</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="pt-4">
+                <div className="flex items-center gap-2">
+                  <TrendingUp className="h-5 w-5 text-purple-600" />
+                  <div>
+                    <p className="text-xl font-bold">${(stats.total_outstanding || 0).toLocaleString()}</p>
+                    <p className="text-xs text-muted-foreground">Outstanding</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="pt-4">
+                <div className="flex items-center gap-2">
+                  <CheckCircle2 className="h-5 w-5 text-emerald-600" />
+                  <div>
+                    <p className="text-xl font-bold">${(stats.total_collected || 0).toLocaleString()}</p>
+                    <p className="text-xs text-muted-foreground">Collected</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="pt-4">
+                <div className="flex items-center gap-2">
+                  <AlertTriangle className="h-5 w-5 text-orange-600" />
+                  <div>
+                    <p className="text-xl font-bold">{stats.late_accounts || 0}</p>
+                    <p className="text-xs text-muted-foreground">Late Accounts</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="pt-4">
+                <div className="flex items-center gap-2">
+                  <BarChart3 className="h-5 w-5 text-cyan-600" />
+                  <div>
+                    <p className="text-xl font-bold">${(stats.average_deal_size || 0).toLocaleString()}</p>
+                    <p className="text-xs text-muted-foreground">Avg Deal Size</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        )}
+
+        {/* Milestones Alert */}
+        {milestones.length > 0 && (
+          <Card className="border-yellow-200 bg-yellow-50">
+            <CardContent className="py-4">
+              <div className="flex items-center gap-3">
+                <Award className="h-6 w-6 text-yellow-600" />
+                <div className="flex-1">
+                  <p className="font-medium text-yellow-800">50% Paid Milestones</p>
+                  <p className="text-sm text-yellow-700">
+                    {milestones.length} deal(s) have reached 50% paid
+                  </p>
+                </div>
+                <div className="flex gap-2">
+                  {milestones.slice(0, 2).map(m => (
+                    <Badge key={m.deal_id} className="bg-yellow-200 text-yellow-800">
+                      {m.client_name} - ${m.total_collected.toLocaleString()}
+                    </Badge>
+                  ))}
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        <Tabs defaultValue="overview" className="space-y-6">
+          <TabsList>
+            <TabsTrigger value="overview">Overview</TabsTrigger>
+            <TabsTrigger value="deals">Funded Deals</TabsTrigger>
+            <TabsTrigger value="collections">Collections</TabsTrigger>
+            <TabsTrigger value="analytics">Analytics</TabsTrigger>
+          </TabsList>
+
+          {/* Overview Tab */}
+          <TabsContent value="overview" className="space-y-6">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* Collections Queue */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="font-['Outfit'] flex items-center gap-2">
+                    <Bell className="h-5 w-5" />
+                    Collections Queue
+                  </CardTitle>
+                  <CardDescription>Payments due soon or overdue</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  {collectionsQueue.length === 0 ? (
+                    <div className="text-center py-8 text-muted-foreground">
+                      <CheckCircle2 className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                      <p>All payments current</p>
+                    </div>
+                  ) : (
+                    <ScrollArea className="h-[300px]">
+                      <div className="space-y-3">
+                        {collectionsQueue.map((item, i) => (
+                          <div key={i} className="flex items-center justify-between p-3 rounded-lg border">
+                            <div>
+                              <p className="font-medium">{item.client_name}</p>
+                              <p className="text-sm text-muted-foreground">{item.business_name}</p>
+                            </div>
+                            <div className="text-right">
+                              <p className="font-bold">${item.amount.toLocaleString()}</p>
+                              <Badge className={getStatusColor(item.status)}>
+                                {item.days_diff < 0 ? `${Math.abs(item.days_diff)} days late` : 
+                                 item.days_diff === 0 ? 'Due today' : 
+                                 `Due in ${item.days_diff} days`}
+                              </Badge>
+                            </div>
+                            <Link to={`/funded/${item.deal_id}`}>
+                              <Button variant="ghost" size="sm">
+                                <ArrowRight className="h-4 w-4" />
+                              </Button>
+                            </Link>
+                          </div>
+                        ))}
+                      </div>
+                    </ScrollArea>
+                  )}
+                </CardContent>
+              </Card>
+
+              {/* Recent Funded */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="font-['Outfit'] flex items-center gap-2">
+                    <TrendingUp className="h-5 w-5" />
+                    Recent Funded Deals
+                  </CardTitle>
+                  <CardDescription>Latest deals that funded</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  {recentDeals.length === 0 ? (
+                    <div className="text-center py-8 text-muted-foreground">
+                      <FileText className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                      <p>No funded deals yet</p>
+                    </div>
+                  ) : (
+                    <ScrollArea className="h-[300px]">
+                      <div className="space-y-3">
+                        {recentDeals.map((deal) => (
+                          <div key={deal.id} className="flex items-center justify-between p-3 rounded-lg bg-green-50 border border-green-200">
+                            <div>
+                              <p className="font-medium text-green-800">{deal.client_name}</p>
+                              <p className="text-sm text-green-600">{deal.business_name}</p>
+                            </div>
+                            <div className="text-right">
+                              <p className="font-bold text-green-700">${deal.funded_amount?.toLocaleString()}</p>
+                              <p className="text-xs text-green-600">{new Date(deal.funding_date).toLocaleDateString()}</p>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </ScrollArea>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
+          </TabsContent>
+
+          {/* Funded Deals Tab */}
+          <TabsContent value="deals" className="space-y-4">
+            <div className="flex items-center gap-4">
+              <div className="relative flex-1 max-w-md">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Search deals..."
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  className="pl-10"
+                />
+              </div>
+            </div>
+
+            {loading ? (
+              <div className="text-center py-12">
+                <div className="h-8 w-8 border-2 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+                <p className="text-muted-foreground">Loading deals...</p>
+              </div>
+            ) : filteredDeals.length === 0 ? (
+              <Card>
+                <CardContent className="text-center py-12">
+                  <FileText className="h-12 w-12 mx-auto mb-4 text-muted-foreground/50" />
+                  <p className="text-muted-foreground">No funded deals yet</p>
+                </CardContent>
+              </Card>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b bg-muted/50">
+                      <th className="text-left p-3 font-medium">Client</th>
+                      <th className="text-left p-3 font-medium">Deal Type</th>
+                      <th className="text-right p-3 font-medium">Funded</th>
+                      <th className="text-right p-3 font-medium">Payback</th>
+                      <th className="text-right p-3 font-medium">Collected</th>
+                      <th className="text-center p-3 font-medium">% Paid</th>
+                      <th className="text-center p-3 font-medium">Status</th>
+                      <th className="text-left p-3 font-medium">Rep</th>
+                      <th className="p-3"></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filteredDeals.map((deal) => (
+                      <tr key={deal.id} className="border-b hover:bg-muted/30">
+                        <td className="p-3">
+                          <div>
+                            <p className="font-medium">{deal.client_name}</p>
+                            <p className="text-xs text-muted-foreground">{deal.business_name}</p>
+                          </div>
+                        </td>
+                        <td className="p-3">{deal.deal_type}</td>
+                        <td className="p-3 text-right font-medium">${deal.funded_amount?.toLocaleString()}</td>
+                        <td className="p-3 text-right">${deal.payback_amount?.toLocaleString()}</td>
+                        <td className="p-3 text-right text-green-600">${deal.total_collected?.toLocaleString()}</td>
+                        <td className="p-3 text-center">
+                          <Badge className={deal.percent_paid >= 50 ? "bg-green-100 text-green-700" : "bg-gray-100"}>
+                            {deal.percent_paid}%
+                          </Badge>
+                        </td>
+                        <td className="p-3 text-center">
+                          <Badge className={getStatusColor(deal.payment_status)}>
+                            {deal.payment_status}
+                          </Badge>
+                        </td>
+                        <td className="p-3">{deal.assigned_rep_name || '-'}</td>
+                        <td className="p-3">
+                          <Link to={`/funded/${deal.id}`}>
+                            <Button variant="ghost" size="sm">
+                              <ExternalLink className="h-4 w-4" />
+                            </Button>
+                          </Link>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </TabsContent>
+
+          {/* Collections Tab */}
+          <TabsContent value="collections" className="space-y-4">
+            <Card>
+              <CardHeader>
+                <CardTitle>Collections Summary</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+                  <div className="p-4 rounded-lg bg-blue-50">
+                    <p className="text-sm text-blue-600">Auto-Cleared Today</p>
+                    <p className="text-2xl font-bold text-blue-700">
+                      {collectionsQueue.filter(q => q.status === 'cleared').length}
+                    </p>
+                  </div>
+                  <div className="p-4 rounded-lg bg-red-50">
+                    <p className="text-sm text-red-600">Payments Overdue</p>
+                    <p className="text-2xl font-bold text-red-700">
+                      {collectionsQueue.filter(q => q.days_diff < 0).length}
+                    </p>
+                  </div>
+                  <div className="p-4 rounded-lg bg-yellow-50">
+                    <p className="text-sm text-yellow-600">Due Today</p>
+                    <p className="text-2xl font-bold text-yellow-700">
+                      {collectionsQueue.filter(q => q.days_diff === 0).length}
+                    </p>
+                  </div>
+                  <div className="p-4 rounded-lg bg-green-50">
+                    <p className="text-sm text-green-600">50% Milestones</p>
+                    <p className="text-2xl font-bold text-green-700">{milestones.length}</p>
+                  </div>
+                </div>
+
+                <h3 className="font-medium mb-3">Action Required</h3>
+                {collectionsQueue.length === 0 ? (
+                  <p className="text-muted-foreground text-center py-8">No collections actions needed</p>
+                ) : (
+                  <div className="space-y-2">
+                    {collectionsQueue.map((item, i) => (
+                      <div key={i} className="flex items-center justify-between p-3 rounded-lg border">
+                        <div className="flex items-center gap-3">
+                          <div className={`h-2 w-2 rounded-full ${item.days_diff < 0 ? 'bg-red-500' : item.days_diff === 0 ? 'bg-yellow-500' : 'bg-blue-500'}`} />
+                          <div>
+                            <p className="font-medium">{item.client_name}</p>
+                            <p className="text-sm text-muted-foreground">
+                              ${item.amount.toLocaleString()} • Payment #{item.payment_number}
+                            </p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Badge className={getStatusColor(item.status)}>
+                            {item.days_diff < 0 ? `${Math.abs(item.days_diff)} days late` : 
+                             item.days_diff === 0 ? 'Due today' : 
+                             `Due in ${item.days_diff} days`}
+                          </Badge>
+                          <Button variant="outline" size="sm">Send Reminder</Button>
+                          <Link to={`/funded/${item.deal_id}`}>
+                            <Button variant="ghost" size="sm">View</Button>
+                          </Link>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* Analytics Tab */}
+          <TabsContent value="analytics" className="space-y-4">
+            <Card>
+              <CardHeader>
+                <CardTitle>Book Value Summary</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  <div className="p-6 rounded-lg bg-gradient-to-br from-green-50 to-emerald-50 border border-green-200">
+                    <p className="text-sm text-green-600 mb-1">Total Book Value</p>
+                    <p className="text-3xl font-bold text-green-700">${(stats?.book_value || 0).toLocaleString()}</p>
+                    <p className="text-xs text-green-500 mt-1">Outstanding receivables</p>
+                  </div>
+                  <div className="p-6 rounded-lg bg-gradient-to-br from-blue-50 to-cyan-50 border border-blue-200">
+                    <p className="text-sm text-blue-600 mb-1">Expected Receivables</p>
+                    <p className="text-3xl font-bold text-blue-700">${(stats?.expected_receivables || 0).toLocaleString()}</p>
+                    <p className="text-xs text-blue-500 mt-1">Future collections</p>
+                  </div>
+                  <div className="p-6 rounded-lg bg-gradient-to-br from-purple-50 to-pink-50 border border-purple-200">
+                    <p className="text-sm text-purple-600 mb-1">Monthly Funded</p>
+                    <p className="text-3xl font-bold text-purple-700">${(stats?.monthly_funded_volume || 0).toLocaleString()}</p>
+                    <p className="text-xs text-purple-500 mt-1">This month</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+        </Tabs>
+      </div>
+    </DashboardLayout>
+  );
+};
+
+export default FundedDeals;
