@@ -1059,6 +1059,135 @@ Provide analysis in this JSON format:
         logger.error(f"AI analyze error: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
+# ============== LEAD CAPTURE ROUTES ==============
+
+@api_router.get("/leads/forms")
+async def get_lead_forms(current_user: dict = Depends(get_current_user)):
+    """Get all lead capture forms"""
+    forms = await db.lead_forms.find(
+        {"user_id": current_user["user_id"]},
+        {"_id": 0}
+    ).to_list(100)
+    return forms
+
+@api_router.post("/leads/forms")
+async def create_lead_form(data: dict, current_user: dict = Depends(get_current_user)):
+    """Create a lead capture form"""
+    form_id = str(uuid.uuid4())
+    now = datetime.now(timezone.utc).isoformat()
+    base_url = os.environ.get('REACT_APP_BACKEND_URL', 'https://payment-reminders-4.preview.emergentagent.com')
+    
+    form_doc = {
+        "id": form_id,
+        "user_id": current_user["user_id"],
+        "name": data.get("name", "Contact Form"),
+        "fields": data.get("fields", []),
+        "redirect_url": data.get("redirect_url", ""),
+        "auto_tags": data.get("auto_tags", []),
+        "form_url": f"{base_url}/form/{form_id}",
+        "submissions_count": 0,
+        "created_at": now
+    }
+    
+    await db.lead_forms.insert_one(form_doc)
+    if "_id" in form_doc:
+        del form_doc["_id"]
+    return form_doc
+
+@api_router.post("/leads/webhook")
+async def create_webhook(current_user: dict = Depends(get_current_user)):
+    """Create a webhook endpoint for receiving leads"""
+    webhook_id = str(uuid.uuid4())
+    base_url = os.environ.get('REACT_APP_BACKEND_URL', 'https://payment-reminders-4.preview.emergentagent.com')
+    
+    webhook_doc = {
+        "id": webhook_id,
+        "user_id": current_user["user_id"],
+        "url": f"{base_url}/api/webhook/lead/{webhook_id}",
+        "created_at": datetime.now(timezone.utc).isoformat()
+    }
+    
+    await db.webhooks.insert_one(webhook_doc)
+    if "_id" in webhook_doc:
+        del webhook_doc["_id"]
+    return webhook_doc
+
+@api_router.post("/webhook/lead/{webhook_id}")
+async def receive_webhook_lead(webhook_id: str, data: dict):
+    """Public endpoint to receive leads via webhook"""
+    webhook = await db.webhooks.find_one({"id": webhook_id})
+    if not webhook:
+        raise HTTPException(status_code=404, detail="Webhook not found")
+    
+    # Create client from webhook data
+    client_id = str(uuid.uuid4())
+    now = datetime.now(timezone.utc).isoformat()
+    
+    client_doc = {
+        "id": client_id,
+        "user_id": webhook["user_id"],
+        "name": data.get("name", "Unknown"),
+        "email": data.get("email", ""),
+        "phone": data.get("phone", ""),
+        "company": data.get("company", ""),
+        "tags": data.get("tags", ["Webhook Lead"]),
+        "pipeline_stage": "new_lead",
+        "source": "webhook",
+        "webhook_id": webhook_id,
+        "created_at": now,
+        "updated_at": now
+    }
+    
+    await db.clients.insert_one(client_doc)
+    return {"success": True, "client_id": client_id}
+
+@api_router.post("/leads/import/csv")
+async def import_csv_leads(file: UploadFile, auto_tags: str = "", current_user: dict = Depends(get_current_user)):
+    """Import leads from CSV file"""
+    import csv
+    import io
+    
+    contents = await file.read()
+    decoded = contents.decode('utf-8')
+    reader = csv.DictReader(io.StringIO(decoded))
+    
+    imported = 0
+    errors = []
+    tags = [t.strip() for t in auto_tags.split(',') if t.strip()] or ["CSV Import"]
+    
+    for row in reader:
+        try:
+            name = row.get('name', row.get('Name', '')).strip()
+            phone = row.get('phone', row.get('Phone', '')).strip()
+            email = row.get('email', row.get('Email', '')).strip()
+            company = row.get('company', row.get('Company', '')).strip()
+            
+            if not name:
+                errors.append(f"Row {imported + 1}: Missing name")
+                continue
+            
+            client_id = str(uuid.uuid4())
+            now = datetime.now(timezone.utc).isoformat()
+            
+            await db.clients.insert_one({
+                "id": client_id,
+                "user_id": current_user["user_id"],
+                "name": name,
+                "phone": phone,
+                "email": email,
+                "company": company,
+                "tags": tags,
+                "pipeline_stage": "new_lead",
+                "source": "csv_import",
+                "created_at": now,
+                "updated_at": now
+            })
+            imported += 1
+        except Exception as e:
+            errors.append(f"Row {imported + 1}: {str(e)}")
+    
+    return {"imported": imported, "errors": errors}
+
 # ============== REMINDER ROUTES ==============
 
 @api_router.post("/reminders", response_model=ReminderResponse)
