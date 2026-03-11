@@ -26,7 +26,8 @@ import {
   Smartphone,
   Tag,
   X,
-  Pencil
+  Pencil,
+  ArrowRight
 } from 'lucide-react';
 import { clientsApi, contactsApi, templatesApi, phoneNumbersApi } from '../lib/api';
 import { toast } from 'sonner';
