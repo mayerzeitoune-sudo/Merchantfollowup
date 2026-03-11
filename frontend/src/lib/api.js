@@ -144,10 +144,11 @@ export const templatesApi = {
   delete: (id) => axios.delete(`${API}/templates/${id}`),
   getCategories: () => axios.get(`${API}/templates/categories`),
   use: (id) => axios.post(`${API}/templates/${id}/use`),
-  sendToContact: (clientId, templateId, variables) => 
+  sendToContact: (clientId, templateId, variables, fromNumber) => 
     axios.post(`${API}/contacts/${clientId}/send-template`, { 
       template_id: templateId, 
-      variables: variables 
+      variables: variables,
+      from_number: fromNumber
     })
 };
 
