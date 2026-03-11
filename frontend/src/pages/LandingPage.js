@@ -357,21 +357,121 @@ const LandingPage = () => {
               </div>
               <div className="rounded-2xl overflow-hidden shadow-xl border bg-gradient-to-br from-slate-100 to-slate-200 p-6">
                 <div className="bg-white rounded-xl p-4">
-                  <h4 className="font-semibold mb-4">Deal Pipeline</h4>
+                  <div className="flex items-center justify-between mb-4">
+                    <h4 className="font-semibold">Deal Pipeline</h4>
+                    <div className="flex gap-2">
+                      <Badge className="bg-blue-100 text-blue-700">24 Deals</Badge>
+                      <Badge className="bg-green-100 text-green-700">$847K Value</Badge>
+                    </div>
+                  </div>
                   <div className="flex gap-3 overflow-x-auto pb-2">
-                    {['New Lead', 'Interested', 'Application', 'Approved', 'Funded'].map((stage, i) => (
-                      <div key={i} className="flex-shrink-0 w-36 bg-gray-50 rounded-lg p-3">
-                        <p className="text-xs font-medium text-gray-600 mb-2">{stage}</p>
+                    {[
+                      { stage: 'New Lead', count: 8, leads: [{ name: 'Tom Wilson', value: '$12,000', time: '2h ago' }, { name: 'Lisa Park', value: '$8,500', time: '4h ago' }] },
+                      { stage: 'Interested', count: 6, leads: [{ name: 'James Lee', value: '$25,000', time: '1d ago' }] },
+                      { stage: 'Application', count: 4, leads: [{ name: 'Anna Smith', value: '$45,000', time: '2d ago' }] },
+                      { stage: 'Approved', count: 3, leads: [{ name: 'Mike Chen', value: '$18,000', time: '3d ago' }] },
+                      { stage: 'Won', count: 3, leads: [{ name: 'Sarah J.', value: '$32,000', time: '5d ago' }] }
+                    ].map((col, i) => (
+                      <div key={i} className="flex-shrink-0 w-40 bg-gray-50 rounded-lg p-3">
+                        <div className="flex items-center justify-between mb-3">
+                          <p className="text-xs font-semibold text-gray-700">{col.stage}</p>
+                          <span className="text-xs bg-gray-200 text-gray-600 px-1.5 py-0.5 rounded">{col.count}</span>
+                        </div>
                         <div className="space-y-2">
-                          <div className="bg-white p-2 rounded border text-xs shadow-sm">
-                            <p className="font-medium">John Smith</p>
-                            <p className="text-gray-500">$15,000</p>
-                          </div>
+                          {col.leads.map((lead, j) => (
+                            <div key={j} className="bg-white p-2.5 rounded-lg border border-gray-200 shadow-sm hover:shadow-md transition-shadow cursor-pointer">
+                              <p className="font-medium text-sm text-gray-800">{lead.name}</p>
+                              <p className="text-xs text-green-600 font-medium">{lead.value}</p>
+                              <p className="text-xs text-gray-400 mt-1">{lead.time}</p>
+                            </div>
+                          ))}
                         </div>
                       </div>
                     ))}
                   </div>
                 </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Inbox & Multiple Numbers Screenshot - NEW */}
+          <div className="mb-16">
+            <div className="grid lg:grid-cols-2 gap-12 items-center">
+              <div className="rounded-2xl overflow-hidden shadow-xl border bg-gradient-to-br from-slate-100 to-slate-200 p-6">
+                <div className="bg-white rounded-xl p-4">
+                  <div className="flex items-center justify-between mb-4">
+                    <h4 className="font-semibold flex items-center gap-2">
+                      <Inbox className="h-4 w-4" />
+                      Conversation Inbox
+                    </h4>
+                    <Badge className="bg-orange-100 text-orange-700">3 Unread</Badge>
+                  </div>
+                  
+                  {/* Phone Numbers Tabs */}
+                  <div className="flex gap-2 mb-4 overflow-x-auto">
+                    <div className="px-3 py-1.5 bg-orange-100 text-orange-700 rounded-full text-xs font-medium whitespace-nowrap">
+                      (555) 123-4567 Main
+                    </div>
+                    <div className="px-3 py-1.5 bg-gray-100 text-gray-600 rounded-full text-xs font-medium whitespace-nowrap">
+                      (555) 987-6543 Sales
+                    </div>
+                    <div className="px-3 py-1.5 bg-gray-100 text-gray-600 rounded-full text-xs font-medium whitespace-nowrap">
+                      (555) 456-7890 Support
+                    </div>
+                  </div>
+                  
+                  {/* Conversation List */}
+                  <div className="space-y-2">
+                    {[
+                      { name: 'Robert Martinez', msg: 'Yes, I would like to schedule...', time: '2m', unread: true, number: 'Main' },
+                      { name: 'Jennifer Wilson', msg: 'Thanks for the follow up!', time: '15m', unread: true, number: 'Sales' },
+                      { name: 'David Thompson', msg: 'Can you send me more info?', time: '1h', unread: false, number: 'Main' },
+                      { name: 'Amanda Garcia', msg: 'I have a few questions about...', time: '3h', unread: false, number: 'Support' }
+                    ].map((conv, i) => (
+                      <div key={i} className={`flex items-center gap-3 p-3 rounded-lg cursor-pointer transition-colors ${conv.unread ? 'bg-orange-50 border border-orange-200' : 'bg-gray-50 hover:bg-gray-100'}`}>
+                        <div className="h-10 w-10 rounded-full bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center text-white font-bold text-sm">
+                          {conv.name.split(' ').map(n => n[0]).join('')}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2">
+                            <p className={`font-medium text-sm ${conv.unread ? 'text-gray-900' : 'text-gray-700'}`}>{conv.name}</p>
+                            <span className="text-xs text-gray-400 bg-gray-200 px-1.5 py-0.5 rounded">{conv.number}</span>
+                          </div>
+                          <p className="text-xs text-gray-500 truncate">{conv.msg}</p>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-xs text-gray-400">{conv.time}</p>
+                          {conv.unread && <div className="h-2 w-2 rounded-full bg-orange-500 mt-1 ml-auto"></div>}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+              <div>
+                <h3 className="text-2xl font-bold text-gray-900 mb-4">Multi-Number Inbox</h3>
+                <p className="text-gray-600 mb-6">
+                  Manage conversations from multiple phone numbers in one unified inbox. 
+                  Perfect for teams with different departments or campaigns.
+                </p>
+                <ul className="space-y-3">
+                  <li className="flex items-center gap-3">
+                    <CheckCircle className="h-5 w-5 text-green-600" />
+                    <span className="text-gray-700">Multiple phone numbers per account</span>
+                  </li>
+                  <li className="flex items-center gap-3">
+                    <CheckCircle className="h-5 w-5 text-green-600" />
+                    <span className="text-gray-700">Track which number each lead came from</span>
+                  </li>
+                  <li className="flex items-center gap-3">
+                    <CheckCircle className="h-5 w-5 text-green-600" />
+                    <span className="text-gray-700">Separate conversations by phone number</span>
+                  </li>
+                  <li className="flex items-center gap-3">
+                    <CheckCircle className="h-5 w-5 text-green-600" />
+                    <span className="text-gray-700">Assign numbers to team members</span>
+                  </li>
+                </ul>
               </div>
             </div>
           </div>
