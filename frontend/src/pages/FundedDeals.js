@@ -191,6 +191,35 @@ const FundedDeals = () => {
     }
   };
 
+  const handleBulkDelete = async () => {
+    if (selectedDeals.length === 0) return;
+    try {
+      await Promise.all(selectedDeals.map(id => fundedApi.delete(id)));
+      toast.success(`${selectedDeals.length} deal(s) deleted`);
+      setBulkDeleteDialogOpen(false);
+      setSelectedDeals([]);
+      fetchData();
+    } catch (error) {
+      toast.error('Failed to delete some deals');
+    }
+  };
+
+  const toggleSelectDeal = (dealId) => {
+    setSelectedDeals(prev => 
+      prev.includes(dealId) 
+        ? prev.filter(id => id !== dealId)
+        : [...prev, dealId]
+    );
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedDeals.length === filteredDeals.length) {
+      setSelectedDeals([]);
+    } else {
+      setSelectedDeals(filteredDeals.map(d => d.id));
+    }
+  };
+
   const filteredDeals = deals.filter(deal =>
     search === '' ||
     deal.client_name?.toLowerCase().includes(search.toLowerCase()) ||
