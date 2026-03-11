@@ -57,6 +57,8 @@ const ClientProfile = () => {
   const { user } = useAuth();
   const [client, setClient] = useState(null);
   const [conversation, setConversation] = useState([]);
+  const [conversationChains, setConversationChains] = useState([]);
+  const [activeChain, setActiveChain] = useState('all');
   const [loading, setLoading] = useState(true);
   const [newNote, setNewNote] = useState('');
   const [savingNotes, setSavingNotes] = useState(false);
@@ -71,9 +73,15 @@ const ClientProfile = () => {
   useEffect(() => {
     if (clientId) {
       fetchClient();
-      fetchConversation();
+      fetchConversationChains();
     }
   }, [clientId]);
+
+  useEffect(() => {
+    if (clientId) {
+      fetchConversation(activeChain);
+    }
+  }, [clientId, activeChain]);
 
   const fetchClient = async () => {
     try {
