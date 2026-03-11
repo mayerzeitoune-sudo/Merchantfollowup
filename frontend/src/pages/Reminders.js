@@ -153,15 +153,22 @@ const Reminders = () => {
     setIsDialogOpen(true);
   };
 
-  const handleDelete = async (id) => {
-    if (!window.confirm('Are you sure you want to delete this reminder schedule?')) return;
+  const handleDelete = async () => {
+    if (!reminderToDelete) return;
     try {
-      await remindersApi.delete(id);
+      await remindersApi.delete(reminderToDelete.id);
       toast.success('Reminder deleted');
+      setDeleteDialogOpen(false);
+      setReminderToDelete(null);
       fetchData();
     } catch (error) {
       toast.error('Failed to delete reminder');
     }
+  };
+
+  const openDeleteDialog = (reminder) => {
+    setReminderToDelete(reminder);
+    setDeleteDialogOpen(true);
   };
 
   const handleSend = async (id) => {
