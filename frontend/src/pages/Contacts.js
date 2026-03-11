@@ -584,33 +584,70 @@ const Contacts = () => {
                     </div>
                   ) : (
                     <div className="space-y-4">
-                      {conversation.map((msg, index) => (
-                        <div
-                          key={index}
-                          className={`flex ${msg.direction === 'outbound' ? 'justify-end' : 'justify-start'}`}
-                        >
-                          <div className={`
-                            max-w-[70%] rounded-lg p-3
-                            ${msg.direction === 'outbound' 
-                              ? 'bg-primary text-white rounded-br-none' 
-                              : 'bg-secondary rounded-bl-none'
-                            }
-                          `}>
-                            <p className="text-sm">{msg.content}</p>
-                            <div className={`flex items-center gap-2 mt-1 ${msg.direction === 'outbound' ? 'text-white/70' : 'text-muted-foreground'}`}>
-                              <Clock className="h-3 w-3" />
-                              <span className="text-xs">
-                                {new Date(msg.timestamp).toLocaleTimeString()}
-                              </span>
-                              {msg.from_number && msg.direction === 'outbound' && (
-                                <span className="text-xs flex items-center gap-1">
-                                  • <Smartphone className="h-3 w-3" /> {msg.from_number}
-                                </span>
+                      {conversation.map((msg, index) => {
+                        // Check if this is an inbound message and find what it might be responding to
+                        const isInbound = msg.direction === 'inbound';
+                        const previousOutbound = isInbound ? 
+                          conversation.slice(0, index).reverse().find(m => m.direction === 'outbound') : null;
+                        
+                        return (
+                          <div
+                            key={index}
+                            className={`flex ${msg.direction === 'outbound' ? 'justify-end' : 'justify-start'}`}
+                          >
+                            <div className="max-w-[75%]">
+                              {/* Show "Responding to" context for inbound messages */}
+                              {isInbound && (previousOutbound || msg.responding_to) && (
+                                <div className="mb-2 ml-2">
+                                  <div className="text-xs text-muted-foreground flex items-center gap-1 mb-1">
+                                    <ArrowRight className="h-3 w-3 rotate-180" />
+                                    Responding to:
+                                  </div>
+                                  <div className="bg-muted/50 border-l-2 border-primary/30 pl-3 py-2 rounded-r text-xs text-muted-foreground italic">
+                                    "{(msg.responding_to || previousOutbound?.content || '').substring(0, 100)}{(msg.responding_to || previousOutbound?.content || '').length > 100 ? '...' : ''}"
+                                    {(msg.campaign_name || previousOutbound?.campaign_name) && (
+                                      <Badge variant="outline" className="ml-2 text-[10px] px-1.5 py-0">
+                                        {msg.campaign_name || previousOutbound?.campaign_name}
+                                      </Badge>
+                                    )}
+                                  </div>
+                                </div>
                               )}
+                              
+                              {/* Campaign badge for outbound campaign messages */}
+                              {msg.direction === 'outbound' && msg.campaign_name && (
+                                <div className="flex justify-end mb-1">
+                                  <Badge variant="secondary" className="text-[10px] px-2 py-0.5">
+                                    <Zap className="h-3 w-3 mr-1" />
+                                    {msg.campaign_name}
+                                  </Badge>
+                                </div>
+                              )}
+                              
+                              <div className={`
+                                rounded-lg p-3
+                                ${msg.direction === 'outbound' 
+                                  ? 'bg-primary text-white rounded-br-none' 
+                                  : 'bg-secondary rounded-bl-none'
+                                }
+                              `}>
+                                <p className="text-sm">{msg.content}</p>
+                                <div className={`flex items-center gap-2 mt-1 ${msg.direction === 'outbound' ? 'text-white/70' : 'text-muted-foreground'}`}>
+                                  <Clock className="h-3 w-3" />
+                                  <span className="text-xs">
+                                    {new Date(msg.timestamp).toLocaleTimeString()}
+                                  </span>
+                                  {msg.from_number && msg.direction === 'outbound' && (
+                                    <span className="text-xs flex items-center gap-1">
+                                      • <Smartphone className="h-3 w-3" /> {msg.from_number}
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
                             </div>
                           </div>
-                        </div>
-                      ))}
+                        );
+                      })}
                     </div>
                   )}
                 </ScrollArea>
