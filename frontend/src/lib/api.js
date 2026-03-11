@@ -249,6 +249,7 @@ export const fundedApi = {
   getOne: (id) => axios.get(`${API}/funded/deals/${id}`),
   create: (data) => axios.post(`${API}/funded/deals`, data),
   update: (id, data) => axios.put(`${API}/funded/deals/${id}`, data),
+  delete: (id) => axios.delete(`${API}/funded/deals/${id}`),
   updatePayment: (dealId, paymentNumber, data) => axios.put(`${API}/funded/deals/${dealId}/payment/${paymentNumber}`, data),
   getStats: () => axios.get(`${API}/funded/stats`),
   getCollectionsQueue: () => axios.get(`${API}/funded/collections-queue`),
