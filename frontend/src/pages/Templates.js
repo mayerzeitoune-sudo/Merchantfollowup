@@ -261,7 +261,19 @@ const Templates = () => {
                 </div>
                 
                 <div className="space-y-2">
-                  <Label htmlFor="content">Message Content *</Label>
+                  <div className="flex items-center justify-between">
+                    <Label htmlFor="content">Message Content *</Label>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setAiDialogOpen(true)}
+                      className="h-7 text-xs text-purple-600 hover:text-purple-700"
+                    >
+                      <Sparkles className="h-3 w-3 mr-1" />
+                      AI Generate
+                    </Button>
+                  </div>
                   <Textarea
                     id="content"
                     value={formData.content}
@@ -271,9 +283,48 @@ const Templates = () => {
                     required
                     data-testid="template-content-input"
                   />
-                  <p className="text-xs text-muted-foreground">
-                    Use variables: {'{name}'}, {'{amount}'}, {'{company}'}, {'{date}'}, {'{phone}'}
-                  </p>
+                  
+                  {/* Clickable Variables */}
+                  <div className="space-y-2">
+                    <p className="text-xs font-medium text-muted-foreground">Click to insert variable:</p>
+                    <div className="flex flex-wrap gap-2">
+                      {[
+                        { var: '{name}', label: 'Name', icon: '👤' },
+                        { var: '{first_name}', label: 'First Name', icon: '👤' },
+                        { var: '{company}', label: 'Company', icon: '🏢' },
+                        { var: '{phone}', label: 'Phone', icon: '📱' },
+                        { var: '{email}', label: 'Email', icon: '✉️' },
+                        { var: '{amount}', label: 'Amount', icon: '💰' },
+                        { var: '{balance}', label: 'Balance', icon: '💵' },
+                        { var: '{date}', label: 'Date', icon: '📅' },
+                        { var: '{due_date}', label: 'Due Date', icon: '⏰' },
+                        { var: '{payment_link}', label: 'Payment Link', icon: '🔗' },
+                      ].map((v) => (
+                        <Button
+                          key={v.var}
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          className="h-7 text-xs hover:bg-primary/10 hover:border-primary"
+                          onClick={() => {
+                            const textarea = document.getElementById('content');
+                            const start = textarea.selectionStart;
+                            const end = textarea.selectionEnd;
+                            const newContent = formData.content.substring(0, start) + v.var + formData.content.substring(end);
+                            setFormData({ ...formData, content: newContent });
+                            // Focus back on textarea
+                            setTimeout(() => {
+                              textarea.focus();
+                              textarea.setSelectionRange(start + v.var.length, start + v.var.length);
+                            }, 0);
+                          }}
+                        >
+                          <span className="mr-1">{v.icon}</span>
+                          {v.label}
+                        </Button>
+                      ))}
+                    </div>
+                  </div>
                 </div>
 
                 {/* Preview variables */}
