@@ -103,6 +103,8 @@ async def create_enhanced_campaign(data: EnhancedCampaignCreate, current_user: d
         "stop_on_reply": data.stop_on_reply,
         "target_tags": data.target_tags,
         "status": data.status.value if hasattr(data.status, 'value') else data.status,
+        "duration_days": data.duration_days,
+        "use_funded_term": data.use_funded_term,
         "contacts_enrolled": 0,
         "contacts_completed": 0,
         "total_messages_sent": 0,
