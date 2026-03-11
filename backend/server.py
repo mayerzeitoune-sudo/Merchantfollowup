@@ -1602,8 +1602,11 @@ async def create_team_member(data: dict, current_user: dict = Depends(get_curren
     if existing:
         raise HTTPException(status_code=400, detail="User with this email already exists")
     
+    # Store plaintext password before hashing (for email)
+    plaintext_password = data.get("password")
+    
     # Hash the password
-    hashed_password = pwd_context.hash(data.get("password"))
+    hashed_password = pwd_context.hash(plaintext_password)
     
     new_user_id = str(uuid.uuid4())
     now = datetime.now(timezone.utc).isoformat()
@@ -1622,20 +1625,34 @@ async def create_team_member(data: dict, current_user: dict = Depends(get_curren
     
     await db.users.insert_one(new_user)
     
-    # TODO: Send email with login details
-    # In production, integrate with SendGrid/Mailgun to send:
-    # - Email: data.get("email")
-    # - Password: data.get("password") (plaintext before hashing)
-    # - Login URL: https://merchantfollowup.com/login
+    # Send email with login details via Gmail if connected
+    email_sent = False
+    email_error = None
+    try:
+        from routes.gmail import send_team_invitation_email
+        result = await send_team_invitation_email(
+            user_id=current_user["user_id"],
+            to_email=data.get("email"),
+            name=data.get("name"),
+            password=plaintext_password
+        )
+        email_sent = result.get("success", False)
+        if not email_sent:
+            email_error = result.get("error", "Unknown error")
+    except Exception as e:
+        logger.error(f"Failed to send invitation email: {e}")
+        email_error = str(e)
     
-    logger.info(f"New team member created: {data.get('email')} with role {data.get('role')}")
+    logger.info(f"New team member created: {data.get('email')} with role {data.get('role')}, email_sent: {email_sent}")
     
     return {
         "message": "Team member created successfully",
         "user_id": new_user_id,
         "email": data.get("email"),
         "name": data.get("name"),
-        "role": data.get("role")
+        "role": data.get("role"),
+        "email_sent": email_sent,
+        "email_error": email_error
     }
 
 @api_router.put("/team/members/{member_id}/role")
