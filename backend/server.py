@@ -2648,6 +2648,432 @@ async def get_dashboard_stats(current_user: dict = Depends(get_current_user)):
 async def root():
     return {"message": "Merchant Follow Up API", "version": "2.0.0"}
 
+# ============== FUNDED DEALS ROUTES ==============
+
+from funded_deals import generate_payment_schedule, calculate_deal_totals, auto_clear_payments, get_payment_status
+
+DEAL_TYPES = ["MCA", "Term Loan", "Line of Credit", "Equipment Financing", "Revenue Based", "Invoice Factoring"]
+PAYMENT_FREQUENCIES = ["daily", "weekly", "bi-weekly", "monthly"]
+
+@api_router.get("/funded/deal-types")
+async def get_deal_types():
+    """Get available deal types"""
+    return {"deal_types": DEAL_TYPES, "payment_frequencies": PAYMENT_FREQUENCIES}
+
+@api_router.post("/funded/deals")
+async def create_funded_deal(data: dict, current_user: dict = Depends(get_current_user)):
+    """Create a new funded deal"""
+    deal_id = str(uuid.uuid4())
+    now = datetime.now(timezone.utc).isoformat()
+    
+    # Generate payment schedule
+    payment_schedule = generate_payment_schedule(
+        start_date=data.get("start_date", now),
+        num_payments=data.get("num_payments", 1),
+        payment_amount=data.get("payment_amount", 0),
+        frequency=data.get("payment_frequency", "weekly")
+    )
+    
+    # Calculate maturity date
+    if payment_schedule:
+        maturity_date = payment_schedule[-1]["due_date"]
+    else:
+        maturity_date = data.get("start_date", now)
+    
+    deal_doc = {
+        "id": deal_id,
+        "user_id": current_user["user_id"],
+        "client_id": data.get("client_id"),
+        "client_name": data.get("client_name", ""),
+        "business_name": data.get("business_name", ""),
+        "deal_type": data.get("deal_type", "MCA"),
+        "funded_amount": data.get("funded_amount", 0),
+        "funding_date": data.get("funding_date", now),
+        "payback_amount": data.get("payback_amount", 0),
+        "payment_frequency": data.get("payment_frequency", "weekly"),
+        "num_payments": data.get("num_payments", 1),
+        "payment_amount": data.get("payment_amount", 0),
+        "start_date": data.get("start_date", now),
+        "maturity_date": maturity_date,
+        "payment_schedule": payment_schedule,
+        "payment_link": data.get("payment_link", ""),
+        "assigned_rep": data.get("assigned_rep"),
+        "assigned_rep_name": data.get("assigned_rep_name", ""),
+        "notes": data.get("notes", ""),
+        "status": "active",  # active, paid_off, defaulted
+        "payment_status": "current",  # current, late, severely_late, paid_off
+        "milestone_50_notified": False,
+        "created_at": now,
+        "updated_at": now
+    }
+    
+    # Calculate initial totals
+    totals = calculate_deal_totals(payment_schedule)
+    deal_doc.update(totals)
+    
+    await db.funded_deals.insert_one(deal_doc)
+    
+    # Update client pipeline stage to funded
+    await db.clients.update_one(
+        {"id": data.get("client_id")},
+        {"$set": {"pipeline_stage": "funded", "updated_at": now}}
+    )
+    
+    if "_id" in deal_doc:
+        del deal_doc["_id"]
+    return deal_doc
+
+@api_router.get("/funded/deals")
+async def get_funded_deals(
+    status: Optional[str] = None,
+    payment_status: Optional[str] = None,
+    assigned_rep: Optional[str] = None,
+    deal_type: Optional[str] = None,
+    current_user: dict = Depends(get_current_user)
+):
+    """Get all funded deals with filters"""
+    query = {"user_id": current_user["user_id"]}
+    
+    if status:
+        query["status"] = status
+    if payment_status:
+        query["payment_status"] = payment_status
+    if assigned_rep:
+        query["assigned_rep"] = assigned_rep
+    if deal_type:
+        query["deal_type"] = deal_type
+    
+    deals = await db.funded_deals.find(query, {"_id": 0}).sort("funding_date", -1).to_list(500)
+    
+    # Auto-clear payments and recalculate for each deal
+    for deal in deals:
+        deal["payment_schedule"] = auto_clear_payments(deal.get("payment_schedule", []))
+        totals = calculate_deal_totals(deal["payment_schedule"])
+        deal.update(totals)
+        
+        # Check 50% milestone
+        if totals["percent_paid"] >= 50 and not deal.get("milestone_50_notified"):
+            deal["milestone_50_reached"] = True
+    
+    return deals
+
+@api_router.get("/funded/deals/{deal_id}")
+async def get_funded_deal(deal_id: str, current_user: dict = Depends(get_current_user)):
+    """Get a single funded deal with full details"""
+    deal = await db.funded_deals.find_one(
+        {"id": deal_id, "user_id": current_user["user_id"]},
+        {"_id": 0}
+    )
+    if not deal:
+        raise HTTPException(status_code=404, detail="Funded deal not found")
+    
+    # Auto-clear and recalculate
+    deal["payment_schedule"] = auto_clear_payments(deal.get("payment_schedule", []))
+    totals = calculate_deal_totals(deal["payment_schedule"])
+    deal.update(totals)
+    
+    # Get conversation history
+    conversations = await db.conversations.find(
+        {"client_id": deal.get("client_id"), "user_id": current_user["user_id"]},
+        {"_id": 0}
+    ).sort("timestamp", -1).to_list(100)
+    deal["conversations"] = conversations
+    
+    # Get payment reminder logs
+    reminders = await db.funded_deal_reminders.find(
+        {"deal_id": deal_id},
+        {"_id": 0}
+    ).sort("sent_at", -1).to_list(50)
+    deal["reminder_logs"] = reminders
+    
+    return deal
+
+@api_router.put("/funded/deals/{deal_id}")
+async def update_funded_deal(deal_id: str, data: dict, current_user: dict = Depends(get_current_user)):
+    """Update funded deal details"""
+    update_data = {k: v for k, v in data.items() if v is not None}
+    update_data["updated_at"] = datetime.now(timezone.utc).isoformat()
+    
+    result = await db.funded_deals.update_one(
+        {"id": deal_id, "user_id": current_user["user_id"]},
+        {"$set": update_data}
+    )
+    
+    if result.matched_count == 0:
+        raise HTTPException(status_code=404, detail="Funded deal not found")
+    
+    return {"message": "Deal updated"}
+
+@api_router.put("/funded/deals/{deal_id}/payment/{payment_number}")
+async def update_payment(
+    deal_id: str,
+    payment_number: int,
+    data: dict,
+    current_user: dict = Depends(get_current_user)
+):
+    """Update a specific payment in the schedule"""
+    deal = await db.funded_deals.find_one(
+        {"id": deal_id, "user_id": current_user["user_id"]}
+    )
+    if not deal:
+        raise HTTPException(status_code=404, detail="Funded deal not found")
+    
+    schedule = deal.get("payment_schedule", [])
+    
+    # Find the payment
+    payment_idx = None
+    for i, p in enumerate(schedule):
+        if p["payment_number"] == payment_number:
+            payment_idx = i
+            break
+    
+    if payment_idx is None:
+        raise HTTPException(status_code=404, detail="Payment not found")
+    
+    # Update payment
+    if "cleared" in data:
+        schedule[payment_idx]["cleared"] = data["cleared"]
+        if data["cleared"]:
+            schedule[payment_idx]["missed"] = False
+            schedule[payment_idx]["status"] = "cleared"
+            schedule[payment_idx]["paid_date"] = data.get("paid_date") or datetime.now(timezone.utc).isoformat()
+    
+    if "missed" in data:
+        schedule[payment_idx]["missed"] = data["missed"]
+        if data["missed"]:
+            schedule[payment_idx]["cleared"] = False
+            schedule[payment_idx]["status"] = "missed"
+            schedule[payment_idx]["paid_date"] = None
+    
+    if "notes" in data:
+        schedule[payment_idx]["notes"] = data["notes"]
+    
+    # Recalculate totals
+    totals = calculate_deal_totals(schedule)
+    
+    # Check 50% milestone
+    milestone_50_notified = deal.get("milestone_50_notified", False)
+    milestone_reached = False
+    if totals["percent_paid"] >= 50 and not milestone_50_notified:
+        milestone_reached = True
+    
+    # Determine overall payment status
+    late_count = sum(1 for p in schedule if p.get("missed") or (not p.get("cleared") and get_payment_status(p) in ["late", "severely_late"]))
+    if totals["percent_paid"] >= 100:
+        payment_status = "paid_off"
+        deal_status = "paid_off"
+    elif late_count >= 3:
+        payment_status = "severely_late"
+        deal_status = "active"
+    elif late_count > 0:
+        payment_status = "late"
+        deal_status = "active"
+    else:
+        payment_status = "current"
+        deal_status = "active"
+    
+    await db.funded_deals.update_one(
+        {"id": deal_id},
+        {"$set": {
+            "payment_schedule": schedule,
+            "payment_status": payment_status,
+            "status": deal_status,
+            **totals,
+            "updated_at": datetime.now(timezone.utc).isoformat()
+        }}
+    )
+    
+    return {
+        "message": "Payment updated",
+        "totals": totals,
+        "milestone_50_reached": milestone_reached
+    }
+
+@api_router.get("/funded/stats")
+async def get_funded_stats(current_user: dict = Depends(get_current_user)):
+    """Get funded deals statistics and book value"""
+    deals = await db.funded_deals.find(
+        {"user_id": current_user["user_id"]},
+        {"_id": 0}
+    ).to_list(1000)
+    
+    # Calculate stats
+    total_funded_volume = sum(d.get("funded_amount", 0) for d in deals)
+    total_deals = len(deals)
+    active_deals = [d for d in deals if d.get("status") == "active"]
+    paid_off_deals = [d for d in deals if d.get("status") == "paid_off"]
+    late_deals = [d for d in deals if d.get("payment_status") in ["late", "severely_late"]]
+    
+    # Calculate collected and outstanding
+    total_collected = 0
+    total_outstanding = 0
+    for deal in deals:
+        schedule = auto_clear_payments(deal.get("payment_schedule", []))
+        totals = calculate_deal_totals(schedule)
+        total_collected += totals["total_collected"]
+        total_outstanding += totals["remaining_balance"]
+    
+    # Monthly stats
+    now = datetime.now(timezone.utc)
+    current_month_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+    
+    monthly_funded = sum(
+        d.get("funded_amount", 0) for d in deals
+        if d.get("funding_date", "").startswith(current_month_start.strftime("%Y-%m"))
+    )
+    
+    avg_deal_size = total_funded_volume / total_deals if total_deals > 0 else 0
+    
+    return {
+        "total_funded_volume": total_funded_volume,
+        "total_deals": total_deals,
+        "active_deals": len(active_deals),
+        "paid_off_deals": len(paid_off_deals),
+        "late_accounts": len(late_deals),
+        "total_collected": total_collected,
+        "total_outstanding": total_outstanding,
+        "monthly_funded_volume": monthly_funded,
+        "average_deal_size": round(avg_deal_size, 2),
+        "book_value": total_outstanding,
+        "expected_receivables": total_outstanding
+    }
+
+@api_router.get("/funded/collections-queue")
+async def get_collections_queue(current_user: dict = Depends(get_current_user)):
+    """Get deals that need payment follow-up"""
+    deals = await db.funded_deals.find(
+        {"user_id": current_user["user_id"], "status": "active"},
+        {"_id": 0}
+    ).to_list(500)
+    
+    queue = []
+    now = datetime.now(timezone.utc)
+    
+    for deal in deals:
+        schedule = deal.get("payment_schedule", [])
+        
+        for payment in schedule:
+            if payment["cleared"] or payment["missed"]:
+                continue
+            
+            due_date = datetime.fromisoformat(payment["due_date"].replace('Z', '+00:00'))
+            days_diff = (due_date.date() - now.date()).days
+            
+            # Include if due within 3 days or overdue
+            if days_diff <= 3:
+                status = get_payment_status(payment)
+                queue.append({
+                    "deal_id": deal["id"],
+                    "client_name": deal.get("client_name", ""),
+                    "business_name": deal.get("business_name", ""),
+                    "payment_number": payment["payment_number"],
+                    "amount": payment["expected_amount"],
+                    "due_date": payment["due_date"],
+                    "days_diff": days_diff,
+                    "status": status,
+                    "priority": "high" if days_diff < 0 else "medium" if days_diff == 0 else "low"
+                })
+    
+    # Sort by priority (overdue first)
+    queue.sort(key=lambda x: x["days_diff"])
+    
+    return queue
+
+@api_router.get("/funded/milestones")
+async def get_milestones(current_user: dict = Depends(get_current_user)):
+    """Get deals that have reached milestones"""
+    deals = await db.funded_deals.find(
+        {"user_id": current_user["user_id"]},
+        {"_id": 0}
+    ).to_list(500)
+    
+    milestones = []
+    
+    for deal in deals:
+        schedule = auto_clear_payments(deal.get("payment_schedule", []))
+        totals = calculate_deal_totals(schedule)
+        
+        if totals["percent_paid"] >= 50 and not deal.get("milestone_50_notified"):
+            milestones.append({
+                "deal_id": deal["id"],
+                "client_name": deal.get("client_name", ""),
+                "business_name": deal.get("business_name", ""),
+                "milestone": "50%",
+                "total_payback": totals["total_payback"],
+                "total_collected": totals["total_collected"],
+                "percent_paid": totals["percent_paid"]
+            })
+    
+    return milestones
+
+@api_router.post("/funded/deals/{deal_id}/milestone-acknowledged")
+async def acknowledge_milestone(deal_id: str, current_user: dict = Depends(get_current_user)):
+    """Mark a milestone as acknowledged"""
+    result = await db.funded_deals.update_one(
+        {"id": deal_id, "user_id": current_user["user_id"]},
+        {"$set": {"milestone_50_notified": True}}
+    )
+    
+    if result.matched_count == 0:
+        raise HTTPException(status_code=404, detail="Deal not found")
+    
+    return {"message": "Milestone acknowledged"}
+
+@api_router.get("/funded/recent")
+async def get_recent_funded(limit: int = 10, current_user: dict = Depends(get_current_user)):
+    """Get recently funded deals"""
+    deals = await db.funded_deals.find(
+        {"user_id": current_user["user_id"]},
+        {"_id": 0, "id": 1, "client_name": 1, "business_name": 1, "funded_amount": 1, "funding_date": 1}
+    ).sort("funding_date", -1).limit(limit).to_list(limit)
+    
+    return deals
+
+@api_router.get("/funded/analytics")
+async def get_funded_analytics(
+    start_date: Optional[str] = None,
+    end_date: Optional[str] = None,
+    current_user: dict = Depends(get_current_user)
+):
+    """Get funded deals analytics for charts"""
+    query = {"user_id": current_user["user_id"]}
+    
+    deals = await db.funded_deals.find(query, {"_id": 0}).to_list(1000)
+    
+    # Group by month for charts
+    monthly_funded = {}
+    monthly_collections = {}
+    by_deal_type = {}
+    by_rep = {}
+    
+    for deal in deals:
+        # By month funded
+        funding_month = deal.get("funding_date", "")[:7]  # YYYY-MM
+        if funding_month:
+            monthly_funded[funding_month] = monthly_funded.get(funding_month, 0) + deal.get("funded_amount", 0)
+        
+        # By deal type
+        deal_type = deal.get("deal_type", "Other")
+        by_deal_type[deal_type] = by_deal_type.get(deal_type, 0) + deal.get("funded_amount", 0)
+        
+        # By rep
+        rep = deal.get("assigned_rep_name", "Unassigned") or "Unassigned"
+        by_rep[rep] = by_rep.get(rep, 0) + deal.get("funded_amount", 0)
+        
+        # Calculate monthly collections
+        schedule = auto_clear_payments(deal.get("payment_schedule", []))
+        for payment in schedule:
+            if payment.get("cleared") and payment.get("paid_date"):
+                payment_month = payment["paid_date"][:7]
+                monthly_collections[payment_month] = monthly_collections.get(payment_month, 0) + payment["expected_amount"]
+    
+    return {
+        "monthly_funded": [{"month": k, "amount": v} for k, v in sorted(monthly_funded.items())],
+        "monthly_collections": [{"month": k, "amount": v} for k, v in sorted(monthly_collections.items())],
+        "by_deal_type": [{"type": k, "amount": v} for k, v in by_deal_type.items()],
+        "by_rep": [{"rep": k, "amount": v} for k, v in by_rep.items()]
+    }
+
 # ============== IMPORT ENHANCED ROUTES ==============
 # Enhanced routes must be included BEFORE main router to ensure proper route matching
 # Routes like /campaigns/enhanced must be matched before /campaigns/{campaign_id}
