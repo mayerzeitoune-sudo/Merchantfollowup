@@ -82,6 +82,8 @@ class EnhancedCampaignCreate(BaseModel):
     stop_on_reply: bool = True
     target_tags: List[str] = []
     status: CampaignStatus = CampaignStatus.DRAFT
+    duration_days: int = 30  # Campaign duration in days
+    use_funded_term: bool = False  # Auto-use funded deal term for duration
 
 class EnhancedCampaignUpdate(BaseModel):
     name: Optional[str] = None
@@ -91,6 +93,8 @@ class EnhancedCampaignUpdate(BaseModel):
     stop_on_reply: Optional[bool] = None
     target_tags: Optional[List[str]] = None
     status: Optional[CampaignStatus] = None
+    duration_days: Optional[int] = None
+    use_funded_term: Optional[bool] = None
 
 class EnhancedCampaignResponse(BaseModel):
     model_config = ConfigDict(extra="ignore")
