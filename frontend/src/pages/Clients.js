@@ -604,8 +604,13 @@ const Clients = () => {
                               ))}
                               <DropdownMenuSeparator />
                               <DropdownMenuItem 
-                                onClick={() => handleDelete(client.id)}
-                                className="text-destructive"
+                                onClick={(e) => {
+                                  e.preventDefault();
+                                  e.stopPropagation();
+                                  handleDelete(client.id);
+                                }}
+                                className="text-destructive cursor-pointer"
+                                data-testid={`delete-client-${client.id}`}
                               >
                                 <Trash2 className="h-4 w-4 mr-2" />
                                 Delete
