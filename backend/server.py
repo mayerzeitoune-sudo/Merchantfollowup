@@ -2316,6 +2316,176 @@ async def send_sms_to_contact(
         "note": None if provider else "Configure SMS provider to send messages"
     }
 
+# ============== INBOUND SMS WEBHOOK (Twilio/Provider) ==============
+
+class InboundSmsPayload(BaseModel):
+    """Model for inbound SMS webhook from Twilio/provider"""
+    From: str  # Customer's phone number
+    To: str  # Your Twilio number
+    Body: str  # Message content
+    MessageSid: Optional[str] = None
+
+@api_router.post("/sms/inbound")
+async def receive_inbound_sms(data: InboundSmsPayload):
+    """
+    Public webhook endpoint to receive inbound SMS from Twilio.
+    This links incoming messages to the last outbound campaign message for context.
+    """
+    customer_phone = data.From
+    our_number = data.To
+    message_content = data.Body
+    
+    # Normalize phone numbers (strip +1 or similar)
+    customer_phone_clean = customer_phone.replace("+1", "").replace("+", "").replace("-", "").replace(" ", "")
+    our_number_clean = our_number.replace("+1", "").replace("+", "").replace("-", "").replace(" ", "")
+    
+    # Find the client by phone number
+    client = await db.clients.find_one({
+        "phone": {"$regex": customer_phone_clean[-10:]}  # Match last 10 digits
+    })
+    
+    if not client:
+        logger.warning(f"Inbound SMS from unknown number: {customer_phone}")
+        # Store as orphan message for manual review
+        await db.orphan_messages.insert_one({
+            "id": str(uuid.uuid4()),
+            "from_number": customer_phone,
+            "to_number": our_number,
+            "content": message_content,
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "status": "unmatched"
+        })
+        return {"status": "received", "matched": False}
+    
+    # Find the last outbound message to this client from this phone number
+    last_outbound = await db.conversations.find_one(
+        {
+            "client_id": client["id"],
+            "direction": "outbound",
+            "$or": [
+                {"from_number": our_number},
+                {"from_number": our_number_clean},
+                {"from_number": {"$regex": our_number_clean[-10:]}}
+            ]
+        },
+        sort=[("timestamp", -1)]
+    )
+    
+    # Build the responding_to context
+    responding_to_content = None
+    campaign_name = None
+    campaign_id = None
+    
+    if last_outbound:
+        responding_to_content = last_outbound.get("content", "")
+        campaign_name = last_outbound.get("campaign_name")
+        campaign_id = last_outbound.get("campaign_id")
+    
+    # Store the inbound message with context
+    message_id = str(uuid.uuid4())
+    now = datetime.now(timezone.utc).isoformat()
+    
+    inbound_doc = {
+        "id": message_id,
+        "user_id": client.get("user_id"),
+        "client_id": client["id"],
+        "direction": "inbound",
+        "content": message_content,
+        "from_number": our_number,  # The number it was sent TO (our number)
+        "customer_phone": customer_phone,
+        "timestamp": now,
+        "status": "received",
+        "responding_to": responding_to_content,  # The original outbound message they're replying to
+        "campaign_name": campaign_name,
+        "campaign_id": campaign_id,
+        "twilio_sid": data.MessageSid
+    }
+    
+    await db.conversations.insert_one(inbound_doc)
+    
+    logger.info(f"Inbound SMS from {customer_phone} to {our_number} - Client: {client['name']}")
+    
+    return {
+        "status": "received",
+        "matched": True,
+        "client_id": client["id"],
+        "message_id": message_id,
+        "has_context": responding_to_content is not None
+    }
+
+@api_router.post("/sms/simulate-inbound")
+async def simulate_inbound_sms(
+    data: dict,
+    current_user: dict = Depends(get_current_user)
+):
+    """
+    DEV/TEST endpoint: Simulate an inbound SMS reply from a customer.
+    This helps test the reply context feature without real Twilio integration.
+    """
+    client_id = data.get("client_id")
+    message_content = data.get("message", "Test reply message")
+    from_number = data.get("from_number")  # Optional: which of your numbers they're replying to
+    
+    client = await db.clients.find_one(
+        {"id": client_id, "user_id": current_user["user_id"]}
+    )
+    if not client:
+        raise HTTPException(status_code=404, detail="Client not found")
+    
+    # Find the last outbound message to this client
+    query = {
+        "client_id": client_id,
+        "direction": "outbound",
+        "user_id": current_user["user_id"]
+    }
+    if from_number:
+        query["from_number"] = from_number
+    
+    last_outbound = await db.conversations.find_one(
+        query,
+        sort=[("timestamp", -1)]
+    )
+    
+    # Build the responding_to context
+    responding_to_content = None
+    campaign_name = None
+    campaign_id = None
+    
+    if last_outbound:
+        responding_to_content = last_outbound.get("content", "")
+        campaign_name = last_outbound.get("campaign_name")
+        campaign_id = last_outbound.get("campaign_id")
+    
+    # Store the simulated inbound message
+    message_id = str(uuid.uuid4())
+    now = datetime.now(timezone.utc).isoformat()
+    
+    inbound_doc = {
+        "id": message_id,
+        "user_id": current_user["user_id"],
+        "client_id": client_id,
+        "direction": "inbound",
+        "content": message_content,
+        "from_number": from_number or last_outbound.get("from_number") if last_outbound else None,
+        "customer_phone": client["phone"],
+        "timestamp": now,
+        "status": "received",
+        "responding_to": responding_to_content,
+        "campaign_name": campaign_name,
+        "campaign_id": campaign_id,
+        "simulated": True
+    }
+    
+    await db.conversations.insert_one(inbound_doc)
+    
+    return {
+        "message_id": message_id,
+        "client_name": client["name"],
+        "responding_to": responding_to_content[:100] + "..." if responding_to_content and len(responding_to_content) > 100 else responding_to_content,
+        "campaign_name": campaign_name,
+        "note": "Simulated inbound SMS for testing reply context"
+    }
+
 @api_router.post("/contacts/{client_id}/initiate-call")
 async def initiate_call(
     client_id: str, 
