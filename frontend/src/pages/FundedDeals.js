@@ -82,6 +82,7 @@ const FundedDeals = () => {
     business_name: '',
     deal_type: 'MCA',
     funded_amount: '',
+    rate_percent: '',
     funding_date: new Date().toISOString().split('T')[0],
     payback_amount: '',
     payment_frequency: 'weekly',
@@ -89,8 +90,74 @@ const FundedDeals = () => {
     payment_amount: '',
     start_date: new Date().toISOString().split('T')[0],
     assigned_rep: '',
-    notes: ''
+    notes: '',
+    auto_calculate: true
   });
+
+  // Auto-calculate payback and payment amounts
+  const handleFundedAmountChange = (value) => {
+    const fundedAmount = parseFloat(value) || 0;
+    const ratePercent = parseFloat(newDeal.rate_percent) || 0;
+    const numPayments = parseInt(newDeal.num_payments) || 0;
+    
+    let updates = { funded_amount: value };
+    
+    if (newDeal.auto_calculate && ratePercent > 0) {
+      const paybackAmount = fundedAmount * (1 + ratePercent / 100);
+      updates.payback_amount = paybackAmount.toFixed(2);
+      
+      if (numPayments > 0) {
+        updates.payment_amount = (paybackAmount / numPayments).toFixed(2);
+      }
+    }
+    
+    setNewDeal({ ...newDeal, ...updates });
+  };
+
+  const handleRateChange = (value) => {
+    const fundedAmount = parseFloat(newDeal.funded_amount) || 0;
+    const ratePercent = parseFloat(value) || 0;
+    const numPayments = parseInt(newDeal.num_payments) || 0;
+    
+    let updates = { rate_percent: value };
+    
+    if (newDeal.auto_calculate && fundedAmount > 0) {
+      const paybackAmount = fundedAmount * (1 + ratePercent / 100);
+      updates.payback_amount = paybackAmount.toFixed(2);
+      
+      if (numPayments > 0) {
+        updates.payment_amount = (paybackAmount / numPayments).toFixed(2);
+      }
+    }
+    
+    setNewDeal({ ...newDeal, ...updates });
+  };
+
+  const handleNumPaymentsChange = (value) => {
+    const numPayments = parseInt(value) || 0;
+    const paybackAmount = parseFloat(newDeal.payback_amount) || 0;
+    
+    let updates = { num_payments: value };
+    
+    if (newDeal.auto_calculate && paybackAmount > 0 && numPayments > 0) {
+      updates.payment_amount = (paybackAmount / numPayments).toFixed(2);
+    }
+    
+    setNewDeal({ ...newDeal, ...updates });
+  };
+
+  const handlePaybackChange = (value) => {
+    const paybackAmount = parseFloat(value) || 0;
+    const numPayments = parseInt(newDeal.num_payments) || 0;
+    
+    let updates = { payback_amount: value, auto_calculate: false };
+    
+    if (numPayments > 0 && paybackAmount > 0) {
+      updates.payment_amount = (paybackAmount / numPayments).toFixed(2);
+    }
+    
+    setNewDeal({ ...newDeal, ...updates });
+  };
 
   useEffect(() => {
     fetchData();
