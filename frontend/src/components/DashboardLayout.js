@@ -110,7 +110,7 @@ const DashboardLayout = ({ children }) => {
       `}>
         <div className="flex flex-col h-full">
           {/* Logo */}
-          <div className="h-20 flex items-center justify-between px-4 border-b border-border sticky top-0 bg-white z-10">
+          <div className="h-20 flex items-center justify-between px-4 border-b border-border sticky top-0 bg-white z-10 relative">
             <Link to="/dashboard" className="flex items-center gap-3 group">
               <div className="relative">
                 <img 
@@ -130,6 +130,13 @@ const DashboardLayout = ({ children }) => {
             >
               <X className="h-5 w-5" />
             </button>
+            {/* Dripping effect under sidebar header */}
+            <div className="absolute left-0 right-0 top-full pointer-events-none h-8 flex justify-start overflow-hidden">
+              <img src={dripsUrl} alt="" className="h-6 w-auto opacity-70" />
+              <img src={dripsUrl} alt="" className="h-6 w-auto opacity-70 -ml-1" />
+              <img src={dripsUrl} alt="" className="h-6 w-auto opacity-70 -ml-1" />
+              <img src={dripsUrl} alt="" className="h-6 w-auto opacity-70 -ml-1" />
+            </div>
           </div>
 
           {/* Navigation */}
