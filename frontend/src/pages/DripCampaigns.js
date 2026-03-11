@@ -896,6 +896,145 @@ const DripCampaigns = () => {
             </DialogFooter>
           </DialogContent>
         </Dialog>
+
+        {/* AI Assistant Dialog */}
+        <Dialog open={aiDialogOpen} onOpenChange={setAiDialogOpen}>
+          <DialogContent className="sm:max-w-2xl max-h-[80vh]">
+            <DialogHeader>
+              <DialogTitle className="font-['Outfit'] flex items-center gap-2">
+                <Sparkles className="h-5 w-5 text-purple-500" />
+                AI Drip Campaign Assistant
+              </DialogTitle>
+              <DialogDescription>
+                Generate automated drip sequences to nurture your leads
+              </DialogDescription>
+            </DialogHeader>
+            
+            <div className="space-y-4 mt-4">
+              {/* Quick Generate */}
+              <Card className="bg-gradient-to-r from-purple-50 to-pink-50 border-purple-200">
+                <CardContent className="pt-4">
+                  <h4 className="font-medium mb-3 flex items-center gap-2">
+                    <Wand2 className="h-4 w-4" />
+                    Quick Generate Sequence
+                  </h4>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label>Campaign Goal</Label>
+                      <Select value={aiGoal} onValueChange={setAiGoal}>
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="nurture">Lead Nurturing</SelectItem>
+                          <SelectItem value="follow_up">Follow Up</SelectItem>
+                          <SelectItem value="onboarding">Client Onboarding</SelectItem>
+                          <SelectItem value="re_engage">Re-Engagement</SelectItem>
+                          <SelectItem value="promotion">Promotional</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Number of Messages</Label>
+                      <Select value={aiNumMessages.toString()} onValueChange={(v) => setAiNumMessages(parseInt(v))}>
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="3">3 messages</SelectItem>
+                          <SelectItem value="5">5 messages</SelectItem>
+                          <SelectItem value="7">7 messages</SelectItem>
+                          <SelectItem value="10">10 messages</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="col-span-2 space-y-2">
+                      <Label>Industry (optional)</Label>
+                      <Input
+                        value={aiIndustry}
+                        onChange={(e) => setAiIndustry(e.target.value)}
+                        placeholder="e.g., Restaurant, Retail, Consulting"
+                      />
+                    </div>
+                  </div>
+                  <Button 
+                    className="w-full mt-4" 
+                    onClick={handleAiGenerateSequence}
+                    disabled={aiLoading}
+                  >
+                    {aiLoading ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Sparkles className="h-4 w-4 mr-2" />}
+                    Generate Sequence
+                  </Button>
+                </CardContent>
+              </Card>
+
+              {/* Generated Sequence Preview */}
+              {aiGeneratedSequence && (
+                <Card>
+                  <CardContent className="pt-4">
+                    <div className="flex items-center justify-between mb-3">
+                      <h4 className="font-medium">Generated Sequence</h4>
+                      <Button size="sm" onClick={handleUseAiSequence}>
+                        Use This Sequence
+                      </Button>
+                    </div>
+                    <ScrollArea className="h-[200px]">
+                      <div className="space-y-3">
+                        {aiGeneratedSequence.map((step, i) => (
+                          <div key={i} className="p-3 rounded-lg bg-muted">
+                            <div className="flex items-center gap-2 mb-2">
+                              <Badge variant="outline">Step {i + 1}</Badge>
+                              <Badge className="text-xs">{step.channel?.toUpperCase() || 'SMS'}</Badge>
+                              <span className="text-xs text-muted-foreground">Day {step.delay_days || 0}</span>
+                            </div>
+                            <p className="text-sm">{step.message}</p>
+                          </div>
+                        ))}
+                      </div>
+                    </ScrollArea>
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* Chat with AI */}
+              <div className="space-y-2">
+                <Label>Ask AI for Help</Label>
+                <div className="flex gap-2">
+                  <Input
+                    value={aiInput}
+                    onChange={(e) => setAiInput(e.target.value)}
+                    placeholder="e.g., Create a 5-step follow-up sequence for new leads..."
+                    onKeyDown={(e) => e.key === 'Enter' && handleAiChat()}
+                  />
+                  <Button onClick={handleAiChat} disabled={aiLoading || !aiInput.trim()}>
+                    <Send className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+
+              {/* Chat Messages */}
+              {aiChatMessages.length > 0 && (
+                <ScrollArea className="h-[200px] border rounded-lg p-4">
+                  <div className="space-y-3">
+                    {aiChatMessages.map((msg, i) => (
+                      <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                        <div className={`max-w-[85%] p-3 rounded-lg ${
+                          msg.role === 'user' ? 'bg-primary text-primary-foreground' : 'bg-muted'
+                        }`}>
+                          <p className="text-sm whitespace-pre-wrap">{msg.content}</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </ScrollArea>
+              )}
+            </div>
+            
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setAiDialogOpen(false)}>Close</Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     </DashboardLayout>
   );
