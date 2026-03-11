@@ -11,6 +11,7 @@ import ForgotPassword from "./pages/ForgotPassword";
 import Dashboard from "./pages/Dashboard";
 import Clients from "./pages/Clients";
 import ClientProfile from "./pages/ClientProfile";
+import Pipeline from "./pages/Pipeline";
 import Reminders from "./pages/Reminders";
 import CalendarPage from "./pages/CalendarPage";
 import Campaigns from "./pages/Campaigns";
