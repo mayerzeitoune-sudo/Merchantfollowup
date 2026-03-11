@@ -32,8 +32,10 @@ import {
   TrendingUp,
   Phone,
   Loader2,
-  Save
+  Save,
+  Trash2
 } from 'lucide-react';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '../components/ui/alert-dialog';
 import { fundedApi, contactsApi, templatesApi } from '../lib/api';
 import { toast } from 'sonner';
 
