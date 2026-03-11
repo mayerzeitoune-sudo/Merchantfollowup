@@ -520,7 +520,7 @@ const Reminders = () => {
                                   Edit
                                 </DropdownMenuItem>
                                 <DropdownMenuItem 
-                                  onSelect={() => handleDelete(reminder.id)}
+                                  onSelect={() => openDeleteDialog(reminder)}
                                   className="text-destructive cursor-pointer"
                                 >
                                   <Trash2 className="h-4 w-4 mr-2" />
@@ -538,6 +538,25 @@ const Reminders = () => {
             </div>
           </CardContent>
         </Card>
+
+        {/* Delete Confirmation Dialog */}
+        <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Delete Reminder</AlertDialogTitle>
+              <AlertDialogDescription>
+                Are you sure you want to delete this reminder schedule for <strong>{reminderToDelete?.client_name}</strong>? 
+                This action cannot be undone.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel onClick={() => setReminderToDelete(null)}>Cancel</AlertDialogCancel>
+              <AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                Delete
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
     </DashboardLayout>
   );
