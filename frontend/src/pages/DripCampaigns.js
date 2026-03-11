@@ -29,9 +29,13 @@ import {
   ChevronDown,
   ChevronUp,
   Edit,
-  Copy
+  Copy,
+  Sparkles,
+  Wand2,
+  Send,
+  Loader2
 } from 'lucide-react';
-import { enhancedCampaignsApi, clientsApi, segmentsApi } from '../lib/api';
+import { enhancedCampaignsApi, clientsApi, segmentsApi, aiApi } from '../lib/api';
 import { toast } from 'sonner';
 
 const DripCampaigns = () => {
