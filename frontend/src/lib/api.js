@@ -27,6 +27,13 @@ export const clientsApi = {
   getSummary: (id) => axios.get(`${API}/clients/${id}/summary`)
 };
 
+// AI Assistant API
+export const aiApi = {
+  generateMessage: (clientId, context) => axios.post(`${API}/ai/generate-message`, { client_id: clientId, context }),
+  rewriteMessage: (message, tone) => axios.post(`${API}/ai/rewrite-message`, { message, tone }),
+  analyzeDeal: (clientId) => axios.post(`${API}/ai/analyze-deal`, { client_id: clientId })
+};
+
 // Reminders API
 export const remindersApi = {
   getAll: (status) => axios.get(`${API}/reminders`, { params: { status } }),
