@@ -332,23 +332,6 @@ const Clients = () => {
                       />
                     </div>
                   </div>
-                  
-                  <div className="space-y-2">
-                    <Label htmlFor="balance">Balance Owed</Label>
-                    <div className="relative">
-                      <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                      <Input
-                        id="balance"
-                        type="number"
-                        step="0.01"
-                        value={formData.balance}
-                        onChange={(e) => setFormData({ ...formData, balance: parseFloat(e.target.value) || 0 })}
-                        placeholder="0.00"
-                        className="pl-10"
-                        data-testid="client-balance-input"
-                      />
-                    </div>
-                  </div>
                 </div>
 
                 <div className="space-y-2">
