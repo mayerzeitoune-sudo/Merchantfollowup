@@ -62,12 +62,13 @@ const Dashboard = () => {
 
   const fetchAllData = async () => {
     try {
-      const [statsRes, followupsRes, analyticsRes, notificationsRes, fundedRes] = await Promise.all([
+      const [statsRes, followupsRes, analyticsRes, notificationsRes, fundedRes, onboardingRes] = await Promise.all([
         dashboardApi.getStats().catch(() => ({ data: stats })),
         followupsApi.getToday().catch(() => ({ data: { followups: [] } })),
         analyticsApi.getOverview().catch(() => ({ data: null })),
         notificationsApi.getAll(true, 5).catch(() => ({ data: { notifications: [], unread_count: 0 } })),
-        fundedApi.getStats().catch(() => ({ data: null }))
+        fundedApi.getStats().catch(() => ({ data: null })),
+        axios.get(`${API}/api/onboarding/status`).catch(() => ({ data: { status: 'not_started' } }))
       ]);
       
       setStats(statsRes.data);
@@ -76,6 +77,7 @@ const Dashboard = () => {
       setNotifications(notificationsRes.data?.notifications || []);
       setUnreadCount(notificationsRes.data?.unread_count || 0);
       setFundedStats(fundedRes.data);
+      setOnboardingStatus(onboardingRes.data);
     } catch (error) {
       console.error('Failed to fetch data:', error);
     } finally {
