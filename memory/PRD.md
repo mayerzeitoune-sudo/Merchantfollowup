@@ -22,6 +22,11 @@ Build a comprehensive SMS platform "Merchant Follow Up" for automated payment re
 - **Delete Buttons Fixed**: All dropdown menu delete buttons now use `onSelect` instead of `onClick`
 - **Error Handling Fixed**: Validation errors from API now display properly as strings
 
+#### Tags & Pipeline Sync (NEW - March 2026)
+- **Unified Tags & Stages**: Tags now match pipeline stages (removed "Contacted", "Responded", "Not Interested", "Follow Up", "Lost Deal")
+- **Bidirectional Sync**: Changing a tag automatically updates pipeline stage, and vice versa
+- **8 Pipeline Stages**: New Lead → Interested → Application Sent → Docs Submitted → Approved → Funded → Dead → Future
+
 #### AI Content Generation (NEW - March 2026)
 - **Templates AI Assistant**: Generate message templates with AI, multiple tone options
 - **Drip Campaigns AI Assistant**: AI-generated multi-step sequences with customizable goals
