@@ -242,3 +242,4 @@ Build a comprehensive SMS platform "Merchant Follow Up" for automated payment re
 
 ## Recent Changes Log
 - **March 11, 2026**: Fixed delete buttons (onClick → onSelect), Added AI Assistant to Revival page, Fixed AI Dialog in DripCampaigns, Fixed error handling for validation errors
+- **March 11, 2026**: Unified tags with pipeline stages, removed "Contacted" stage, implemented bidirectional tag↔stage sync
