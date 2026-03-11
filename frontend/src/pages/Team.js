@@ -161,15 +161,15 @@ const Team = () => {
               </DialogTrigger>
               <DialogContent>
                 <DialogHeader>
-                  <DialogTitle>Invite Team Member</DialogTitle>
+                  <DialogTitle>Add Team Member</DialogTitle>
                   <DialogDescription>
-                    Send an invitation to join your team
+                    Create a new user account and send them their login details
                   </DialogDescription>
                 </DialogHeader>
                 
                 <div className="space-y-4 mt-4">
                   <div className="space-y-2">
-                    <Label>Name</Label>
+                    <Label>Full Name *</Label>
                     <Input
                       value={newInvite.name}
                       onChange={(e) => setNewInvite({ ...newInvite, name: e.target.value })}
@@ -179,7 +179,7 @@ const Team = () => {
                   </div>
                   
                   <div className="space-y-2">
-                    <Label>Email Address</Label>
+                    <Label>Email Address *</Label>
                     <Input
                       type="email"
                       value={newInvite.email}
@@ -187,6 +187,18 @@ const Team = () => {
                       placeholder="john@company.com"
                       data-testid="invite-email-input"
                     />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label>Password *</Label>
+                    <Input
+                      type="password"
+                      value={newInvite.password}
+                      onChange={(e) => setNewInvite({ ...newInvite, password: e.target.value })}
+                      placeholder="Enter a secure password"
+                      data-testid="invite-password-input"
+                    />
+                    <p className="text-xs text-muted-foreground">This will be sent to the user via email</p>
                   </div>
                   
                   <div className="space-y-2">
@@ -211,7 +223,10 @@ const Team = () => {
                 
                 <DialogFooter>
                   <Button variant="outline" onClick={() => setInviteDialogOpen(false)}>Cancel</Button>
-                  <Button onClick={handleInvite} data-testid="send-invite-btn">Send Invitation</Button>
+                  <Button onClick={handleInvite} data-testid="send-invite-btn">
+                    <UserPlus className="h-4 w-4 mr-2" />
+                    Create User
+                  </Button>
                 </DialogFooter>
               </DialogContent>
             </Dialog>
