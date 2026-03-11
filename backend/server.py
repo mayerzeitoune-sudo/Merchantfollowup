@@ -3122,6 +3122,9 @@ async def update_payment(
     if "notes" in data:
         schedule[payment_idx]["notes"] = data["notes"]
     
+    if "expected_amount" in data:
+        schedule[payment_idx]["expected_amount"] = data["expected_amount"]
+    
     # Recalculate totals
     totals = calculate_deal_totals(schedule)
     
