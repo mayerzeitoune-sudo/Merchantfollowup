@@ -125,6 +125,51 @@ const Templates = () => {
     setFormData({ name: '', category: 'General', content: '' });
   };
 
+  // AI Functions
+  const handleAiGenerateTemplate = async () => {
+    setAiLoading(true);
+    try {
+      const response = await aiApi.generateTemplate(aiTemplateType, '', aiTone);
+      const newMessage = {
+        role: 'assistant',
+        content: response.data.template,
+        variables: response.data.variables
+      };
+      setAiChatMessages(prev => [...prev, newMessage]);
+      toast.success('Template generated!');
+    } catch (error) {
+      toast.error('Failed to generate template');
+    } finally {
+      setAiLoading(false);
+    }
+  };
+
+  const handleAiChat = async () => {
+    if (!aiInput.trim()) return;
+    
+    const userMessage = { role: 'user', content: aiInput };
+    setAiChatMessages(prev => [...prev, userMessage]);
+    setAiInput('');
+    setAiLoading(true);
+    
+    try {
+      const response = await aiApi.chat(aiInput, 'templates');
+      const assistantMessage = { role: 'assistant', content: response.data.response };
+      setAiChatMessages(prev => [...prev, assistantMessage]);
+    } catch (error) {
+      toast.error('AI request failed');
+    } finally {
+      setAiLoading(false);
+    }
+  };
+
+  const handleUseAiTemplate = (content) => {
+    setFormData(prev => ({ ...prev, content }));
+    setAiDialogOpen(false);
+    setIsDialogOpen(true);
+    toast.success('Template added to editor');
+  };
+
   const filteredTemplates = templates.filter(t =>
     t.name.toLowerCase().includes(search.toLowerCase()) ||
     t.content.toLowerCase().includes(search.toLowerCase())
