@@ -776,12 +776,33 @@ async def update_client(client_id: str, data: ClientUpdate, current_user: dict =
 
 @api_router.delete("/clients/{client_id}")
 async def delete_client(client_id: str, current_user: dict = Depends(get_current_user)):
-    result = await db.clients.delete_one(
+    # First, delete all funded deals associated with this client
+    db.funded_deals.delete_many(
+        {"client_id": client_id, "user_id": current_user["user_id"]}
+    )
+    
+    # Delete all payments associated with deals for this client
+    db.deal_payments.delete_many(
+        {"client_id": client_id, "user_id": current_user["user_id"]}
+    )
+    
+    # Delete conversations
+    db.conversations.delete_many(
+        {"client_id": client_id}
+    )
+    
+    # Delete reminders
+    db.reminders.delete_many(
+        {"client_id": client_id, "user_id": current_user["user_id"]}
+    )
+    
+    # Finally delete the client
+    result = db.clients.delete_one(
         {"id": client_id, "user_id": current_user["user_id"]}
     )
     if result.deleted_count == 0:
         raise HTTPException(status_code=404, detail="Client not found")
-    return {"message": "Client deleted"}
+    return {"message": "Client and all associated data deleted"}
 
 @api_router.put("/clients/{client_id}/pipeline")
 async def update_client_pipeline(client_id: str, stage: str, current_user: dict = Depends(get_current_user)):
