@@ -294,22 +294,66 @@ const ClientProfile = () => {
             {/* Tags Card */}
             <Card>
               <CardHeader>
-                <CardTitle className="font-['Outfit'] text-lg flex items-center gap-2">
-                  <Tag className="h-4 w-4" />
-                  Tags
-                </CardTitle>
+                <div className="flex items-center justify-between">
+                  <CardTitle className="font-['Outfit'] text-lg flex items-center gap-2">
+                    <Tag className="h-4 w-4" />
+                    Tags
+                  </CardTitle>
+                  <Button 
+                    variant="ghost" 
+                    size="sm"
+                    onClick={() => setShowTagEditor(!showTagEditor)}
+                    data-testid="edit-tags-profile-btn"
+                  >
+                    <Pencil className="h-4 w-4 mr-1" />
+                    {showTagEditor ? 'Done' : 'Edit'}
+                  </Button>
+                </div>
               </CardHeader>
               <CardContent>
-                {client.tags?.length > 0 ? (
-                  <div className="flex flex-wrap gap-2">
-                    {client.tags.map((tag) => (
-                      <Badge key={tag} className={getTagColor(tag)}>
+                {/* Current Tags */}
+                <div className="flex flex-wrap gap-2 mb-3">
+                  {client.tags?.length > 0 ? (
+                    client.tags.map((tag) => (
+                      <Badge 
+                        key={tag} 
+                        className={`${getTagColor(tag)} ${showTagEditor ? 'cursor-pointer' : ''}`}
+                        onClick={() => showTagEditor && handleTagUpdate(tag)}
+                      >
                         {tag}
+                        {showTagEditor && <X className="h-3 w-3 ml-1" />}
                       </Badge>
-                    ))}
+                    ))
+                  ) : (
+                    <p className="text-sm text-muted-foreground">No tags assigned</p>
+                  )}
+                </div>
+                
+                {/* Tag Editor */}
+                {showTagEditor && (
+                  <div className="pt-3 border-t">
+                    <p className="text-xs text-muted-foreground mb-2">Click to add/remove tags:</p>
+                    <div className="flex flex-wrap gap-1">
+                      {AVAILABLE_TAGS.map((tag) => (
+                        <Badge
+                          key={tag.value}
+                          variant="outline"
+                          className={`cursor-pointer text-xs transition-all ${
+                            client.tags?.includes(tag.value)
+                              ? tag.color + ' border-transparent'
+                              : 'hover:bg-secondary'
+                          }`}
+                          onClick={() => handleTagUpdate(tag.value)}
+                          data-testid={`profile-tag-${tag.value.toLowerCase().replace(/\s/g, '-')}`}
+                        >
+                          {client.tags?.includes(tag.value) ? (
+                            <X className="h-3 w-3 mr-1" />
+                          ) : null}
+                          {tag.value}
+                        </Badge>
+                      ))}
+                    </div>
                   </div>
-                ) : (
-                  <p className="text-sm text-muted-foreground">No tags assigned</p>
                 )}
               </CardContent>
             </Card>
