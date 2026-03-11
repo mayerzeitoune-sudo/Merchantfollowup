@@ -66,6 +66,7 @@ class UserResponse(BaseModel):
     name: str
     phone: Optional[str] = None
     is_verified: bool = False
+    role: str = "agent"
     created_at: str
 
 class VerifyOTP(BaseModel):
