@@ -646,13 +646,7 @@ const LandingPage = () => {
           <div className="grid md:grid-cols-4 gap-8 mb-8">
             <div>
               <div className="flex items-center gap-3 mb-4">
-                <div className="h-10 w-10 rounded-lg bg-gradient-to-br from-orange-500 to-orange-600 flex items-center justify-center">
-                  <MessageSquare className="h-6 w-6 text-white" />
-                </div>
-                <div>
-                  <h1 className="text-lg font-bold text-white font-['Outfit']">Merchant</h1>
-                  <p className="text-xs text-orange-500 font-medium -mt-1">FOLLOW UP</p>
-                </div>
+                <img src={logoUrl} alt="Merchant Follow Up" className="h-10 w-auto" />
               </div>
               <p className="text-sm">
                 The all-in-one lead management platform for growing businesses.
