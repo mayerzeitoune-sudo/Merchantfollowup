@@ -277,9 +277,10 @@ const Contacts = () => {
     
     setCalling(true);
     try {
-      const response = await contactsApi.initiateCall(selectedClient.id);
+      const fromNumber = selectedFromNumber === 'default' ? null : selectedFromNumber;
+      const response = await contactsApi.initiateCall(selectedClient.id, fromNumber);
       if (response.data.provider_configured) {
-        toast.success('Call initiated!');
+        toast.success(`Call initiated from ${response.data.from_number || 'default number'}!`);
       } else {
         toast.info('Configure Twilio Voice in Settings to make browser calls');
       }
