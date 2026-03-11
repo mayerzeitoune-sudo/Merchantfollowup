@@ -287,8 +287,7 @@ const DripCampaigns = () => {
         channel: 'sms',
         message: '',
         delay_days: formData.steps.length === 0 ? 0 : 3,
-        delay_hours: 0,
-        delay_minutes: 0,
+        send_time: '09:00',
         subject: ''
       }]
     });
