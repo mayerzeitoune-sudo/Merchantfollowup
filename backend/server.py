@@ -858,6 +858,207 @@ async def get_client_summary(client_id: str, current_user: dict = Depends(get_cu
         "updated_at": client.get("summary_updated_at")
     }
 
+# ============== AI DEAL ASSISTANT ==============
+
+@api_router.post("/ai/generate-message")
+async def ai_generate_message(request_data: dict, current_user: dict = Depends(get_current_user)):
+    """Generate AI message for a client"""
+    client_id = request_data.get("client_id")
+    context = request_data.get("context", "follow_up")  # follow_up, intro, closing, reminder
+    
+    client = await db.clients.find_one(
+        {"id": client_id, "user_id": current_user["user_id"]},
+        {"_id": 0}
+    )
+    if not client:
+        raise HTTPException(status_code=404, detail="Client not found")
+    
+    # Get recent conversation
+    conversations = await db.conversations.find(
+        {"client_id": client_id, "user_id": current_user["user_id"]},
+        {"_id": 0}
+    ).sort("timestamp", -1).to_list(10)
+    
+    api_key = os.environ.get('EMERGENT_LLM_KEY')
+    if not api_key:
+        raise HTTPException(status_code=500, detail="AI not configured")
+    
+    try:
+        from emergentintegrations.llm.chat import LlmChat, UserMessage
+        
+        conv_history = "\n".join([
+            f"{'Client' if msg['direction'] == 'inbound' else 'You'}: {msg['content']}"
+            for msg in reversed(conversations[-5:])
+        ]) if conversations else "No previous messages"
+        
+        prompts = {
+            "follow_up": "Write a friendly follow-up message to check in and move the deal forward.",
+            "intro": "Write an introduction message to start the conversation professionally.",
+            "closing": "Write a message to help close the deal and get commitment.",
+            "reminder": "Write a gentle reminder message about their pending application or documents."
+        }
+        
+        chat = LlmChat(
+            api_key=api_key,
+            session_id=f"ai_gen_{client_id}",
+            system_message="You are a professional sales assistant. Write concise, personalized SMS messages (under 160 characters when possible). Be friendly but professional. Don't use emojis excessively."
+        ).with_model("openai", "gpt-5.2")
+        
+        prompt = f"""Client: {client['name']}
+Company: {client.get('company', 'N/A')}
+Pipeline Stage: {client.get('pipeline_stage', 'new_lead')}
+
+Recent conversation:
+{conv_history}
+
+Task: {prompts.get(context, prompts['follow_up'])}
+
+Generate ONLY the message text, nothing else."""
+        
+        user_message = UserMessage(text=prompt)
+        response = await chat.send_message(user_message)
+        
+        return {"message": response.strip(), "context": context}
+        
+    except Exception as e:
+        logger.error(f"AI generate message error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@api_router.post("/ai/rewrite-message")
+async def ai_rewrite_message(request_data: dict, current_user: dict = Depends(get_current_user)):
+    """Rewrite message with different tone"""
+    message = request_data.get("message", "")
+    tone = request_data.get("tone", "professional")  # professional, friendly, urgent
+    
+    if not message:
+        raise HTTPException(status_code=400, detail="Message required")
+    
+    api_key = os.environ.get('EMERGENT_LLM_KEY')
+    if not api_key:
+        raise HTTPException(status_code=500, detail="AI not configured")
+    
+    try:
+        from emergentintegrations.llm.chat import LlmChat, UserMessage
+        
+        tone_prompts = {
+            "professional": "Make it more formal and professional while keeping it concise.",
+            "friendly": "Make it warmer and more conversational while staying professional.",
+            "urgent": "Add urgency while remaining respectful. Emphasize time sensitivity."
+        }
+        
+        chat = LlmChat(
+            api_key=api_key,
+            session_id=f"ai_rewrite_{uuid.uuid4()}",
+            system_message="You rewrite messages. Output ONLY the rewritten message, nothing else."
+        ).with_model("openai", "gpt-5.2")
+        
+        prompt = f"""Original message: {message}
+
+Task: {tone_prompts.get(tone, tone_prompts['professional'])}
+
+Rewrite:"""
+        
+        user_message = UserMessage(text=prompt)
+        response = await chat.send_message(user_message)
+        
+        return {"original": message, "rewritten": response.strip(), "tone": tone}
+        
+    except Exception as e:
+        logger.error(f"AI rewrite error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@api_router.post("/ai/analyze-deal")
+async def ai_analyze_deal(request_data: dict, current_user: dict = Depends(get_current_user)):
+    """Analyze deal health and suggest next actions"""
+    client_id = request_data.get("client_id")
+    
+    client = await db.clients.find_one(
+        {"id": client_id, "user_id": current_user["user_id"]},
+        {"_id": 0}
+    )
+    if not client:
+        raise HTTPException(status_code=404, detail="Client not found")
+    
+    # Get conversation history
+    conversations = await db.conversations.find(
+        {"client_id": client_id, "user_id": current_user["user_id"]},
+        {"_id": 0}
+    ).sort("timestamp", -1).to_list(20)
+    
+    api_key = os.environ.get('EMERGENT_LLM_KEY')
+    if not api_key:
+        raise HTTPException(status_code=500, detail="AI not configured")
+    
+    try:
+        from emergentintegrations.llm.chat import LlmChat, UserMessage
+        
+        # Calculate days since last contact
+        last_contact = None
+        if conversations:
+            last_contact = conversations[0].get('timestamp')
+        
+        conv_history = "\n".join([
+            f"[{msg.get('timestamp', 'unknown')[:10]}] {'Client' if msg['direction'] == 'inbound' else 'You'}: {msg['content']}"
+            for msg in reversed(conversations[-10:])
+        ]) if conversations else "No conversation history"
+        
+        chat = LlmChat(
+            api_key=api_key,
+            session_id=f"ai_analyze_{client_id}",
+            system_message="You are a sales analytics expert. Analyze deals and provide actionable insights."
+        ).with_model("openai", "gpt-5.2")
+        
+        prompt = f"""Analyze this deal:
+
+Client: {client['name']}
+Company: {client.get('company', 'N/A')}
+Pipeline Stage: {client.get('pipeline_stage', 'new_lead')}
+Deal Value: ${client.get('balance', 0)}
+Tags: {', '.join(client.get('tags', []))}
+Last Contact: {last_contact or 'Never'}
+
+Conversation History:
+{conv_history}
+
+Provide analysis in this JSON format:
+{{
+  "health_score": <1-10>,
+  "status": "<hot|warm|cold|dead>",
+  "days_inactive": <number or null>,
+  "risk_factors": ["<factor1>", "<factor2>"],
+  "suggested_actions": ["<action1>", "<action2>", "<action3>"],
+  "next_message_suggestion": "<suggested message>",
+  "win_probability": <0-100>
+}}"""
+        
+        user_message = UserMessage(text=prompt)
+        response = await chat.send_message(user_message)
+        
+        # Parse JSON response
+        import json
+        try:
+            # Extract JSON from response
+            json_str = response.strip()
+            if "```json" in json_str:
+                json_str = json_str.split("```json")[1].split("```")[0]
+            elif "```" in json_str:
+                json_str = json_str.split("```")[1].split("```")[0]
+            analysis = json.loads(json_str)
+        except:
+            analysis = {
+                "health_score": 5,
+                "status": "warm",
+                "risk_factors": ["Unable to parse full analysis"],
+                "suggested_actions": ["Follow up with client"],
+                "raw_response": response.strip()
+            }
+        
+        return {"client_id": client_id, "analysis": analysis}
+        
+    except Exception as e:
+        logger.error(f"AI analyze error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
 # ============== REMINDER ROUTES ==============
 
 @api_router.post("/reminders", response_model=ReminderResponse)
