@@ -225,7 +225,7 @@ Build a comprehensive SMS platform "Merchant Follow Up" for automated payment re
 - Password: password123
 
 ## Known Issues
-1. OTP input component has usability issues
+1. OTP input component has usability issues (P3)
 2. All SMS/Voice functionality is mocked (requires provider setup)
 
 ## Mocked Features (UI Placeholders)
@@ -234,3 +234,6 @@ Build a comprehensive SMS platform "Merchant Follow Up" for automated payment re
 - Gift ordering and delivery
 - Domain purchasing
 - Actual SMS sending (pending provider credentials)
+
+## Recent Changes Log
+- **March 11, 2026**: Fixed delete buttons (onClick → onSelect), Added AI Assistant to Revival page, Fixed AI Dialog in DripCampaigns, Fixed error handling for validation errors
