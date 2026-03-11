@@ -506,14 +506,66 @@ const Settings = () => {
                           <p className="text-sm text-green-700">{gmailStatus.email}</p>
                         </div>
                       </div>
-                      <Button 
-                        variant="outline" 
-                        onClick={handleGmailDisconnect}
-                        className="text-red-600 border-red-200 hover:bg-red-50"
-                      >
-                        <Unlink className="h-4 w-4 mr-2" />
-                        Disconnect
-                      </Button>
+                      <div className="flex gap-2">
+                        <Dialog open={composeOpen} onOpenChange={setComposeOpen}>
+                          <DialogTrigger asChild>
+                            <Button variant="outline">
+                              <Mail className="h-4 w-4 mr-2" />
+                              Compose
+                            </Button>
+                          </DialogTrigger>
+                          <DialogContent className="max-w-lg">
+                            <DialogHeader>
+                              <DialogTitle>Compose Email</DialogTitle>
+                              <DialogDescription>
+                                Send an email from {gmailStatus.email}
+                              </DialogDescription>
+                            </DialogHeader>
+                            <div className="space-y-4 mt-4">
+                              <div className="space-y-2">
+                                <Label>To</Label>
+                                <Input
+                                  type="email"
+                                  placeholder="recipient@example.com"
+                                  value={emailForm.to}
+                                  onChange={(e) => setEmailForm({...emailForm, to: e.target.value})}
+                                />
+                              </div>
+                              <div className="space-y-2">
+                                <Label>Subject</Label>
+                                <Input
+                                  placeholder="Email subject"
+                                  value={emailForm.subject}
+                                  onChange={(e) => setEmailForm({...emailForm, subject: e.target.value})}
+                                />
+                              </div>
+                              <div className="space-y-2">
+                                <Label>Message</Label>
+                                <Textarea
+                                  placeholder="Type your message here..."
+                                  rows={6}
+                                  value={emailForm.body}
+                                  onChange={(e) => setEmailForm({...emailForm, body: e.target.value})}
+                                />
+                              </div>
+                            </div>
+                            <DialogFooter>
+                              <Button variant="outline" onClick={() => setComposeOpen(false)}>Cancel</Button>
+                              <Button onClick={handleSendEmail} disabled={sendingEmail}>
+                                {sendingEmail ? 'Sending...' : 'Send Email'}
+                              </Button>
+                            </DialogFooter>
+                          </DialogContent>
+                        </Dialog>
+                        <Button 
+                          variant="outline" 
+                          onClick={handleGmailDisconnect}
+                          className="text-red-600 border-red-200 hover:bg-red-50"
+                        >
+                          <Unlink className="h-4 w-4 mr-2" />
+                          Disconnect
+                        </Button>
+                      </div>
                     </div>
                     
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
