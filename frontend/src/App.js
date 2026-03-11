@@ -31,6 +31,7 @@ import Revival from "./pages/Revival";
 import Team from "./pages/Team";
 import FundedDeals from "./pages/FundedDeals";
 import FundedDealProfile from "./pages/FundedDealProfile";
+import OnboardingPage from "./pages/OnboardingPage";
 
 // Protected Route Component
 const ProtectedRoute = ({ children }) => {
