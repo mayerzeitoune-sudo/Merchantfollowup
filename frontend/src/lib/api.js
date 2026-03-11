@@ -236,3 +236,15 @@ export const segmentsApi = {
   bulkRemoveTags: (clientIds, tags) => axios.post(`${API}/segments/bulk-remove-tag`, { client_ids: clientIds, tags }),
   getPipelineStats: () => axios.get(`${API}/segments/pipeline`)
 };
+
+// Team API
+export const teamApi = {
+  getMembers: () => axios.get(`${API}/team/members`),
+  getInvites: () => axios.get(`${API}/team/invites`),
+  getStats: () => axios.get(`${API}/team/stats`),
+  inviteMember: (data) => axios.post(`${API}/team/invite`, data),
+  updateMemberRole: (memberId, role) => axios.put(`${API}/team/members/${memberId}/role`, null, { params: { role } }),
+  removeMember: (memberId) => axios.delete(`${API}/team/members/${memberId}`),
+  cancelInvite: (inviteId) => axios.delete(`${API}/team/invites/${inviteId}`)
+};
+
