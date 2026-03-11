@@ -226,7 +226,7 @@ const FundedDealProfile = () => {
             <Link to={`/clients/${deal.client_id}`}>
               <Button variant="outline">View Client</Button>
             </Link>
-            <Button variant="outline">
+            <Button variant="outline" onClick={handleEditDeal} data-testid="edit-deal-btn">
               <Edit className="h-4 w-4 mr-2" />
               Edit Deal
             </Button>
