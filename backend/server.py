@@ -3741,6 +3741,14 @@ try:
 except Exception as e:
     logger.warning(f"Could not load enhanced routes: {e}")
 
+# Load Gmail routes
+try:
+    from routes.gmail import router as gmail_router
+    app.include_router(gmail_router, prefix="/api")
+    logger.info("Gmail routes loaded successfully")
+except Exception as e:
+    logger.warning(f"Could not load Gmail routes: {e}")
+
 # Include the main router AFTER enhanced routes
 app.include_router(api_router)
 
