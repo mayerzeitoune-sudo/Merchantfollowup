@@ -190,13 +190,20 @@ const Templates = () => {
             <h1 className="text-3xl font-bold font-['Outfit']">Message Templates</h1>
             <p className="text-muted-foreground mt-1">Create and manage reusable message templates</p>
           </div>
-          <Dialog open={isDialogOpen} onOpenChange={(open) => { setIsDialogOpen(open); if (!open) resetForm(); }}>
-            <DialogTrigger asChild>
-              <Button className="bg-primary hover:bg-primary/90" data-testid="add-template-btn">
-                <Plus className="h-4 w-4 mr-2" />
-                New Template
-              </Button>
-            </DialogTrigger>
+          <div className="flex gap-2">
+            {/* AI Assistant Button */}
+            <Button variant="outline" onClick={() => setAiDialogOpen(true)} data-testid="ai-assistant-btn">
+              <Sparkles className="h-4 w-4 mr-2 text-purple-500" />
+              AI Assistant
+            </Button>
+            
+            <Dialog open={isDialogOpen} onOpenChange={(open) => { setIsDialogOpen(open); if (!open) resetForm(); }}>
+              <DialogTrigger asChild>
+                <Button className="bg-primary hover:bg-primary/90" data-testid="add-template-btn">
+                  <Plus className="h-4 w-4 mr-2" />
+                  New Template
+                </Button>
+              </DialogTrigger>
             <DialogContent className="sm:max-w-lg">
               <DialogHeader>
                 <DialogTitle className="font-['Outfit']">
