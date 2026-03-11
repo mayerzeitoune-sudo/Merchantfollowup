@@ -30,7 +30,6 @@ import { toast } from 'sonner';
 // Pipeline stages configuration
 const PIPELINE_STAGES = [
   { id: 'new_lead', name: 'New Lead', color: 'bg-blue-500', textColor: 'text-blue-700', bgLight: 'bg-blue-50' },
-  { id: 'contacted', name: 'Contacted', color: 'bg-purple-500', textColor: 'text-purple-700', bgLight: 'bg-purple-50' },
   { id: 'interested', name: 'Interested', color: 'bg-cyan-500', textColor: 'text-cyan-700', bgLight: 'bg-cyan-50' },
   { id: 'application_sent', name: 'Application Sent', color: 'bg-indigo-500', textColor: 'text-indigo-700', bgLight: 'bg-indigo-50' },
   { id: 'docs_submitted', name: 'Docs Submitted', color: 'bg-orange-500', textColor: 'text-orange-700', bgLight: 'bg-orange-50' },
@@ -39,6 +38,18 @@ const PIPELINE_STAGES = [
   { id: 'dead', name: 'Dead', color: 'bg-red-500', textColor: 'text-red-700', bgLight: 'bg-red-50' },
   { id: 'future', name: 'Future', color: 'bg-gray-500', textColor: 'text-gray-700', bgLight: 'bg-gray-50' },
 ];
+
+// Map pipeline stages to tag values for syncing
+const STAGE_TO_TAG = {
+  'new_lead': 'New Lead',
+  'interested': 'Interested',
+  'application_sent': 'Application Sent',
+  'docs_submitted': 'Docs Submitted',
+  'approved': 'Approved',
+  'funded': 'Funded',
+  'dead': 'Dead',
+  'future': 'Future',
+};
 
 const getStageColor = (stageId) => {
   const stage = PIPELINE_STAGES.find(s => s.id === stageId);
