@@ -22,7 +22,10 @@ import {
   Zap,
   FileText,
   ChevronRight,
-  Smartphone
+  Smartphone,
+  Tag,
+  X,
+  Pencil
 } from 'lucide-react';
 import { clientsApi, contactsApi, templatesApi, phoneNumbersApi } from '../lib/api';
 import { toast } from 'sonner';
