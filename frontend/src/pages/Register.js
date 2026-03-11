@@ -19,7 +19,7 @@ const Register = () => {
   const { register } = useAuth();
   const navigate = useNavigate();
 
-  const logoUrl = "https://customer-assets.emergentagent.com/job_payment-tracker-471/artifacts/q3g0kgbm_Image_20260310_172432_668.png";
+  const logoUrl = "https://customer-assets.emergentagent.com/job_8de675b6-2eb0-4aa2-9eba-eeadd9657b38/artifacts/gcg3jc1g_Image_20260311_161856_605.png";
 
   const handleSubmit = async (e) => {
     e.preventDefault();
