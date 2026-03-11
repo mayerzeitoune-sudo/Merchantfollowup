@@ -257,6 +257,7 @@ const Settings = () => {
         <Tabs defaultValue="providers" className="space-y-6">
           <TabsList>
             <TabsTrigger value="providers">SMS Providers</TabsTrigger>
+            <TabsTrigger value="gmail">Gmail</TabsTrigger>
             <TabsTrigger value="profile">Profile</TabsTrigger>
           </TabsList>
 
