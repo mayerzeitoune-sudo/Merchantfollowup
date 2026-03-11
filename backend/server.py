@@ -767,17 +767,44 @@ async def delete_client(client_id: str, current_user: dict = Depends(get_current
 @api_router.put("/clients/{client_id}/pipeline")
 async def update_client_pipeline(client_id: str, stage: str, current_user: dict = Depends(get_current_user)):
     """Update client's pipeline stage"""
-    valid_stages = ['new_lead', 'contacted', 'interested', 'application_sent', 'docs_submitted', 'approved', 'funded', 'dead', 'future']
+    valid_stages = ['new_lead', 'interested', 'application_sent', 'docs_submitted', 'approved', 'funded', 'dead', 'future']
     if stage not in valid_stages:
         raise HTTPException(status_code=400, detail=f"Invalid stage. Must be one of: {valid_stages}")
     
+    # Map stages to tags for syncing
+    STAGE_TO_TAG = {
+        'new_lead': 'New Lead',
+        'interested': 'Interested',
+        'application_sent': 'Application Sent',
+        'docs_submitted': 'Docs Submitted',
+        'approved': 'Approved',
+        'funded': 'Funded',
+        'dead': 'Dead',
+        'future': 'Future',
+    }
+    
+    # Get current client to update tags
+    client = await db.clients.find_one(
+        {"id": client_id, "user_id": current_user["user_id"]},
+        {"_id": 0}
+    )
+    if not client:
+        raise HTTPException(status_code=404, detail="Client not found")
+    
+    # Update tags - remove old stage tags and add new one
+    current_tags = client.get("tags", [])
+    stage_tag_values = list(STAGE_TO_TAG.values())
+    updated_tags = [t for t in current_tags if t not in stage_tag_values]
+    updated_tags.append(STAGE_TO_TAG.get(stage, stage))
+    
     result = await db.clients.update_one(
         {"id": client_id, "user_id": current_user["user_id"]},
-        {"$set": {"pipeline_stage": stage, "updated_at": datetime.now(timezone.utc).isoformat()}}
+        {"$set": {
+            "pipeline_stage": stage, 
+            "tags": updated_tags,
+            "updated_at": datetime.now(timezone.utc).isoformat()
+        }}
     )
-    
-    if result.matched_count == 0:
-        raise HTTPException(status_code=404, detail="Client not found")
     
     return {"message": f"Pipeline stage updated to {stage}"}
 
