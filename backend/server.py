@@ -1949,13 +1949,13 @@ async def send_template_message(
     
     # Default variable substitutions
     default_vars = {
-        "client_name": client.get("name", ""),
-        "client_company": client.get("company", ""),
-        "client_balance": str(client.get("balance", 0))
+        "client_name": client.get("name", "") or "",
+        "client_company": client.get("company", "") or "",
+        "client_balance": str(client.get("balance", 0) or 0)
     }
     
     for var, value in default_vars.items():
-        message_content = message_content.replace(f"{{{var}}}", value)
+        message_content = message_content.replace(f"{{{var}}}", value or "")
     
     # Check for active SMS provider
     provider = await db.sms_providers.find_one(
