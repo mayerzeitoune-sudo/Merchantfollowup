@@ -63,6 +63,7 @@ const FundedDealProfile = () => {
   
   // Edit Deal Dialog state
   const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [editFormData, setEditFormData] = useState({
     funded_amount: 0,
     total_payback: 0,
