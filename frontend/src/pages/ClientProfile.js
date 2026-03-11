@@ -96,9 +96,22 @@ const ClientProfile = () => {
     }
   };
 
-  const fetchConversation = async () => {
+  const fetchConversationChains = async () => {
     try {
-      const response = await contactsApi.getConversation(clientId);
+      const response = await contactsApi.getChains(clientId);
+      setConversationChains(response.data.chains || []);
+    } catch (error) {
+      console.error('Failed to fetch conversation chains');
+      setConversationChains([]);
+    }
+  };
+
+  const fetchConversation = async (fromNumber = 'all') => {
+    try {
+      // If 'all', don't filter by from_number to get all messages
+      // Otherwise, filter by the specific from_number
+      const filterNumber = fromNumber === 'all' ? null : fromNumber;
+      const response = await contactsApi.getConversation(clientId, filterNumber);
       setConversation(response.data.messages || []);
     } catch (error) {
       console.error('Failed to fetch conversation');
