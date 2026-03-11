@@ -50,6 +50,16 @@ const DripCampaigns = () => {
   const [expandedCampaign, setExpandedCampaign] = useState(null);
   const [enrollments, setEnrollments] = useState([]);
   
+  // AI Assistant state
+  const [aiDialogOpen, setAiDialogOpen] = useState(false);
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiGoal, setAiGoal] = useState('nurture');
+  const [aiNumMessages, setAiNumMessages] = useState(5);
+  const [aiIndustry, setAiIndustry] = useState('');
+  const [aiGeneratedSequence, setAiGeneratedSequence] = useState(null);
+  const [aiChatMessages, setAiChatMessages] = useState([]);
+  const [aiInput, setAiInput] = useState('');
+  
   // Form state
   const [formData, setFormData] = useState({
     name: '',
