@@ -625,6 +625,7 @@ const DripCampaigns = () => {
               </DialogFooter>
             </DialogContent>
           </Dialog>
+          </div>
         </div>
 
         {/* Campaigns List */}
