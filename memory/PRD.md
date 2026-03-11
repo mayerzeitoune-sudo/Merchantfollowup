@@ -259,6 +259,8 @@ Build a comprehensive SMS platform "Merchant Follow Up" for automated payment re
 - Actual SMS sending (pending provider credentials)
 
 ## Recent Changes Log
+- **March 11, 2026**: Added rate calculation feature to Create Funded Deal form - auto-calculates Total Payback and Payment Amount based on funded amount, rate %, and term
+- **March 11, 2026**: Fixed conversation messages combining issue on Client Profile - added dropdown to filter by phone number chain, messages now show phone number labels when viewing "All Conversations"
 - **March 11, 2026**: Fixed delete buttons (onClick → onSelect), Added AI Assistant to Revival page, Fixed AI Dialog in DripCampaigns, Fixed error handling for validation errors
 - **March 11, 2026**: Unified tags with pipeline stages, removed "Contacted" stage, implemented bidirectional tag↔stage sync
 - **March 11, 2026**: Improved AI Template Assistant (added Automated tone, dialog reset, better UI), Added Funded Deals edit dialog and editable payments, Implemented timestamped client notes with admin-only editing
