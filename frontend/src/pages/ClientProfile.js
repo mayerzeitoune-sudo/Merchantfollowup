@@ -26,7 +26,9 @@ import {
   Send,
   FileText,
   Gift,
-  Zap
+  Zap,
+  X,
+  Pencil
 } from 'lucide-react';
 import { clientsApi, contactsApi } from '../lib/api';
 import { toast } from 'sonner';
