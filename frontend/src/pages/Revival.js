@@ -36,6 +36,16 @@ const Revival = () => {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [running, setRunning] = useState(null);
   
+  // AI Assistant state
+  const [aiDialogOpen, setAiDialogOpen] = useState(false);
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiDaysInactive, setAiDaysInactive] = useState(30);
+  const [aiLastStage, setAiLastStage] = useState('contacted');
+  const [aiIndustry, setAiIndustry] = useState('');
+  const [aiApproach, setAiApproach] = useState('friendly');
+  const [aiChatMessages, setAiChatMessages] = useState([]);
+  const [aiInput, setAiInput] = useState('');
+  
   const [formData, setFormData] = useState({
     name: '',
     days_inactive: 30,
