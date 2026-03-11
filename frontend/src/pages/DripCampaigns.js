@@ -314,6 +314,73 @@ const DripCampaigns = () => {
     });
   };
 
+  // AI Generate Triggers
+  const handleAiGenerateTriggers = async () => {
+    setAiTriggerLoading(true);
+    try {
+      const response = await aiApi.chat(
+        `Generate 4 keyword triggers for a ${aiGoal} drip campaign${aiIndustry ? ` in the ${aiIndustry} industry` : ''}. 
+        For each trigger, provide:
+        1. A list of keywords that indicate positive interest (like "yes", "interested", "tell me more")
+        2. A list of keywords that indicate negative response (like "no", "stop", "not interested")
+        3. A list of keywords that request more information (like "how much", "pricing", "details")
+        4. A list of keywords that indicate urgency (like "asap", "today", "urgent")
+        
+        Format as JSON array with objects containing: keywords (array), action ("stop" or "send_response"), response_message (string).`,
+        'triggers'
+      );
+      
+      // Try to parse the response as JSON
+      try {
+        const content = response.data.response;
+        const jsonMatch = content.match(/\[[\s\S]*\]/);
+        if (jsonMatch) {
+          const triggers = JSON.parse(jsonMatch[0]);
+          setFormData({ ...formData, triggers: [...formData.triggers, ...triggers] });
+          toast.success('AI triggers added!');
+        } else {
+          // If not JSON, add as a single trigger with the response as keywords
+          toast.info('AI generated suggestions - please review and customize');
+        }
+      } catch (parseError) {
+        toast.info('AI generated suggestions - check the response');
+      }
+    } catch (error) {
+      toast.error('Failed to generate triggers');
+    } finally {
+      setAiTriggerLoading(false);
+    }
+  };
+
+  // AI Generate Response for a trigger
+  const handleAiGenerateResponse = async (triggerIndex) => {
+    const trigger = formData.triggers[triggerIndex];
+    if (!trigger.keywords.length) {
+      toast.error('Add keywords first');
+      return;
+    }
+    
+    setAiTriggerLoading(true);
+    try {
+      const response = await aiApi.chat(
+        `Generate a friendly, professional response message for when someone replies with these keywords: ${trigger.keywords.join(', ')}. 
+        The response should be concise (under 160 characters for SMS), warm, and move the conversation forward.
+        Just provide the message text, nothing else.`,
+        'trigger_response'
+      );
+      
+      const newTriggers = [...formData.triggers];
+      newTriggers[triggerIndex].response_message = response.data.response.trim().replace(/^["']|["']$/g, '');
+      newTriggers[triggerIndex].action = 'send_response';
+      setFormData({ ...formData, triggers: newTriggers });
+      toast.success('Response generated!');
+    } catch (error) {
+      toast.error('Failed to generate response');
+    } finally {
+      setAiTriggerLoading(false);
+    }
+  };
+
   const editCampaign = (campaign) => {
     setSelectedCampaign(campaign);
     setFormData({
