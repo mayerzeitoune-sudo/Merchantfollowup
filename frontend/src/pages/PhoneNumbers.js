@@ -326,17 +326,29 @@ const PhoneNumbers = () => {
                           <Badge variant="outline" className="text-xs">SMS</Badge>
                           <Badge variant="outline" className="text-xs">Voice</Badge>
                         </div>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="text-destructive hover:text-destructive hover:bg-destructive/10"
-                          onClick={() => {
-                            setNumberToDelete(number);
-                            setDeleteDialogOpen(true);
-                          }}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
+                        <div className="flex items-center gap-2">
+                          {number.id !== defaultNumber && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleSetDefault(number.id)}
+                            >
+                              <Star className="h-4 w-4 mr-1" />
+                              Set Default
+                            </Button>
+                          )}
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                            onClick={() => {
+                              setNumberToDelete(number);
+                              setDeleteDialogOpen(true);
+                            }}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
                       </div>
                       <p className="text-xs text-muted-foreground mt-3">
                         Provider: {number.provider} • ${number.monthly_cost}/mo
