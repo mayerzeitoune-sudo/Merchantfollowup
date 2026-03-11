@@ -29,7 +29,8 @@ import {
 
 const navItems = [
   { path: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-  { path: '/pipeline', label: 'Pipeline', icon: Kanban, badge: 'New' },
+  { path: '/pipeline', label: 'Pipeline', icon: Kanban },
+  { path: '/funded', label: 'Funded Deals', icon: DollarSign, badge: 'New' },
   { path: '/clients', label: 'Clients', icon: Users },
   { path: '/contacts', label: 'Inbox', icon: MessageSquare },
   { path: '/templates', label: 'Templates', icon: FileText },
@@ -42,7 +43,7 @@ const navItems = [
   { path: '/lead-capture', label: 'Lead Capture', icon: UserPlus },
   { path: '/analytics', label: 'Analytics', icon: BarChart3 },
   { divider: true, label: 'Team' },
-  { path: '/team', label: 'Team Members', icon: Users, badge: 'New' },
+  { path: '/team', label: 'Team Members', icon: Users },
   { divider: true, label: 'Settings' },
   { path: '/compliance', label: 'SMS Compliance', icon: Shield },
   { path: '/phone-numbers', label: 'Phone Numbers', icon: Phone },
