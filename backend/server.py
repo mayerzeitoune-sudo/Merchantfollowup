@@ -3080,6 +3080,18 @@ async def update_funded_deal(deal_id: str, data: dict, current_user: dict = Depe
     
     return {"message": "Deal updated"}
 
+@api_router.delete("/funded/deals/{deal_id}")
+async def delete_funded_deal(deal_id: str, current_user: dict = Depends(get_current_user)):
+    """Delete a funded deal"""
+    result = await db.funded_deals.delete_one(
+        {"id": deal_id, "user_id": current_user["user_id"]}
+    )
+    
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Funded deal not found")
+    
+    return {"message": "Deal deleted"}
+
 @api_router.put("/funded/deals/{deal_id}/payment/{payment_number}")
 async def update_payment(
     deal_id: str,
