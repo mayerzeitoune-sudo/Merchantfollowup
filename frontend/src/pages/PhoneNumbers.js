@@ -290,7 +290,7 @@ const PhoneNumbers = () => {
                   {ownedNumbers.map((number) => (
                     <div 
                       key={number.id}
-                      className={`p-4 border rounded-lg hover:shadow-md transition-shadow ${selectedNumbers.includes(number.id) ? 'border-primary bg-primary/5' : ''}`}
+                      className={`p-4 border rounded-lg hover:shadow-md transition-shadow ${selectedNumbers.includes(number.id) ? 'border-primary bg-primary/5' : ''} ${number.id === defaultNumber ? 'ring-2 ring-orange-500' : ''}`}
                     >
                       <div className="flex items-start justify-between">
                         <div className="flex items-center gap-3">
@@ -306,12 +306,20 @@ const PhoneNumbers = () => {
                             <p className="text-sm text-muted-foreground">{number.phone_number}</p>
                           </div>
                         </div>
-                        {number.is_active && (
-                          <Badge className="bg-green-100 text-green-700">
-                            <CheckCircle className="h-3 w-3 mr-1" />
-                            Active
-                          </Badge>
-                        )}
+                        <div className="flex flex-col items-end gap-1">
+                          {number.id === defaultNumber && (
+                            <Badge className="bg-orange-100 text-orange-700">
+                              <Star className="h-3 w-3 mr-1 fill-orange-500" />
+                              Default
+                            </Badge>
+                          )}
+                          {number.is_active && (
+                            <Badge className="bg-green-100 text-green-700">
+                              <CheckCircle className="h-3 w-3 mr-1" />
+                              Active
+                            </Badge>
+                          )}
+                        </div>
                       </div>
                       <div className="mt-4 flex items-center justify-between">
                         <div className="flex gap-2">
