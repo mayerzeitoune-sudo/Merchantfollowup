@@ -433,13 +433,14 @@ class NotificationResponse(BaseModel):
 
 # Pipeline stages for contacts
 PIPELINE_STAGES = [
-    "new",
-    "contacted",
-    "qualified",
-    "proposal",
-    "negotiation",
-    "won",
-    "lost"
+    "new_lead",
+    "interested",
+    "application_sent",
+    "docs_submitted",
+    "approved",
+    "funded",
+    "dead",
+    "future"
 ]
 
 # Extended tags
