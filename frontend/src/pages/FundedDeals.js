@@ -347,7 +347,33 @@ const FundedDeals = () => {
                 
                 <div className="space-y-2">
                   <Label>Funded Amount *</Label>
-                  <Input type="number" value={newDeal.funded_amount} onChange={(e) => setNewDeal({...newDeal, funded_amount: e.target.value})} placeholder="$0.00" />
+                  <div className="relative">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">$</span>
+                    <Input 
+                      type="number" 
+                      value={newDeal.funded_amount} 
+                      onChange={(e) => handleFundedAmountChange(e.target.value)} 
+                      placeholder="100,000"
+                      className="pl-7"
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Rate (Factor) %</Label>
+                  <div className="relative">
+                    <Input 
+                      type="number" 
+                      value={newDeal.rate_percent} 
+                      onChange={(e) => handleRateChange(e.target.value)} 
+                      placeholder="50"
+                      className="pr-7"
+                    />
+                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground">%</span>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    e.g., 50% = 1.5 factor (payback is 150% of funded)
+                  </p>
                 </div>
                 
                 <div className="space-y-2">
@@ -356,8 +382,22 @@ const FundedDeals = () => {
                 </div>
                 
                 <div className="space-y-2">
-                  <Label>Total Payback Amount *</Label>
-                  <Input type="number" value={newDeal.payback_amount} onChange={(e) => setNewDeal({...newDeal, payback_amount: e.target.value})} placeholder="$0.00" />
+                  <div className="flex items-center justify-between">
+                    <Label>Total Payback Amount *</Label>
+                    {!newDeal.auto_calculate && (
+                      <Badge variant="outline" className="text-xs">Manual</Badge>
+                    )}
+                  </div>
+                  <div className="relative">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">$</span>
+                    <Input 
+                      type="number" 
+                      value={newDeal.payback_amount} 
+                      onChange={(e) => handlePaybackChange(e.target.value)} 
+                      placeholder="150,000"
+                      className={`pl-7 ${newDeal.auto_calculate ? 'bg-muted/50' : ''}`}
+                    />
+                  </div>
                 </div>
                 
                 <div className="space-y-2">
@@ -373,13 +413,33 @@ const FundedDeals = () => {
                 </div>
                 
                 <div className="space-y-2">
-                  <Label>Number of Payments *</Label>
-                  <Input type="number" value={newDeal.num_payments} onChange={(e) => setNewDeal({...newDeal, num_payments: e.target.value})} />
+                  <Label>Number of Payments (Term) *</Label>
+                  <Input 
+                    type="number" 
+                    value={newDeal.num_payments} 
+                    onChange={(e) => handleNumPaymentsChange(e.target.value)}
+                    placeholder="e.g., 52 for weekly"
+                  />
                 </div>
                 
                 <div className="space-y-2">
-                  <Label>Payment Amount *</Label>
-                  <Input type="number" value={newDeal.payment_amount} onChange={(e) => setNewDeal({...newDeal, payment_amount: e.target.value})} placeholder="$0.00" />
+                  <div className="flex items-center justify-between">
+                    <Label>Payment Amount *</Label>
+                    <Badge variant="outline" className="text-xs">Auto-calculated</Badge>
+                  </div>
+                  <div className="relative">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">$</span>
+                    <Input 
+                      type="number" 
+                      value={newDeal.payment_amount} 
+                      onChange={(e) => setNewDeal({...newDeal, payment_amount: e.target.value})} 
+                      placeholder="Payback ÷ Term"
+                      className="pl-7 bg-muted/50"
+                    />
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    = ${newDeal.payback_amount || '0'} ÷ {newDeal.num_payments || '0'} payments
+                  </p>
                 </div>
                 
                 <div className="space-y-2">
