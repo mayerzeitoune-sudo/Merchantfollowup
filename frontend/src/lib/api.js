@@ -100,7 +100,9 @@ export const contactsApi = {
   sendSms: (clientId, message, fromNumber) => axios.post(`${API}/contacts/${clientId}/send-sms`, null, { 
     params: { message, from_number: fromNumber } 
   }),
-  initiateCall: (clientId) => axios.post(`${API}/contacts/${clientId}/initiate-call`)
+  initiateCall: (clientId, fromNumber) => axios.post(`${API}/contacts/${clientId}/initiate-call`, null, {
+    params: { from_number: fromNumber }
+  })
 };
 
 // Inbox API
