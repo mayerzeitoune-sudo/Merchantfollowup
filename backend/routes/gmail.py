@@ -261,8 +261,11 @@ async def gmail_auth_callback(code: str = None, state: str = None, error: str = 
         return RedirectResponse(f"{FRONTEND_URL}/settings?gmail_connected=true")
         
     except Exception as e:
-        print(f"Gmail OAuth error: {e}")
-        return RedirectResponse(f"{FRONTEND_URL}/settings?gmail_error=auth_failed")
+        import traceback
+        logger.error(f"Gmail OAuth error: {e}")
+        logger.error(traceback.format_exc())
+        error_msg = str(e).replace(" ", "_")[:50]
+        return RedirectResponse(f"{FRONTEND_URL}/settings?gmail_error={error_msg}")
 
 
 @router.get("/status")
