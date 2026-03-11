@@ -48,6 +48,8 @@ const Reminders = () => {
   const [statusFilter, setStatusFilter] = useState('all');
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingReminder, setEditingReminder] = useState(null);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [reminderToDelete, setReminderToDelete] = useState(null);
   const [formData, setFormData] = useState({
     client_id: '',
     amount_due: '',
