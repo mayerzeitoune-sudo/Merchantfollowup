@@ -364,12 +364,32 @@ const LandingPage = () => {
           {/* Clients Screenshot */}
           <div className="mb-16">
             <div className="grid lg:grid-cols-2 gap-12 items-center">
-              <div className="order-2 lg:order-1 rounded-2xl overflow-hidden shadow-xl border">
-                <img 
-                  src="/screenshots/clients.png" 
-                  alt="Client Management" 
-                  className="w-full"
-                />
+              <div className="order-2 lg:order-1 rounded-2xl overflow-hidden shadow-xl border bg-gradient-to-br from-slate-100 to-slate-200 p-6">
+                <div className="bg-white rounded-xl p-4">
+                  <h4 className="font-semibold mb-4">Clients</h4>
+                  <div className="space-y-3">
+                    {[
+                      { name: 'Sarah Johnson', tag: 'Interested', company: 'ABC Corp' },
+                      { name: 'Mike Williams', tag: 'Funded', company: 'XYZ Inc' },
+                      { name: 'Emily Davis', tag: 'New Lead', company: 'Tech Solutions' }
+                    ].map((client, i) => (
+                      <div key={i} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                        <div className="flex items-center gap-3">
+                          <div className="h-10 w-10 rounded-full bg-gradient-to-br from-orange-400 to-orange-600 flex items-center justify-center text-white font-bold">
+                            {client.name[0]}
+                          </div>
+                          <div>
+                            <p className="font-medium text-sm">{client.name}</p>
+                            <p className="text-xs text-gray-500">{client.company}</p>
+                          </div>
+                        </div>
+                        <Badge className={client.tag === 'Funded' ? 'bg-green-100 text-green-700' : client.tag === 'Interested' ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-700'}>
+                          {client.tag}
+                        </Badge>
+                      </div>
+                    ))}
+                  </div>
+                </div>
               </div>
               <div className="order-1 lg:order-2">
                 <h3 className="text-2xl font-bold text-gray-900 mb-4">Smart Contact Management</h3>
