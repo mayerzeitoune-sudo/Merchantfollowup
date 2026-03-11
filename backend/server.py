@@ -1558,14 +1558,14 @@ async def get_team_stats(current_user: dict = Depends(get_current_user)):
 @api_router.post("/team/invite")
 async def invite_team_member(data: dict, current_user: dict = Depends(get_current_user)):
     """Invite a new team member"""
-    user = await db.users.find_one({"id": current_user["user_id"]}, {"_id": 0})
+    user = db.users.find_one({"id": current_user["user_id"]}, {"_id": 0})
     if user.get("role") != "admin":
         raise HTTPException(status_code=403, detail="Only admins can invite members")
     
     team_id = user.get("team_id") or current_user["user_id"]
     
     # Check if email already exists
-    existing = await db.users.find_one({"email": data.get("email")})
+    existing = db.users.find_one({"email": data.get("email")})
     if existing:
         raise HTTPException(status_code=400, detail="User with this email already exists")
     
@@ -1583,10 +1583,60 @@ async def invite_team_member(data: dict, current_user: dict = Depends(get_curren
         "created_at": now
     }
     
-    await db.team_invites.insert_one(invite_doc)
+    db.team_invites.insert_one(invite_doc)
     if "_id" in invite_doc:
         del invite_doc["_id"]
     return invite_doc
+
+@api_router.post("/team/create-member")
+async def create_team_member(data: dict, current_user: dict = Depends(get_current_user)):
+    """Directly create a new team member account and send login details via email"""
+    user = db.users.find_one({"id": current_user["user_id"]}, {"_id": 0})
+    if user.get("role") != "admin":
+        raise HTTPException(status_code=403, detail="Only admins can create members")
+    
+    team_id = user.get("team_id") or current_user["user_id"]
+    
+    # Check if email already exists
+    existing = db.users.find_one({"email": data.get("email")})
+    if existing:
+        raise HTTPException(status_code=400, detail="User with this email already exists")
+    
+    # Hash the password
+    hashed_password = pwd_context.hash(data.get("password"))
+    
+    new_user_id = str(uuid.uuid4())
+    now = datetime.now(timezone.utc).isoformat()
+    
+    new_user = {
+        "id": new_user_id,
+        "email": data.get("email"),
+        "name": data.get("name"),
+        "password": hashed_password,
+        "role": data.get("role", "agent"),
+        "team_id": team_id,
+        "is_verified": True,
+        "created_at": now,
+        "created_by": current_user["user_id"]
+    }
+    
+    db.users.insert_one(new_user)
+    
+    # TODO: Send email with login details
+    # In production, integrate with SendGrid/Mailgun to send:
+    # - Email: data.get("email")
+    # - Password: data.get("password") (plaintext before hashing)
+    # - Login URL: https://merchantfollowup.com/login
+    
+    logger.info(f"New team member created: {data.get('email')} with role {data.get('role')}")
+    
+    return {
+        "message": "Team member created successfully",
+        "user_id": new_user_id,
+        "email": data.get("email"),
+        "name": data.get("name"),
+        "role": data.get("role")
+    }
 
 @api_router.put("/team/members/{member_id}/role")
 async def update_member_role(member_id: str, role: str, current_user: dict = Depends(get_current_user)):
