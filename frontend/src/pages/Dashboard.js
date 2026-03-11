@@ -24,7 +24,7 @@ import {
   RefreshCw
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import { dashboardApi, remindersApi, followupsApi, analyticsApi, notificationsApi } from '../lib/api';
+import { dashboardApi, remindersApi, followupsApi, analyticsApi, notificationsApi, fundedApi } from '../lib/api';
 import { toast } from 'sonner';
 
 const Dashboard = () => {
@@ -42,6 +42,7 @@ const Dashboard = () => {
   const [analytics, setAnalytics] = useState(null);
   const [notifications, setNotifications] = useState([]);
   const [unreadCount, setUnreadCount] = useState(0);
+  const [fundedStats, setFundedStats] = useState(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -50,11 +51,12 @@ const Dashboard = () => {
 
   const fetchAllData = async () => {
     try {
-      const [statsRes, followupsRes, analyticsRes, notificationsRes] = await Promise.all([
+      const [statsRes, followupsRes, analyticsRes, notificationsRes, fundedRes] = await Promise.all([
         dashboardApi.getStats().catch(() => ({ data: stats })),
         followupsApi.getToday().catch(() => ({ data: { followups: [] } })),
         analyticsApi.getOverview().catch(() => ({ data: null })),
-        notificationsApi.getAll(true, 5).catch(() => ({ data: { notifications: [], unread_count: 0 } }))
+        notificationsApi.getAll(true, 5).catch(() => ({ data: { notifications: [], unread_count: 0 } })),
+        fundedApi.getStats().catch(() => ({ data: null }))
       ]);
       
       setStats(statsRes.data);
@@ -62,6 +64,7 @@ const Dashboard = () => {
       setAnalytics(analyticsRes.data);
       setNotifications(notificationsRes.data?.notifications || []);
       setUnreadCount(notificationsRes.data?.unread_count || 0);
+      setFundedStats(fundedRes.data);
     } catch (error) {
       console.error('Failed to fetch data:', error);
     } finally {
