@@ -83,7 +83,9 @@ const DripCampaigns = () => {
     triggers: [],
     stop_on_reply: true,
     target_tags: [],
-    status: 'draft'
+    status: 'draft',
+    duration_days: 30,  // Campaign duration in days
+    use_funded_term: false  // Auto-use funded deal term for duration
   });
 
   useEffect(() => {
