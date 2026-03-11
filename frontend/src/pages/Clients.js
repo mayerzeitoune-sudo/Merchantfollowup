@@ -132,13 +132,21 @@ const Clients = () => {
   };
 
   const handleDelete = async (id) => {
-    if (!window.confirm('Are you sure you want to delete this client?')) return;
+    setClientToDelete(id);
+    setDeleteDialogOpen(true);
+  };
+
+  const confirmDelete = async () => {
+    if (!clientToDelete) return;
     try {
-      await clientsApi.delete(id);
+      await clientsApi.delete(clientToDelete);
       toast.success('Client deleted');
       fetchClients();
     } catch (error) {
       toast.error('Failed to delete client');
+    } finally {
+      setDeleteDialogOpen(false);
+      setClientToDelete(null);
     }
   };
 
