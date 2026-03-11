@@ -83,13 +83,42 @@ const PhoneNumbers = () => {
   };
 
   const handleRelease = async (id) => {
-    if (!window.confirm('Release this phone number?')) return;
     try {
       await phoneNumbersApi.release(id);
       toast.success('Phone number released');
+      setDeleteDialogOpen(false);
+      setNumberToDelete(null);
       fetchOwnedNumbers();
     } catch (error) {
       toast.error('Failed to release number');
+    }
+  };
+
+  const handleBulkDelete = async () => {
+    try {
+      await Promise.all(selectedNumbers.map(id => phoneNumbersApi.release(id)));
+      toast.success(`${selectedNumbers.length} phone number(s) released`);
+      setBulkDeleteDialogOpen(false);
+      setSelectedNumbers([]);
+      fetchOwnedNumbers();
+    } catch (error) {
+      toast.error('Failed to release some numbers');
+    }
+  };
+
+  const toggleSelectNumber = (numberId) => {
+    setSelectedNumbers(prev => 
+      prev.includes(numberId) 
+        ? prev.filter(id => id !== numberId)
+        : [...prev, numberId]
+    );
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedNumbers.length === ownedNumbers.length) {
+      setSelectedNumbers([]);
+    } else {
+      setSelectedNumbers(ownedNumbers.map(n => n.id));
     }
   };
 
