@@ -505,13 +505,13 @@ const Reminders = () => {
                                 </Button>
                               </DropdownMenuTrigger>
                               <DropdownMenuContent align="end">
-                                <DropdownMenuItem onClick={() => handleEdit(reminder)}>
+                                <DropdownMenuItem onSelect={() => handleEdit(reminder)}>
                                   <Pencil className="h-4 w-4 mr-2" />
                                   Edit
                                 </DropdownMenuItem>
                                 <DropdownMenuItem 
-                                  onClick={() => handleDelete(reminder.id)}
-                                  className="text-destructive"
+                                  onSelect={() => handleDelete(reminder.id)}
+                                  className="text-destructive cursor-pointer"
                                 >
                                   <Trash2 className="h-4 w-4 mr-2" />
                                   Delete
