@@ -31,7 +31,11 @@ export const clientsApi = {
 export const aiApi = {
   generateMessage: (clientId, context) => axios.post(`${API}/ai/generate-message`, { client_id: clientId, context }),
   rewriteMessage: (message, tone) => axios.post(`${API}/ai/rewrite-message`, { message, tone }),
-  analyzeDeal: (clientId) => axios.post(`${API}/ai/analyze-deal`, { client_id: clientId })
+  analyzeDeal: (clientId) => axios.post(`${API}/ai/analyze-deal`, { client_id: clientId }),
+  generateTemplate: (type, context, tone) => axios.post(`${API}/ai/generate-template`, { type, context, tone }),
+  generateDripSequence: (goal, numMessages, industry, context) => axios.post(`${API}/ai/generate-drip-sequence`, { goal, num_messages: numMessages, industry, context }),
+  generateRevivalMessage: (daysInactive, lastStage, industry, approach, context) => axios.post(`${API}/ai/generate-revival-message`, { days_inactive: daysInactive, last_stage: lastStage, industry, approach, context }),
+  chat: (message, context) => axios.post(`${API}/ai/chat`, { message, context })
 };
 
 // Reminders API
