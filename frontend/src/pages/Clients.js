@@ -594,7 +594,7 @@ const Clients = () => {
                                   View Profile
                                 </DropdownMenuItem>
                               </Link>
-                              <DropdownMenuItem onClick={() => handleEdit(client)}>
+                              <DropdownMenuItem onSelect={() => handleEdit(client)}>
                                 <Pencil className="h-4 w-4 mr-2" />
                                 Edit
                               </DropdownMenuItem>
@@ -605,7 +605,7 @@ const Clients = () => {
                               {AVAILABLE_TAGS.slice(0, 6).map((tag) => (
                                 <DropdownMenuItem 
                                   key={tag.value}
-                                  onClick={() => handleQuickTagUpdate(client.id, tag.value)}
+                                  onSelect={() => handleQuickTagUpdate(client.id, tag.value)}
                                 >
                                   <div className={`h-2 w-2 rounded-full mr-2 ${tag.color.split(' ')[0]}`} />
                                   {tag.value}
