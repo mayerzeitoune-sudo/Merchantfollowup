@@ -8,6 +8,7 @@ import { Badge } from '../components/ui/badge';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '../components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs';
+import { Textarea } from '../components/ui/textarea';
 import { 
   Users, 
   UserPlus,
@@ -20,7 +21,8 @@ import {
   Clock,
   TrendingUp,
   MessageSquare,
-  DollarSign
+  DollarSign,
+  Send
 } from 'lucide-react';
 import { teamApi } from '../lib/api';
 import { toast } from 'sonner';
