@@ -24,7 +24,8 @@ import {
   Target,
   Shield,
   RefreshCw,
-  Kanban
+  Kanban,
+  DollarSign
 } from 'lucide-react';
 
 const navItems = [
