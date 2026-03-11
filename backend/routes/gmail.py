@@ -191,27 +191,44 @@ async def gmail_auth_start(token: str = Query(..., description="JWT token for us
 @router.get("/callback")
 async def gmail_auth_callback(code: str = None, state: str = None, error: str = None):
     """Handle Gmail OAuth callback"""
+    import logging
+    logger = logging.getLogger(__name__)
+    
+    logger.info(f"Gmail callback received - code: {code[:20] if code else None}..., state: {state}, error: {error}")
+    
     if error:
+        logger.error(f"Gmail OAuth error from Google: {error}")
         return RedirectResponse(f"{FRONTEND_URL}/settings?gmail_error={error}")
     
     if not code or not state:
+        logger.error("Missing code or state in callback")
         return RedirectResponse(f"{FRONTEND_URL}/settings?gmail_error=missing_params")
     
     # Verify state and get user_id
     state_doc = await db.oauth_states.find_one({"state": state})
     if not state_doc:
+        logger.error(f"State not found in database: {state}")
         return RedirectResponse(f"{FRONTEND_URL}/settings?gmail_error=invalid_state")
     
     user_id = state_doc["user_id"]
+    logger.info(f"Found user_id: {user_id} for state")
     
     # Clean up state
     await db.oauth_states.delete_one({"state": state})
     
     # Check if state expired
-    if datetime.now(timezone.utc) > state_doc["expires_at"].replace(tzinfo=timezone.utc) if state_doc["expires_at"].tzinfo is None else state_doc["expires_at"]:
+    expires_at = state_doc["expires_at"]
+    if expires_at.tzinfo is None:
+        expires_at = expires_at.replace(tzinfo=timezone.utc)
+    
+    if datetime.now(timezone.utc) > expires_at:
+        logger.error("State expired")
         return RedirectResponse(f"{FRONTEND_URL}/settings?gmail_error=state_expired")
     
     try:
+        redirect_uri = get_redirect_uri()
+        logger.info(f"Using redirect URI: {redirect_uri}")
+        
         flow = get_oauth_flow(state)
         
         with warnings.catch_warnings():
@@ -219,11 +236,13 @@ async def gmail_auth_callback(code: str = None, state: str = None, error: str = 
             flow.fetch_token(code=code)
         
         creds = flow.credentials
+        logger.info("Token fetched successfully")
         
         # Get user's email address
         service = build('gmail', 'v1', credentials=creds)
         profile = service.users().getProfile(userId='me').execute()
         email_address = profile.get('emailAddress')
+        logger.info(f"Got email address: {email_address}")
         
         # Store tokens
         await db.gmail_tokens.update_one(
