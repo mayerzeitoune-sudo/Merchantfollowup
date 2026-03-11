@@ -406,15 +406,15 @@ const Templates = () => {
       </div>
 
       {/* AI Assistant Dialog */}
-      <Dialog open={aiDialogOpen} onOpenChange={setAiDialogOpen}>
-        <DialogContent className="sm:max-w-2xl max-h-[80vh]">
+      <Dialog open={aiDialogOpen} onOpenChange={handleAiDialogClose}>
+        <DialogContent className="sm:max-w-2xl max-h-[85vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="font-['Outfit'] flex items-center gap-2">
               <Sparkles className="h-5 w-5 text-purple-500" />
               AI Template Assistant
             </DialogTitle>
             <DialogDescription>
-              Ask AI to generate templates or get help with your messaging
+              Generate professional message templates with AI assistance
             </DialogDescription>
           </DialogHeader>
           
@@ -424,7 +424,7 @@ const Templates = () => {
               <CardContent className="pt-4">
                 <h4 className="font-medium mb-3 flex items-center gap-2">
                   <Wand2 className="h-4 w-4" />
-                  Quick Generate
+                  Quick Generate Template
                 </h4>
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
@@ -455,6 +455,7 @@ const Templates = () => {
                         <SelectItem value="friendly">Friendly</SelectItem>
                         <SelectItem value="urgent">Urgent</SelectItem>
                         <SelectItem value="casual">Casual</SelectItem>
+                        <SelectItem value="automated">Automated / Robotic</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
@@ -472,7 +473,7 @@ const Templates = () => {
 
             {/* Chat with AI */}
             <div className="space-y-2">
-              <Label>Ask AI Anything</Label>
+              <Label>Ask AI for Custom Template</Label>
               <div className="flex gap-2">
                 <Input
                   value={aiInput}
@@ -486,44 +487,62 @@ const Templates = () => {
               </div>
             </div>
 
-            {/* Chat Messages */}
+            {/* Generated Templates */}
             {aiChatMessages.length > 0 && (
-              <ScrollArea className="h-[250px] border rounded-lg p-4">
-                <div className="space-y-3">
-                  {aiChatMessages.map((msg, i) => (
-                    <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                      <div className={`max-w-[85%] p-3 rounded-lg ${
-                        msg.role === 'user' ? 'bg-primary text-primary-foreground' : 'bg-muted'
-                      }`}>
-                        <p className="text-sm whitespace-pre-wrap">{msg.content}</p>
-                        {msg.variables && msg.variables.length > 0 && (
-                          <div className="flex flex-wrap gap-1 mt-2">
-                            <span className="text-xs opacity-70">Variables:</span>
-                            {msg.variables.map(v => (
-                              <Badge key={v} variant="secondary" className="text-xs">{`{${v}}`}</Badge>
-                            ))}
+              <div className="space-y-2">
+                <Label>Generated Templates</Label>
+                <ScrollArea className="h-[280px] border rounded-lg p-4">
+                  <div className="space-y-4">
+                    {aiChatMessages.map((msg, i) => (
+                      <div key={i} className={`${msg.role === 'user' ? 'ml-8' : ''}`}>
+                        {msg.role === 'user' ? (
+                          <div className="bg-primary/10 p-3 rounded-lg">
+                            <p className="text-sm text-primary font-medium">Your request:</p>
+                            <p className="text-sm">{msg.content}</p>
                           </div>
-                        )}
-                        {msg.role === 'assistant' && (
-                          <div className="flex gap-2 mt-2">
-                            <Button size="sm" variant="outline" onClick={() => handleUseAiTemplate(msg.content)}>
-                              Use This
-                            </Button>
-                            <Button size="sm" variant="ghost" onClick={() => handleCopy(msg.content)}>
-                              <Copy className="h-3 w-3" />
-                            </Button>
-                          </div>
+                        ) : (
+                          <Card className="border-green-200 bg-green-50/50">
+                            <CardContent className="pt-4">
+                              <div className="flex items-start justify-between mb-2">
+                                <Badge variant="outline" className="text-xs">
+                                  <MessageSquare className="h-3 w-3 mr-1" />
+                                  Generated Template
+                                </Badge>
+                                <div className="flex gap-1">
+                                  <Button size="sm" variant="outline" onClick={() => handleCopy(msg.content)}>
+                                    <Copy className="h-3 w-3" />
+                                  </Button>
+                                </div>
+                              </div>
+                              <p className="text-sm whitespace-pre-wrap bg-white p-3 rounded border">{msg.content}</p>
+                              {msg.variables && msg.variables.length > 0 && (
+                                <div className="flex flex-wrap gap-1 mt-3">
+                                  <span className="text-xs text-muted-foreground">Variables:</span>
+                                  {msg.variables.map(v => (
+                                    <Badge key={v} variant="secondary" className="text-xs">{`{${v}}`}</Badge>
+                                  ))}
+                                </div>
+                              )}
+                              <Button 
+                                size="sm" 
+                                className="w-full mt-3" 
+                                onClick={() => handleUseAiTemplate(msg.content)}
+                              >
+                                Use This Template
+                              </Button>
+                            </CardContent>
+                          </Card>
                         )}
                       </div>
-                    </div>
-                  ))}
-                </div>
-              </ScrollArea>
+                    ))}
+                  </div>
+                </ScrollArea>
+              </div>
             )}
           </div>
           
           <DialogFooter>
-            <Button variant="outline" onClick={() => setAiDialogOpen(false)}>Close</Button>
+            <Button variant="outline" onClick={() => handleAiDialogClose(false)}>Close</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
