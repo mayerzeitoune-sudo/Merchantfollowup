@@ -123,6 +123,25 @@ const ClientProfile = () => {
     }
   };
 
+  const handleTagUpdate = async (tag) => {
+    if (!client) return;
+    
+    let updatedTags;
+    if (client.tags?.includes(tag)) {
+      updatedTags = client.tags.filter(t => t !== tag);
+    } else {
+      updatedTags = [...(client.tags || []), tag];
+    }
+    
+    try {
+      await clientsApi.update(clientId, { tags: updatedTags });
+      setClient({ ...client, tags: updatedTags });
+      toast.success('Tag updated');
+    } catch (error) {
+      toast.error('Failed to update tag');
+    }
+  };
+
   const formatAddress = () => {
     if (!client) return null;
     const parts = [
