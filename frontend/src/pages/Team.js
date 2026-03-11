@@ -306,9 +306,6 @@ const Team = () => {
               </Dialog>
             </div>
           )}
-              </DialogContent>
-            </Dialog>
-          )}
         </div>
 
         {/* Team Stats (Admin Only) */}
