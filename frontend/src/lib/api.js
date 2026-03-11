@@ -267,3 +267,14 @@ export const fundedApi = {
   getDealTypes: () => axios.get(`${API}/funded/deal-types`)
 };
 
+// Gmail API
+export const gmailApi = {
+  getAuthUrl: (token) => `${API}/gmail/auth?token=${token}`,
+  getStatus: (token) => axios.get(`${API}/gmail/status`, { params: { token } }),
+  disconnect: (token) => axios.post(`${API}/gmail/disconnect`, null, { params: { token } }),
+  sendEmail: (token, data) => axios.post(`${API}/gmail/send`, data, { params: { token } }),
+  getMessages: (token, query, maxResults = 20, pageToken) => 
+    axios.get(`${API}/gmail/messages`, { params: { token, query, max_results: maxResults, page_token: pageToken } }),
+  getMessage: (token, messageId) => axios.get(`${API}/gmail/messages/${messageId}`, { params: { token } }),
+  getLabels: (token) => axios.get(`${API}/gmail/labels`, { params: { token } })
+};
