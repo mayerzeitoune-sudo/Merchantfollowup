@@ -628,7 +628,8 @@ async def login(data: UserLogin):
             "id": user["id"],
             "email": user["email"],
             "name": user["name"],
-            "is_verified": user.get("is_verified", False)
+            "is_verified": user.get("is_verified", False),
+            "role": user.get("role", "agent")
         }
     }
 
