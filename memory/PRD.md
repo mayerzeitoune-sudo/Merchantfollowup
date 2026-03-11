@@ -18,6 +18,14 @@ Build a comprehensive SMS platform "Merchant Follow Up" for automated payment re
 
 ### ✅ COMPLETED FEATURES (Updated March 11, 2026)
 
+#### Drip Campaign Reply Context (NEW - March 11, 2026)
+- **Inbound SMS Context Linking**: When customers reply, the system automatically links their response to the last outbound message
+- **Campaign Context Displayed**: Inbox shows "Responding to:" block with quoted original message
+- **Campaign Badge**: Messages from drip campaigns show the campaign name badge
+- **Simulate Reply Feature**: Test tube button allows testing reply context without real Twilio
+- **Backend Webhook Ready**: `/api/sms/inbound` endpoint ready for Twilio webhook integration
+- **Files Updated**: `/app/backend/server.py` (inbound SMS endpoints), `/app/frontend/src/pages/Contacts.js` (UI), `/app/frontend/src/lib/api.js` (API methods)
+
 #### Bug Fixes Completed
 - **Delete Buttons Fixed**: All dropdown menu delete buttons now use `onSelect` instead of `onClick`
 - **Error Handling Fixed**: Validation errors from API now display properly as strings
