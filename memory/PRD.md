@@ -26,6 +26,12 @@ Build a comprehensive SMS platform "Merchant Follow Up" for automated payment re
 - **Backend Webhook Ready**: `/api/sms/inbound` endpoint ready for Twilio webhook integration
 - **Files Updated**: `/app/backend/server.py` (inbound SMS endpoints), `/app/frontend/src/pages/Contacts.js` (UI), `/app/frontend/src/lib/api.js` (API methods)
 
+#### Drip Campaign Duration Settings (NEW - March 11, 2026)
+- **Flexible Duration**: Campaign duration no longer capped at 30 days - options from 7 days to 2 years
+- **Use Funded Deal Term**: When "Funded" tag is selected, toggle to auto-match campaign duration to each client's funding term
+- **Dynamic Day Selection**: Step day dropdown now shows options up to the configured campaign duration
+- **Files Updated**: `/app/backend/models/enhanced.py`, `/app/backend/routes/enhanced.py`, `/app/frontend/src/pages/DripCampaigns.js`
+
 #### Bug Fixes Completed
 - **Delete Buttons Fixed**: All dropdown menu delete buttons now use `onSelect` instead of `onClick`
 - **Error Handling Fixed**: Validation errors from API now display properly as strings
