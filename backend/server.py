@@ -762,6 +762,23 @@ async def delete_client(client_id: str, current_user: dict = Depends(get_current
         raise HTTPException(status_code=404, detail="Client not found")
     return {"message": "Client deleted"}
 
+@api_router.put("/clients/{client_id}/pipeline")
+async def update_client_pipeline(client_id: str, stage: str, current_user: dict = Depends(get_current_user)):
+    """Update client's pipeline stage"""
+    valid_stages = ['new_lead', 'contacted', 'interested', 'application_sent', 'docs_submitted', 'approved', 'funded', 'dead', 'future']
+    if stage not in valid_stages:
+        raise HTTPException(status_code=400, detail=f"Invalid stage. Must be one of: {valid_stages}")
+    
+    result = await db.clients.update_one(
+        {"id": client_id, "user_id": current_user["user_id"]},
+        {"$set": {"pipeline_stage": stage, "updated_at": datetime.now(timezone.utc).isoformat()}}
+    )
+    
+    if result.matched_count == 0:
+        raise HTTPException(status_code=404, detail="Client not found")
+    
+    return {"message": f"Pipeline stage updated to {stage}"}
+
 @api_router.post("/clients/{client_id}/generate-summary")
 async def generate_client_ai_summary(client_id: str, current_user: dict = Depends(get_current_user)):
     """Generate AI summary of client conversations"""
