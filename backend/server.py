@@ -126,6 +126,7 @@ class ClientResponse(BaseModel):
     notes: Optional[str] = None
     balance: float = 0.0
     tags: List[str] = []
+    pipeline_stage: Optional[str] = "new_lead"
     birthday: Optional[str] = None
     special_events: List[Dict[str, str]] = []
     address_line1: Optional[str] = None
