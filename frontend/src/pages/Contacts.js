@@ -306,6 +306,23 @@ const Contacts = () => {
     }
   };
 
+  const handleSimulateReply = async () => {
+    if (!selectedClient || !simulateReplyText.trim()) return;
+    
+    try {
+      const fromNumber = selectedFromNumber === 'default' ? null : selectedFromNumber;
+      const response = await contactsApi.simulateInbound(selectedClient.id, simulateReplyText, fromNumber);
+      toast.success(`Simulated reply from ${selectedClient.name}`);
+      setSimulateReplyText('');
+      setShowSimulateDialog(false);
+      // Refresh the conversation to see the new inbound message with context
+      fetchConversationChains(selectedClient.id);
+      fetchConversation(selectedClient.id, activeChain);
+    } catch (error) {
+      toast.error('Failed to simulate reply');
+    }
+  };
+
   const filteredClients = clients.filter(client =>
     client.name.toLowerCase().includes(search.toLowerCase()) ||
     client.phone.includes(search)
