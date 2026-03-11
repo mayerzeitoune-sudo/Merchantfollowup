@@ -40,7 +40,7 @@ const Revival = () => {
   const [aiDialogOpen, setAiDialogOpen] = useState(false);
   const [aiLoading, setAiLoading] = useState(false);
   const [aiDaysInactive, setAiDaysInactive] = useState(30);
-  const [aiLastStage, setAiLastStage] = useState('contacted');
+  const [aiLastStage, setAiLastStage] = useState('interested');
   const [aiIndustry, setAiIndustry] = useState('');
   const [aiApproach, setAiApproach] = useState('friendly');
   const [aiChatMessages, setAiChatMessages] = useState([]);
