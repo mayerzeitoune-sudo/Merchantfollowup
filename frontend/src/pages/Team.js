@@ -167,82 +167,145 @@ const Team = () => {
             <p className="text-muted-foreground mt-1">Manage your team members and permissions</p>
           </div>
           {isAdmin && (
-            <Dialog open={inviteDialogOpen} onOpenChange={setInviteDialogOpen}>
-              <DialogTrigger asChild>
-                <Button data-testid="add-user-btn" className="bg-orange-600 hover:bg-orange-700">
-                  <UserPlus className="h-4 w-4 mr-2" />
-                  Add User
-                </Button>
-              </DialogTrigger>
-              <DialogContent>
-                <DialogHeader>
-                  <DialogTitle>Add New User</DialogTitle>
-                  <DialogDescription>
-                    Create a new team member account with login credentials
-                  </DialogDescription>
-                </DialogHeader>
-                
-                <div className="space-y-4 mt-4">
-                  <div className="space-y-2">
-                    <Label>Full Name *</Label>
-                    <Input
-                      value={newInvite.name}
-                      onChange={(e) => setNewInvite({ ...newInvite, name: e.target.value })}
-                      placeholder="John Doe"
-                      data-testid="user-name-input"
-                    />
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <Label>Email Address *</Label>
-                    <Input
-                      type="email"
-                      value={newInvite.email}
-                      onChange={(e) => setNewInvite({ ...newInvite, email: e.target.value })}
-                      placeholder="john@company.com"
-                      data-testid="user-email-input"
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label>Password *</Label>
-                    <Input
-                      type="password"
-                      value={newInvite.password}
-                      onChange={(e) => setNewInvite({ ...newInvite, password: e.target.value })}
-                      placeholder="Enter a secure password"
-                      data-testid="user-password-input"
-                    />
-                    <p className="text-xs text-muted-foreground">Share these credentials with the new user</p>
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <Label>Role</Label>
-                    <Select value={newInvite.role} onValueChange={(value) => setNewInvite({ ...newInvite, role: value })}>
-                      <SelectTrigger data-testid="user-role-select">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {ROLES.map((role) => (
-                          <SelectItem key={role.value} value={role.value}>
-                            <div className="flex items-center gap-2">
-                              <Badge className={role.color}>{role.label}</Badge>
-                              <span className="text-xs text-muted-foreground">{role.description}</span>
-                            </div>
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-                
-                <DialogFooter>
-                  <Button variant="outline" onClick={() => setInviteDialogOpen(false)}>Cancel</Button>
-                  <Button onClick={handleInvite} data-testid="create-user-btn" className="bg-orange-600 hover:bg-orange-700">
-                    <UserPlus className="h-4 w-4 mr-2" />
-                    Create User
+            <div className="flex gap-2">
+              {/* Invite Member Dialog */}
+              <Dialog open={inviteDialogOpen} onOpenChange={setInviteDialogOpen}>
+                <DialogTrigger asChild>
+                  <Button variant="outline" data-testid="invite-member-btn">
+                    <Mail className="h-4 w-4 mr-2" />
+                    Invite Member
                   </Button>
-                </DialogFooter>
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>Invite Team Member</DialogTitle>
+                    <DialogDescription>
+                      Send an email invitation to join your team
+                    </DialogDescription>
+                  </DialogHeader>
+                  
+                  <div className="space-y-4 mt-4">
+                    <div className="space-y-2">
+                      <Label>Email Address *</Label>
+                      <Input
+                        type="email"
+                        value={newInvite.email}
+                        onChange={(e) => setNewInvite({ ...newInvite, email: e.target.value })}
+                        placeholder="colleague@company.com"
+                        data-testid="invite-email-input"
+                      />
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <Label>Role</Label>
+                      <Select value={newInvite.role} onValueChange={(value) => setNewInvite({ ...newInvite, role: value })}>
+                        <SelectTrigger data-testid="invite-role-select">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {ROLES.map((role) => (
+                            <SelectItem key={role.value} value={role.value}>
+                              <div className="flex items-center gap-2">
+                                <Badge className={role.color}>{role.label}</Badge>
+                              </div>
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                  
+                  <DialogFooter>
+                    <Button variant="outline" onClick={() => setInviteDialogOpen(false)}>Cancel</Button>
+                    <Button onClick={handleInvite} data-testid="send-invite-btn">
+                      <Mail className="h-4 w-4 mr-2" />
+                      Send Invitation
+                    </Button>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
+
+              {/* Add User Dialog */}
+              <Dialog open={addUserDialogOpen} onOpenChange={setAddUserDialogOpen}>
+                <DialogTrigger asChild>
+                  <Button data-testid="add-user-btn" className="bg-orange-600 hover:bg-orange-700">
+                    <UserPlus className="h-4 w-4 mr-2" />
+                    Add User
+                  </Button>
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>Add New User</DialogTitle>
+                    <DialogDescription>
+                      Create a new team member account with login credentials
+                    </DialogDescription>
+                  </DialogHeader>
+                  
+                  <div className="space-y-4 mt-4">
+                    <div className="space-y-2">
+                      <Label>Full Name *</Label>
+                      <Input
+                        value={newUser.name}
+                        onChange={(e) => setNewUser({ ...newUser, name: e.target.value })}
+                        placeholder="John Doe"
+                        data-testid="user-name-input"
+                      />
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <Label>Email Address *</Label>
+                      <Input
+                        type="email"
+                        value={newUser.email}
+                        onChange={(e) => setNewUser({ ...newUser, email: e.target.value })}
+                        placeholder="john@company.com"
+                        data-testid="user-email-input"
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label>Password *</Label>
+                      <Input
+                        type="password"
+                        value={newUser.password}
+                        onChange={(e) => setNewUser({ ...newUser, password: e.target.value })}
+                        placeholder="Enter a secure password"
+                        data-testid="user-password-input"
+                      />
+                      <p className="text-xs text-muted-foreground">Share these credentials with the new user</p>
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <Label>Role</Label>
+                      <Select value={newUser.role} onValueChange={(value) => setNewUser({ ...newUser, role: value })}>
+                        <SelectTrigger data-testid="user-role-select">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {ROLES.map((role) => (
+                            <SelectItem key={role.value} value={role.value}>
+                              <div className="flex items-center gap-2">
+                                <Badge className={role.color}>{role.label}</Badge>
+                                <span className="text-xs text-muted-foreground">{role.description}</span>
+                              </div>
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                  
+                  <DialogFooter>
+                    <Button variant="outline" onClick={() => setAddUserDialogOpen(false)}>Cancel</Button>
+                    <Button onClick={handleAddUser} data-testid="create-user-btn" className="bg-orange-600 hover:bg-orange-700">
+                      <UserPlus className="h-4 w-4 mr-2" />
+                      Create User
+                    </Button>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
+            </div>
+          )}
               </DialogContent>
             </Dialog>
           )}
