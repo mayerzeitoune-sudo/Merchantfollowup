@@ -611,18 +611,52 @@ const DripCampaigns = () => {
                 
                 {/* Triggers Tab */}
                 <TabsContent value="triggers" className="space-y-4 mt-4">
-                  <div className="p-4 rounded-lg bg-secondary/50">
-                    <p className="font-medium">Keyword Triggers</p>
-                    <p className="text-sm text-muted-foreground mt-1">
-                      Define what happens when a contact replies with specific keywords.
-                      The AI will match semantic variations (e.g., "yes", "yea", "yeah").
-                    </p>
+                  <div className="p-4 rounded-lg bg-gradient-to-r from-purple-50 to-pink-50 border-purple-200">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="font-medium flex items-center gap-2">
+                          <Zap className="h-4 w-4 text-purple-500" />
+                          Keyword Triggers
+                        </p>
+                        <p className="text-sm text-muted-foreground mt-1">
+                          Define what happens when a contact replies with specific keywords.
+                        </p>
+                      </div>
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        onClick={handleAiGenerateTriggers}
+                        disabled={aiTriggerLoading}
+                        className="border-purple-300 hover:bg-purple-100"
+                      >
+                        {aiTriggerLoading ? (
+                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        ) : (
+                          <Sparkles className="h-4 w-4 mr-2 text-purple-500" />
+                        )}
+                        AI Generate Triggers
+                      </Button>
+                    </div>
                   </div>
                   
                   <div className="space-y-4">
                     {formData.triggers.map((trigger, index) => (
-                      <Card key={index}>
+                      <Card key={index} className="border-l-4 border-l-purple-400">
                         <CardContent className="p-4">
+                          <div className="flex items-start justify-between mb-3">
+                            <Badge variant="outline" className="text-xs">Trigger {index + 1}</Badge>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-7 text-destructive"
+                              onClick={() => {
+                                const newTriggers = formData.triggers.filter((_, i) => i !== index);
+                                setFormData({ ...formData, triggers: newTriggers });
+                              }}
+                            >
+                              <X className="h-4 w-4" />
+                            </Button>
+                          </div>
                           <div className="space-y-4">
                             <div className="space-y-2">
                               <Label>Keywords (comma separated)</Label>
@@ -659,7 +693,23 @@ const DripCampaigns = () => {
                             
                             {trigger.action === 'send_response' && (
                               <div className="space-y-2">
-                                <Label>Response Message</Label>
+                                <div className="flex items-center justify-between">
+                                  <Label>Response Message</Label>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => handleAiGenerateResponse(index)}
+                                    disabled={aiTriggerLoading}
+                                    className="h-7 text-xs"
+                                  >
+                                    {aiTriggerLoading ? (
+                                      <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                                    ) : (
+                                      <Sparkles className="h-3 w-3 mr-1 text-purple-500" />
+                                    )}
+                                    AI Generate
+                                  </Button>
+                                </div>
                                 <Textarea
                                   value={trigger.response_message}
                                   onChange={(e) => {
@@ -677,9 +727,17 @@ const DripCampaigns = () => {
                       </Card>
                     ))}
                     
+                    {formData.triggers.length === 0 && (
+                      <div className="text-center py-8 text-muted-foreground border-2 border-dashed rounded-lg">
+                        <Zap className="h-10 w-10 mx-auto mb-3 opacity-40" />
+                        <p className="text-sm">No triggers yet</p>
+                        <p className="text-xs mt-1">Add triggers to respond automatically to keywords</p>
+                      </div>
+                    )}
+                    
                     <Button onClick={addTrigger} variant="outline" className="w-full">
                       <Plus className="h-4 w-4 mr-2" />
-                      Add Trigger
+                      Add Trigger Manually
                     </Button>
                   </div>
                 </TabsContent>
