@@ -15,7 +15,8 @@ import {
   Trash2,
   ShoppingCart,
   CheckCircle,
-  AlertCircle
+  AlertCircle,
+  Star
 } from 'lucide-react';
 import { phoneNumbersApi } from '../lib/api';
 import { toast } from 'sonner';
@@ -32,6 +33,7 @@ const PhoneNumbers = () => {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [numberToDelete, setNumberToDelete] = useState(null);
   const [bulkDeleteDialogOpen, setBulkDeleteDialogOpen] = useState(false);
+  const [defaultNumber, setDefaultNumber] = useState(null);
 
   useEffect(() => {
     fetchOwnedNumbers();
@@ -41,10 +43,28 @@ const PhoneNumbers = () => {
     try {
       const response = await phoneNumbersApi.getOwned();
       setOwnedNumbers(response.data);
+      // Find and set default number
+      const defaultNum = response.data.find(n => n.is_default);
+      setDefaultNumber(defaultNum?.id || (response.data.length > 0 ? response.data[0].id : null));
     } catch (error) {
       toast.error('Failed to fetch phone numbers');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleSetDefault = async (numberId) => {
+    try {
+      await phoneNumbersApi.setDefault(numberId);
+      setDefaultNumber(numberId);
+      // Update local state
+      setOwnedNumbers(prev => prev.map(n => ({
+        ...n,
+        is_default: n.id === numberId
+      })));
+      toast.success('Default phone number updated');
+    } catch (error) {
+      toast.error('Failed to set default number');
     }
   };
 
