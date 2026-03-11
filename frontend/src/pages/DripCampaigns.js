@@ -651,8 +651,32 @@ const DripCampaigns = () => {
                                     <SelectItem value="14">Day 14</SelectItem>
                                     <SelectItem value="21">Day 21</SelectItem>
                                     <SelectItem value="30">Day 30</SelectItem>
+                                    {formData.duration_days > 30 && <SelectItem value="45">Day 45</SelectItem>}
+                                    {formData.duration_days >= 60 && <SelectItem value="60">Day 60</SelectItem>}
+                                    {formData.duration_days >= 90 && <SelectItem value="90">Day 90</SelectItem>}
+                                    {formData.duration_days >= 120 && <SelectItem value="120">Day 120</SelectItem>}
+                                    {formData.duration_days >= 150 && <SelectItem value="150">Day 150</SelectItem>}
+                                    {formData.duration_days >= 180 && <SelectItem value="180">Day 180</SelectItem>}
+                                    {formData.duration_days >= 210 && <SelectItem value="210">Day 210</SelectItem>}
+                                    {formData.duration_days >= 240 && <SelectItem value="240">Day 240</SelectItem>}
+                                    {formData.duration_days >= 270 && <SelectItem value="270">Day 270</SelectItem>}
+                                    {formData.duration_days >= 300 && <SelectItem value="300">Day 300</SelectItem>}
+                                    {formData.duration_days >= 330 && <SelectItem value="330">Day 330</SelectItem>}
+                                    {formData.duration_days >= 365 && <SelectItem value="365">Day 365</SelectItem>}
+                                    {formData.duration_days >= 400 && <SelectItem value="400">Day 400</SelectItem>}
+                                    {formData.duration_days >= 450 && <SelectItem value="450">Day 450</SelectItem>}
+                                    {formData.duration_days >= 500 && <SelectItem value="500">Day 500</SelectItem>}
+                                    {formData.duration_days >= 548 && <SelectItem value="548">Day 548</SelectItem>}
+                                    {formData.duration_days >= 600 && <SelectItem value="600">Day 600</SelectItem>}
+                                    {formData.duration_days >= 700 && <SelectItem value="700">Day 700</SelectItem>}
+                                    {formData.duration_days >= 730 && <SelectItem value="730">Day 730</SelectItem>}
                                   </SelectContent>
                                 </Select>
+                                {formData.use_funded_term && (
+                                  <p className="text-xs text-green-600">
+                                    Days adjust per client's funding term
+                                  </p>
+                                )}
                               </div>
 
                               <div className="space-y-2">
