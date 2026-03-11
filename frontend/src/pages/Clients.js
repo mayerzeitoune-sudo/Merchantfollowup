@@ -587,11 +587,6 @@ const Clients = () => {
                         <TableCell className="hidden md:table-cell text-muted-foreground">
                           {client.company || '-'}
                         </TableCell>
-                        <TableCell className="text-right font-medium">
-                          <span className={client.balance > 0 ? 'text-orange-600' : 'text-green-600'}>
-                            ${client.balance.toFixed(2)}
-                          </span>
-                        </TableCell>
                         <TableCell>
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
