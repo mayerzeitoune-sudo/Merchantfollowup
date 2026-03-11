@@ -238,3 +238,20 @@ export const teamApi = {
   cancelInvite: (inviteId) => axios.delete(`${API}/team/invites/${inviteId}`)
 };
 
+
+// Funded Deals API
+export const fundedApi = {
+  getAll: (filters) => axios.get(`${API}/funded/deals`, { params: filters }),
+  getOne: (id) => axios.get(`${API}/funded/deals/${id}`),
+  create: (data) => axios.post(`${API}/funded/deals`, data),
+  update: (id, data) => axios.put(`${API}/funded/deals/${id}`, data),
+  updatePayment: (dealId, paymentNumber, data) => axios.put(`${API}/funded/deals/${dealId}/payment/${paymentNumber}`, data),
+  getStats: () => axios.get(`${API}/funded/stats`),
+  getCollectionsQueue: () => axios.get(`${API}/funded/collections-queue`),
+  getMilestones: () => axios.get(`${API}/funded/milestones`),
+  acknowledgeMilestone: (dealId) => axios.post(`${API}/funded/deals/${dealId}/milestone-acknowledged`),
+  getRecent: (limit = 10) => axios.get(`${API}/funded/recent`, { params: { limit } }),
+  getAnalytics: (startDate, endDate) => axios.get(`${API}/funded/analytics`, { params: { start_date: startDate, end_date: endDate } }),
+  getDealTypes: () => axios.get(`${API}/funded/deal-types`)
+};
+
