@@ -2116,6 +2116,39 @@ async def release_phone_number(phone_id: str, current_user: dict = Depends(get_c
         raise HTTPException(status_code=404, detail="Phone number not found")
     return {"message": "Phone number released"}
 
+@api_router.put("/phone-numbers/{phone_id}/set-default")
+async def set_default_phone_number(phone_id: str, current_user: dict = Depends(get_current_user)):
+    """Set a phone number as the default"""
+    # First, unset all current defaults for this user
+    await db.phone_numbers.update_many(
+        {"user_id": current_user["user_id"]},
+        {"$set": {"is_default": False}}
+    )
+    # Set the new default
+    result = await db.phone_numbers.update_one(
+        {"id": phone_id, "user_id": current_user["user_id"]},
+        {"$set": {"is_default": True}}
+    )
+    if result.matched_count == 0:
+        raise HTTPException(status_code=404, detail="Phone number not found")
+    return {"message": "Default phone number updated"}
+
+@api_router.get("/phone-numbers/default")
+async def get_default_phone_number(current_user: dict = Depends(get_current_user)):
+    """Get the default phone number for the user"""
+    default_number = await db.phone_numbers.find_one(
+        {"user_id": current_user["user_id"], "is_default": True},
+        {"_id": 0}
+    )
+    if not default_number:
+        # Return first number if no default set
+        first_number = await db.phone_numbers.find_one(
+            {"user_id": current_user["user_id"]},
+            {"_id": 0}
+        )
+        return first_number
+    return default_number
+
 # ============== CONTACT MESSAGING & CALLING ROUTES ==============
 
 @api_router.get("/contacts/{client_id}/conversation")
