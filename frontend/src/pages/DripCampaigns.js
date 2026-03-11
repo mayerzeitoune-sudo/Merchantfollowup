@@ -544,7 +544,7 @@ const DripCampaigns = () => {
                               </Button>
                             </div>
                             
-                            <div className="grid grid-cols-2 gap-4 mb-4">
+                            <div className="grid grid-cols-3 gap-4 mb-4">
                               <div className="space-y-2">
                                 <Label>Channel</Label>
                                 <Select
@@ -562,13 +562,53 @@ const DripCampaigns = () => {
                               </div>
                               
                               <div className="space-y-2">
-                                <Label>Delay (days)</Label>
-                                <Input
-                                  type="number"
-                                  min="0"
-                                  value={step.delay_days}
-                                  onChange={(e) => updateStep(index, 'delay_days', parseInt(e.target.value) || 0)}
-                                />
+                                <Label>Day</Label>
+                                <Select
+                                  value={String(step.delay_days)}
+                                  onValueChange={(value) => updateStep(index, 'delay_days', parseInt(value))}
+                                >
+                                  <SelectTrigger>
+                                    <SelectValue />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="0">Day 0 (Immediately)</SelectItem>
+                                    <SelectItem value="1">Day 1</SelectItem>
+                                    <SelectItem value="2">Day 2</SelectItem>
+                                    <SelectItem value="3">Day 3</SelectItem>
+                                    <SelectItem value="4">Day 4</SelectItem>
+                                    <SelectItem value="5">Day 5</SelectItem>
+                                    <SelectItem value="7">Day 7</SelectItem>
+                                    <SelectItem value="10">Day 10</SelectItem>
+                                    <SelectItem value="14">Day 14</SelectItem>
+                                    <SelectItem value="21">Day 21</SelectItem>
+                                    <SelectItem value="30">Day 30</SelectItem>
+                                  </SelectContent>
+                                </Select>
+                              </div>
+
+                              <div className="space-y-2">
+                                <Label>Send Time</Label>
+                                <Select
+                                  value={step.send_time || '09:00'}
+                                  onValueChange={(value) => updateStep(index, 'send_time', value)}
+                                >
+                                  <SelectTrigger>
+                                    <SelectValue />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="08:00">8:00 AM</SelectItem>
+                                    <SelectItem value="09:00">9:00 AM</SelectItem>
+                                    <SelectItem value="10:00">10:00 AM</SelectItem>
+                                    <SelectItem value="11:00">11:00 AM</SelectItem>
+                                    <SelectItem value="12:00">12:00 PM</SelectItem>
+                                    <SelectItem value="13:00">1:00 PM</SelectItem>
+                                    <SelectItem value="14:00">2:00 PM</SelectItem>
+                                    <SelectItem value="15:00">3:00 PM</SelectItem>
+                                    <SelectItem value="16:00">4:00 PM</SelectItem>
+                                    <SelectItem value="17:00">5:00 PM</SelectItem>
+                                    <SelectItem value="18:00">6:00 PM</SelectItem>
+                                  </SelectContent>
+                                </Select>
                               </div>
                             </div>
                             
