@@ -33,6 +33,7 @@ import {
 } from 'lucide-react';
 import { clientsApi, contactsApi } from '../lib/api';
 import { toast } from 'sonner';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
 
 const AVAILABLE_TAGS = [
   { value: "New Lead", color: "bg-blue-100 text-blue-700", stage: "new_lead" },
