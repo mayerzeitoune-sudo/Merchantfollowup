@@ -62,8 +62,12 @@ const DashboardLayout = ({ children }) => {
   const logoUrl = "https://customer-assets.emergentagent.com/job_payment-tracker-471/artifacts/q3g0kgbm_Image_20260310_172432_668.png";
 
   const handleLogout = () => {
-    logout();
+    // Navigate first, then logout to avoid ProtectedRoute redirect
     navigate('/');
+    // Small delay to ensure navigation completes before auth state changes
+    setTimeout(() => {
+      logout();
+    }, 100);
   };
 
   return (
