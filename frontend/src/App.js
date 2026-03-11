@@ -106,6 +106,8 @@ function AppRoutes() {
       <Route path="/compliance" element={<ProtectedRoute><Compliance /></ProtectedRoute>} />
       <Route path="/revival" element={<ProtectedRoute><Revival /></ProtectedRoute>} />
       <Route path="/team" element={<ProtectedRoute><Team /></ProtectedRoute>} />
+      <Route path="/funded" element={<ProtectedRoute><FundedDeals /></ProtectedRoute>} />
+      <Route path="/funded/:dealId" element={<ProtectedRoute><FundedDealProfile /></ProtectedRoute>} />
       
       {/* Default redirect */}
       <Route path="/" element={<Navigate to="/login" replace />} />
