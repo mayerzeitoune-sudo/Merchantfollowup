@@ -231,18 +231,29 @@ async def gmail_auth_callback(code: str = None, state: str = None, error: str = 
         
         flow = get_oauth_flow(state)
         
-        with warnings.catch_warnings():
-            warnings.simplefilter("ignore")
-            flow.fetch_token(code=code)
+        try:
+            with warnings.catch_warnings():
+                warnings.simplefilter("ignore")
+                flow.fetch_token(code=code)
+            logger.info("Token fetch completed")
+        except Exception as token_error:
+            logger.error(f"Token fetch failed: {token_error}")
+            import traceback
+            logger.error(traceback.format_exc())
+            return RedirectResponse(f"{FRONTEND_URL}/settings?gmail_error=token_fetch_failed")
         
         creds = flow.credentials
         logger.info("Token fetched successfully")
         
         # Get user's email address
-        service = build('gmail', 'v1', credentials=creds)
-        profile = service.users().getProfile(userId='me').execute()
-        email_address = profile.get('emailAddress')
-        logger.info(f"Got email address: {email_address}")
+        try:
+            service = build('gmail', 'v1', credentials=creds)
+            profile = service.users().getProfile(userId='me').execute()
+            email_address = profile.get('emailAddress')
+            logger.info(f"Got email address: {email_address}")
+        except Exception as gmail_error:
+            logger.error(f"Gmail API error: {gmail_error}")
+            return RedirectResponse(f"{FRONTEND_URL}/settings?gmail_error=gmail_api_failed")
         
         # Store tokens
         await db.gmail_tokens.update_one(
