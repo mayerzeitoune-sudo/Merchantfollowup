@@ -439,12 +439,27 @@ const LandingPage = () => {
                   </li>
                 </ul>
               </div>
-              <div className="rounded-2xl overflow-hidden shadow-xl border">
-                <img 
-                  src="/screenshots/campaigns.png" 
-                  alt="Drip Campaigns" 
-                  className="w-full"
-                />
+              <div className="rounded-2xl overflow-hidden shadow-xl border bg-gradient-to-br from-slate-100 to-slate-200 p-6">
+                <div className="bg-white rounded-xl p-4">
+                  <h4 className="font-semibold mb-4">Drip Campaign Builder</h4>
+                  <div className="space-y-3">
+                    {[
+                      { day: 'Day 1', msg: 'Welcome message' },
+                      { day: 'Day 3', msg: 'Follow-up with offer' },
+                      { day: 'Day 7', msg: 'Check-in message' }
+                    ].map((step, i) => (
+                      <div key={i} className="flex items-center gap-3">
+                        <div className="h-8 w-8 rounded-full bg-orange-100 text-orange-600 flex items-center justify-center text-sm font-bold">
+                          {i + 1}
+                        </div>
+                        <div className="flex-1 p-3 bg-gray-50 rounded-lg">
+                          <p className="text-xs text-gray-500">{step.day}</p>
+                          <p className="text-sm font-medium">{step.msg}</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
               </div>
             </div>
           </div>
