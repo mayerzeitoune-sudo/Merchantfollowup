@@ -437,6 +437,87 @@ const Settings = () => {
             )}
           </TabsContent>
 
+          {/* Gmail Tab */}
+          <TabsContent value="gmail" className="space-y-6">
+            <Card className="bg-red-50 border-red-100">
+              <CardContent className="p-4">
+                <div className="flex items-start gap-3">
+                  <Mail className="h-5 w-5 text-red-600 mt-0.5" />
+                  <div>
+                    <p className="font-medium text-red-900">Gmail Integration</p>
+                    <p className="text-sm text-red-700 mt-1">
+                      Connect your Gmail account to send team invitations, notifications, and read incoming emails to import leads.
+                    </p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle className="font-['Outfit'] flex items-center gap-2">
+                  <Mail className="h-5 w-5" />
+                  Gmail Account
+                </CardTitle>
+                <CardDescription>
+                  Connect your Gmail to send and receive emails from the platform
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                {gmailLoading ? (
+                  <p className="text-muted-foreground">Loading Gmail status...</p>
+                ) : gmailStatus.connected ? (
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between p-4 bg-green-50 rounded-lg border border-green-200">
+                      <div className="flex items-center gap-3">
+                        <div className="h-10 w-10 rounded-full bg-green-100 flex items-center justify-center">
+                          <CheckCircle className="h-5 w-5 text-green-600" />
+                        </div>
+                        <div>
+                          <p className="font-medium text-green-900">Connected</p>
+                          <p className="text-sm text-green-700">{gmailStatus.email}</p>
+                        </div>
+                      </div>
+                      <Button 
+                        variant="outline" 
+                        onClick={handleGmailDisconnect}
+                        className="text-red-600 border-red-200 hover:bg-red-50"
+                      >
+                        <Unlink className="h-4 w-4 mr-2" />
+                        Disconnect
+                      </Button>
+                    </div>
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <Card>
+                        <CardContent className="p-4">
+                          <h4 className="font-medium mb-2">What you can do:</h4>
+                          <ul className="text-sm text-muted-foreground space-y-1">
+                            <li>• Send team invitation emails</li>
+                            <li>• Send notifications to clients</li>
+                            <li>• Read incoming emails</li>
+                            <li>• Import leads from inbox</li>
+                          </ul>
+                        </CardContent>
+                      </Card>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="text-center py-8">
+                    <div className="h-16 w-16 rounded-full bg-gray-100 flex items-center justify-center mx-auto mb-4">
+                      <Mail className="h-8 w-8 text-gray-400" />
+                    </div>
+                    <p className="text-muted-foreground mb-4">No Gmail account connected</p>
+                    <Button onClick={handleGmailConnect} className="bg-red-600 hover:bg-red-700">
+                      <Link className="h-4 w-4 mr-2" />
+                      Connect Gmail
+                    </Button>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
           {/* Profile Tab */}
           <TabsContent value="profile">
             <Card>
