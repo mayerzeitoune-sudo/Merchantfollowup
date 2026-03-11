@@ -472,6 +472,15 @@ const Contacts = () => {
                       <Button
                         variant="outline"
                         size="icon"
+                        onClick={() => setShowSimulateDialog(true)}
+                        title="Simulate Customer Reply (Test)"
+                        data-testid="simulate-reply-btn"
+                      >
+                        <TestTube2 className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="icon"
                         onClick={handleCall}
                         disabled={calling}
                         data-testid="call-btn"
