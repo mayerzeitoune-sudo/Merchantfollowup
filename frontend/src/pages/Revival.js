@@ -182,13 +182,20 @@ const Revival = () => {
               Re-engage old leads who haven't responded in a while
             </p>
           </div>
-          <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-            <DialogTrigger asChild>
-              <Button>
-                <Plus className="h-4 w-4 mr-2" />
-                New Revival Campaign
-              </Button>
-            </DialogTrigger>
+          <div className="flex gap-2">
+            {/* AI Assistant Button */}
+            <Button variant="outline" onClick={() => setAiDialogOpen(true)} data-testid="ai-revival-btn">
+              <Sparkles className="h-4 w-4 mr-2 text-purple-500" />
+              AI Assistant
+            </Button>
+            
+            <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+              <DialogTrigger asChild>
+                <Button>
+                  <Plus className="h-4 w-4 mr-2" />
+                  New Revival Campaign
+                </Button>
+              </DialogTrigger>
             <DialogContent className="max-w-lg">
               <DialogHeader>
                 <DialogTitle>Create Revival Campaign</DialogTitle>
