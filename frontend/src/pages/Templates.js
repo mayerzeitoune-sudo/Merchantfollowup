@@ -393,6 +393,129 @@ const Templates = () => {
           </div>
         )}
       </div>
+
+      {/* AI Assistant Dialog */}
+      <Dialog open={aiDialogOpen} onOpenChange={setAiDialogOpen}>
+        <DialogContent className="sm:max-w-2xl max-h-[80vh]">
+          <DialogHeader>
+            <DialogTitle className="font-['Outfit'] flex items-center gap-2">
+              <Sparkles className="h-5 w-5 text-purple-500" />
+              AI Template Assistant
+            </DialogTitle>
+            <DialogDescription>
+              Ask AI to generate templates or get help with your messaging
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4 mt-4">
+            {/* Quick Generate */}
+            <Card className="bg-gradient-to-r from-purple-50 to-pink-50 border-purple-200">
+              <CardContent className="pt-4">
+                <h4 className="font-medium mb-3 flex items-center gap-2">
+                  <Wand2 className="h-4 w-4" />
+                  Quick Generate
+                </h4>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>Template Type</Label>
+                    <Select value={aiTemplateType} onValueChange={setAiTemplateType}>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="follow_up">Follow Up</SelectItem>
+                        <SelectItem value="payment_reminder">Payment Reminder</SelectItem>
+                        <SelectItem value="introduction">Introduction</SelectItem>
+                        <SelectItem value="thank_you">Thank You</SelectItem>
+                        <SelectItem value="appointment">Appointment</SelectItem>
+                        <SelectItem value="closing">Deal Closing</SelectItem>
+                        <SelectItem value="cold_outreach">Cold Outreach</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Tone</Label>
+                    <Select value={aiTone} onValueChange={setAiTone}>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="professional">Professional</SelectItem>
+                        <SelectItem value="friendly">Friendly</SelectItem>
+                        <SelectItem value="urgent">Urgent</SelectItem>
+                        <SelectItem value="casual">Casual</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+                <Button 
+                  className="w-full mt-4" 
+                  onClick={handleAiGenerateTemplate}
+                  disabled={aiLoading}
+                >
+                  {aiLoading ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Sparkles className="h-4 w-4 mr-2" />}
+                  Generate Template
+                </Button>
+              </CardContent>
+            </Card>
+
+            {/* Chat with AI */}
+            <div className="space-y-2">
+              <Label>Ask AI Anything</Label>
+              <div className="flex gap-2">
+                <Input
+                  value={aiInput}
+                  onChange={(e) => setAiInput(e.target.value)}
+                  placeholder="e.g., Write a payment reminder that sounds friendly..."
+                  onKeyDown={(e) => e.key === 'Enter' && handleAiChat()}
+                />
+                <Button onClick={handleAiChat} disabled={aiLoading || !aiInput.trim()}>
+                  <Send className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+
+            {/* Chat Messages */}
+            {aiChatMessages.length > 0 && (
+              <ScrollArea className="h-[250px] border rounded-lg p-4">
+                <div className="space-y-3">
+                  {aiChatMessages.map((msg, i) => (
+                    <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                      <div className={`max-w-[85%] p-3 rounded-lg ${
+                        msg.role === 'user' ? 'bg-primary text-primary-foreground' : 'bg-muted'
+                      }`}>
+                        <p className="text-sm whitespace-pre-wrap">{msg.content}</p>
+                        {msg.variables && msg.variables.length > 0 && (
+                          <div className="flex flex-wrap gap-1 mt-2">
+                            <span className="text-xs opacity-70">Variables:</span>
+                            {msg.variables.map(v => (
+                              <Badge key={v} variant="secondary" className="text-xs">{`{${v}}`}</Badge>
+                            ))}
+                          </div>
+                        )}
+                        {msg.role === 'assistant' && (
+                          <div className="flex gap-2 mt-2">
+                            <Button size="sm" variant="outline" onClick={() => handleUseAiTemplate(msg.content)}>
+                              Use This
+                            </Button>
+                            <Button size="sm" variant="ghost" onClick={() => handleCopy(msg.content)}>
+                              <Copy className="h-3 w-3" />
+                            </Button>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </ScrollArea>
+            )}
+          </div>
+          
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setAiDialogOpen(false)}>Close</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </DashboardLayout>
   );
 };
