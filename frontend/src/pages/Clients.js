@@ -169,16 +169,33 @@ const Clients = () => {
     const client = clients.find(c => c.id === clientId);
     if (!client) return;
     
+    // Check if this tag maps to a pipeline stage
+    const newStage = TAG_TO_STAGE[newTag];
+    
     let updatedTags;
     if (client.tags?.includes(newTag)) {
+      // Removing the tag - just remove it, don't change stage
       updatedTags = client.tags.filter(t => t !== newTag);
     } else {
-      updatedTags = [...(client.tags || []), newTag];
+      // Adding a stage tag - remove other stage tags and add this one
+      if (newStage) {
+        // Remove any existing stage tags
+        const stageTags = Object.values(STAGE_TO_TAG);
+        updatedTags = (client.tags || []).filter(t => !stageTags.includes(t));
+        updatedTags.push(newTag);
+      } else {
+        updatedTags = [...(client.tags || []), newTag];
+      }
     }
     
     try {
-      await clientsApi.update(clientId, { tags: updatedTags });
-      toast.success('Tag updated');
+      const updateData = { tags: updatedTags };
+      // If adding a stage tag, also update pipeline_stage
+      if (newStage && !client.tags?.includes(newTag)) {
+        updateData.pipeline_stage = newStage;
+      }
+      await clientsApi.update(clientId, updateData);
+      toast.success(newStage ? `Moved to ${newTag}` : 'Tag updated');
       fetchClients();
     } catch (error) {
       toast.error('Failed to update tag');
