@@ -114,7 +114,15 @@ const Contacts = () => {
   const fetchOwnedNumbers = async () => {
     try {
       const response = await phoneNumbersApi.getOwned();
-      setOwnedNumbers(response.data || []);
+      const numbers = response.data || [];
+      setOwnedNumbers(numbers);
+      // Find and set default number
+      const defaultNum = numbers.find(n => n.is_default);
+      if (defaultNum) {
+        setSelectedFromNumber(defaultNum.phone_number);
+      } else if (numbers.length > 0) {
+        setSelectedFromNumber(numbers[0].phone_number);
+      }
     } catch (error) {
       console.error('Failed to fetch phone numbers');
     }
