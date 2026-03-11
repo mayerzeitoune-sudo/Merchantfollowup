@@ -59,7 +59,7 @@ const DashboardLayout = ({ children }) => {
   const navigate = useNavigate();
   const { user, logout } = useAuth();
 
-  const logoUrl = "https://customer-assets.emergentagent.com/job_payment-tracker-471/artifacts/q3g0kgbm_Image_20260310_172432_668.png";
+  const logoUrl = "https://customer-assets.emergentagent.com/job_8de675b6-2eb0-4aa2-9eba-eeadd9657b38/artifacts/gcg3jc1g_Image_20260311_161856_605.png";
 
   const handleLogout = () => {
     // Navigate first, then logout to avoid ProtectedRoute redirect
@@ -81,11 +81,14 @@ const DashboardLayout = ({ children }) => {
         >
           <Menu className="h-6 w-6" />
         </button>
-        <img 
-          src={logoUrl} 
-          alt="Merchant Follow Up" 
-          className="h-8 w-auto"
-        />
+        <div className="flex items-center gap-2">
+          <img 
+            src={logoUrl} 
+            alt="Merchant Follow Up" 
+            className="h-10 w-auto"
+          />
+          <span className="text-sm font-bold">MERCHANT</span>
+        </div>
         <div className="w-10" />
       </header>
 
