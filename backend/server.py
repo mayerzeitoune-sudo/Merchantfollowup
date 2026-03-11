@@ -2743,19 +2743,34 @@ async def send_template_message(
     
     # Substitute variables in template content
     message_content = template["content"]
+    
+    # Apply custom variables first
     if variables:
         for var, value in variables.items():
-            message_content = message_content.replace(f"{{{var}}}", value)
+            message_content = message_content.replace(f"{{{var}}}", str(value))
     
-    # Default variable substitutions
+    # Default variable substitutions from client data
+    client_name = client.get("name", "") or ""
+    first_name = client_name.split()[0] if client_name else ""
+    
     default_vars = {
-        "client_name": client.get("name", "") or "",
+        "name": client_name,
+        "first_name": first_name,
+        "client_name": client_name,
+        "company": client.get("company", "") or "",
         "client_company": client.get("company", "") or "",
-        "client_balance": str(client.get("balance", 0) or 0)
+        "phone": client.get("phone", "") or "",
+        "email": client.get("email", "") or "",
+        "balance": f"${client.get('balance', 0):.2f}",
+        "amount": f"${client.get('balance', 0):.2f}",
+        "client_balance": f"${client.get('balance', 0):.2f}",
+        "date": datetime.now(timezone.utc).strftime('%B %d, %Y'),
+        "due_date": datetime.now(timezone.utc).strftime('%B %d, %Y'),
+        "payment_link": f"https://pay.example.com/{client_id}"
     }
     
     for var, value in default_vars.items():
-        message_content = message_content.replace(f"{{{var}}}", value or "")
+        message_content = message_content.replace(f"{{{var}}}", str(value) if value else "")
     
     # Check for active SMS provider
     provider = await db.sms_providers.find_one(
