@@ -89,7 +89,6 @@ const DripCampaigns = () => {
   useEffect(() => {
     fetchCampaigns();
     fetchClients();
-    fetchTags();
   }, []);
 
   const fetchCampaigns = async () => {
