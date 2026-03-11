@@ -113,6 +113,12 @@ export const contactsApi = {
   sendSms: (clientId, data) => axios.post(`${API}/contacts/${clientId}/send-sms`, data),
   initiateCall: (clientId, fromNumber) => axios.post(`${API}/contacts/${clientId}/initiate-call`, null, {
     params: { from_number: fromNumber }
+  }),
+  // Simulate inbound SMS for testing reply context feature
+  simulateInbound: (clientId, message, fromNumber) => axios.post(`${API}/sms/simulate-inbound`, {
+    client_id: clientId,
+    message: message,
+    from_number: fromNumber
   })
 };
 
