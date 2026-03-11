@@ -112,6 +112,34 @@ const FundedDealProfile = () => {
     }
   };
 
+  // Open edit dialog with current deal data
+  const handleEditDeal = () => {
+    setEditFormData({
+      funded_amount: deal.funded_amount || 0,
+      total_payback: deal.total_payback || 0,
+      payment_amount: deal.payment_amount || 0,
+      payment_frequency: deal.payment_frequency || 'daily',
+      deal_type: deal.deal_type || '',
+      notes: deal.notes || ''
+    });
+    setEditDialogOpen(true);
+  };
+
+  // Save edited deal
+  const handleSaveDeal = async () => {
+    setSaving(true);
+    try {
+      await fundedApi.update(dealId, editFormData);
+      toast.success('Deal updated successfully');
+      setEditDialogOpen(false);
+      fetchDeal();
+    } catch (error) {
+      toast.error('Failed to update deal');
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const handleSendMessage = async () => {
     if (!message.trim() || !deal?.client_id) return;
     
