@@ -4,6 +4,7 @@ import { AuthProvider, useAuth } from "./context/AuthContext";
 import { Toaster } from "./components/ui/sonner";
 
 // Pages
+import LandingPage from "./pages/LandingPage";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
 import VerifyOTP from "./pages/VerifyOTP";
