@@ -340,12 +340,23 @@ const LandingPage = () => {
                   </li>
                 </ul>
               </div>
-              <div className="rounded-2xl overflow-hidden shadow-xl border">
-                <img 
-                  src="/screenshots/pipeline.png" 
-                  alt="Pipeline View" 
-                  className="w-full"
-                />
+              <div className="rounded-2xl overflow-hidden shadow-xl border bg-gradient-to-br from-slate-100 to-slate-200 p-6">
+                <div className="bg-white rounded-xl p-4">
+                  <h4 className="font-semibold mb-4">Deal Pipeline</h4>
+                  <div className="flex gap-3 overflow-x-auto pb-2">
+                    {['New Lead', 'Interested', 'Application', 'Approved', 'Funded'].map((stage, i) => (
+                      <div key={i} className="flex-shrink-0 w-36 bg-gray-50 rounded-lg p-3">
+                        <p className="text-xs font-medium text-gray-600 mb-2">{stage}</p>
+                        <div className="space-y-2">
+                          <div className="bg-white p-2 rounded border text-xs shadow-sm">
+                            <p className="font-medium">John Smith</p>
+                            <p className="text-gray-500">$15,000</p>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
               </div>
             </div>
           </div>
