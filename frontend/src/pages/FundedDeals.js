@@ -571,11 +571,38 @@ const FundedDeals = () => {
                         </td>
                         <td className="p-3">{deal.assigned_rep_name || '-'}</td>
                         <td className="p-3">
-                          <Link to={`/funded/${deal.id}`}>
-                            <Button variant="ghost" size="sm">
-                              <ExternalLink className="h-4 w-4" />
-                            </Button>
-                          </Link>
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" size="sm">
+                                <MoreHorizontal className="h-4 w-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <Link to={`/funded/${deal.id}`}>
+                                <DropdownMenuItem>
+                                  <ExternalLink className="h-4 w-4 mr-2" />
+                                  View Details
+                                </DropdownMenuItem>
+                              </Link>
+                              <Link to={`/funded/${deal.id}`}>
+                                <DropdownMenuItem>
+                                  <Edit className="h-4 w-4 mr-2" />
+                                  Edit Deal
+                                </DropdownMenuItem>
+                              </Link>
+                              <DropdownMenuSeparator />
+                              <DropdownMenuItem 
+                                onSelect={() => {
+                                  setDealToDelete(deal);
+                                  setDeleteDialogOpen(true);
+                                }}
+                                className="text-destructive cursor-pointer"
+                              >
+                                <Trash2 className="h-4 w-4 mr-2" />
+                                Delete Deal
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
                         </td>
                       </tr>
                     ))}
