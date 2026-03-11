@@ -564,9 +564,31 @@ const FundedDeals = () => {
               </Card>
             ) : (
               <div className="overflow-x-auto">
+                {/* Bulk Actions Bar */}
+                {selectedDeals.length > 0 && (
+                  <div className="flex items-center justify-between p-3 bg-muted/50 border-b">
+                    <span className="text-sm font-medium">
+                      {selectedDeals.length} deal(s) selected
+                    </span>
+                    <Button 
+                      variant="destructive" 
+                      size="sm"
+                      onClick={() => setBulkDeleteDialogOpen(true)}
+                    >
+                      <Trash2 className="h-4 w-4 mr-2" />
+                      Delete Selected
+                    </Button>
+                  </div>
+                )}
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="border-b bg-muted/50">
+                      <th className="p-3 w-10">
+                        <Checkbox
+                          checked={selectedDeals.length === filteredDeals.length && filteredDeals.length > 0}
+                          onCheckedChange={toggleSelectAll}
+                        />
+                      </th>
                       <th className="text-left p-3 font-medium">Client</th>
                       <th className="text-left p-3 font-medium">Deal Type</th>
                       <th className="text-right p-3 font-medium">Funded</th>
@@ -580,7 +602,13 @@ const FundedDeals = () => {
                   </thead>
                   <tbody>
                     {filteredDeals.map((deal) => (
-                      <tr key={deal.id} className="border-b hover:bg-muted/30">
+                      <tr key={deal.id} className={`border-b hover:bg-muted/30 ${selectedDeals.includes(deal.id) ? 'bg-primary/5' : ''}`}>
+                        <td className="p-3">
+                          <Checkbox
+                            checked={selectedDeals.includes(deal.id)}
+                            onCheckedChange={() => toggleSelectDeal(deal.id)}
+                          />
+                        </td>
                         <td className="p-3">
                           <div>
                             <p className="font-medium">{deal.client_name}</p>
