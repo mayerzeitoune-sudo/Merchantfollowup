@@ -61,6 +61,8 @@ const Templates = () => {
   const [aiInput, setAiInput] = useState('');
   const [aiTemplateType, setAiTemplateType] = useState('follow_up');
   const [aiTone, setAiTone] = useState('professional');
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [templateToDelete, setTemplateToDelete] = useState(null);
 
   // Reset AI options when dialog closes
   const handleAiDialogClose = (open) => {
