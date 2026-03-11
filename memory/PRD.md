@@ -27,6 +27,21 @@ Build a comprehensive SMS platform "Merchant Follow Up" for automated payment re
 - **Bidirectional Sync**: Changing a tag automatically updates pipeline stage, and vice versa
 - **8 Pipeline Stages**: New Lead → Interested → Application Sent → Docs Submitted → Approved → Funded → Dead → Future
 
+#### AI Template Assistant Improvements (NEW - March 2026)
+- **Automated/Robotic Tone**: Added "Automated / Robotic" tone option for system-like messages
+- **Dialog Reset**: Dialog now resets all options (type, tone, messages) when closed
+- **Better Organization**: Improved UI layout with clearer sections and generated template cards
+
+#### Funded Deals Editing (NEW - March 2026)
+- **Edit Deal Dialog**: Full edit functionality for deal information (amounts, frequency, type, notes)
+- **Editable Payment Amounts**: Payment schedule amounts can now be edited inline
+- **Real-time Updates**: Changes save immediately with confirmation toasts
+
+#### Client Notes System (NEW - March 2026)
+- **Timestamped Note Logs**: Notes are now logged with timestamps and author information
+- **Admin-Only Editing**: Only admin users can edit or delete existing notes
+- **Note History**: Complete history of all notes with creation dates and authors
+
 #### AI Content Generation (NEW - March 2026)
 - **Templates AI Assistant**: Generate message templates with AI, multiple tone options
 - **Drip Campaigns AI Assistant**: AI-generated multi-step sequences with customizable goals
