@@ -107,6 +107,8 @@ class EnhancedCampaignResponse(BaseModel):
     stop_on_reply: bool = True
     target_tags: List[str] = []
     status: str
+    duration_days: int = 30
+    use_funded_term: bool = False
     contacts_enrolled: int = 0
     contacts_completed: int = 0
     total_messages_sent: int = 0
