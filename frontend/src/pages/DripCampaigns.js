@@ -495,19 +495,19 @@ const DripCampaigns = () => {
                       Only contacts with these tags will be enrolled
                     </p>
                     <div className="flex flex-wrap gap-2 mt-2">
-                      {tags.map((tag) => (
+                      {AVAILABLE_TAGS.map((tag) => (
                         <Badge
-                          key={tag.tag}
-                          variant={formData.target_tags.includes(tag.tag) ? "default" : "outline"}
-                          className="cursor-pointer"
+                          key={tag.value}
+                          variant={formData.target_tags.includes(tag.value) ? "default" : "outline"}
+                          className={`cursor-pointer ${formData.target_tags.includes(tag.value) ? '' : tag.color}`}
                           onClick={() => {
-                            const newTags = formData.target_tags.includes(tag.tag)
-                              ? formData.target_tags.filter(t => t !== tag.tag)
-                              : [...formData.target_tags, tag.tag];
+                            const newTags = formData.target_tags.includes(tag.value)
+                              ? formData.target_tags.filter(t => t !== tag.value)
+                              : [...formData.target_tags, tag.value];
                             setFormData({ ...formData, target_tags: newTags });
                           }}
                         >
-                          {tag.tag}
+                          {tag.value}
                         </Badge>
                       ))}
                     </div>
