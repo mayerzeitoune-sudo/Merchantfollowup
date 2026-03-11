@@ -529,20 +529,19 @@ const Clients = () => {
                     <TableHead className="font-semibold">Phone</TableHead>
                     <TableHead className="font-semibold">Tags</TableHead>
                     <TableHead className="font-semibold hidden md:table-cell">Company</TableHead>
-                    <TableHead className="font-semibold text-right">Balance</TableHead>
                     <TableHead className="w-12"></TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {loading ? (
                     <TableRow>
-                      <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                      <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
                         Loading...
                       </TableCell>
                     </TableRow>
                   ) : filteredClients.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                      <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
                         {search || tagFilter !== 'all' ? 'No clients found' : 'No clients yet. Add your first client!'}
                       </TableCell>
                     </TableRow>
