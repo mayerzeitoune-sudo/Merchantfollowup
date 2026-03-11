@@ -639,6 +639,96 @@ const FundedDealProfile = () => {
           </TabsContent>
         </Tabs>
       </div>
+
+      {/* Edit Deal Dialog */}
+      <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="font-['Outfit']">Edit Funded Deal</DialogTitle>
+            <DialogDescription>
+              Update deal information and payment settings
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4 py-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="funded_amount">Funded Amount ($)</Label>
+                <Input
+                  id="funded_amount"
+                  type="number"
+                  value={editFormData.funded_amount}
+                  onChange={(e) => setEditFormData({...editFormData, funded_amount: parseFloat(e.target.value) || 0})}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="total_payback">Total Payback ($)</Label>
+                <Input
+                  id="total_payback"
+                  type="number"
+                  value={editFormData.total_payback}
+                  onChange={(e) => setEditFormData({...editFormData, total_payback: parseFloat(e.target.value) || 0})}
+                />
+              </div>
+            </div>
+            
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="payment_amount">Payment Amount ($)</Label>
+                <Input
+                  id="payment_amount"
+                  type="number"
+                  value={editFormData.payment_amount}
+                  onChange={(e) => setEditFormData({...editFormData, payment_amount: parseFloat(e.target.value) || 0})}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="payment_frequency">Payment Frequency</Label>
+                <Select value={editFormData.payment_frequency} onValueChange={(v) => setEditFormData({...editFormData, payment_frequency: v})}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="daily">Daily</SelectItem>
+                    <SelectItem value="weekly">Weekly</SelectItem>
+                    <SelectItem value="bi-weekly">Bi-Weekly</SelectItem>
+                    <SelectItem value="monthly">Monthly</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="deal_type">Deal Type</Label>
+              <Input
+                id="deal_type"
+                value={editFormData.deal_type}
+                onChange={(e) => setEditFormData({...editFormData, deal_type: e.target.value})}
+                placeholder="e.g., MCA, Term Loan, LOC"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="notes">Notes</Label>
+              <Textarea
+                id="notes"
+                value={editFormData.notes}
+                onChange={(e) => setEditFormData({...editFormData, notes: e.target.value})}
+                placeholder="Add any notes about this deal..."
+                rows={3}
+              />
+            </div>
+          </div>
+          
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditDialogOpen(false)}>Cancel</Button>
+            <Button onClick={handleSaveDeal} disabled={saving}>
+              {saving ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Save className="h-4 w-4 mr-2" />}
+              Save Changes
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </DashboardLayout>
   );
 };
