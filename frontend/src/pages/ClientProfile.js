@@ -601,7 +601,24 @@ const ClientProfile = () => {
                     </Button>
                   </Link>
                 </div>
-                <CardDescription>{conversation.length} messages</CardDescription>
+                <CardDescription className="flex items-center justify-between mt-2">
+                  <span>{conversation.length} messages</span>
+                  {conversationChains.length > 0 && (
+                    <Select value={activeChain} onValueChange={setActiveChain}>
+                      <SelectTrigger className="w-[180px] h-8" data-testid="chain-selector">
+                        <SelectValue placeholder="Select number" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All Conversations</SelectItem>
+                        {conversationChains.map((chain) => (
+                          <SelectItem key={chain.from_number} value={chain.from_number}>
+                            {chain.display_name} ({chain.message_count})
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  )}
+                </CardDescription>
               </CardHeader>
               <CardContent>
                 <ScrollArea className="h-[500px] pr-4">
@@ -635,6 +652,11 @@ const ClientProfile = () => {
                             }`}>
                               <Clock className="h-3 w-3" />
                               {new Date(msg.timestamp).toLocaleString()}
+                              {activeChain === 'all' && msg.from_number && (
+                                <span className="ml-2 px-1.5 py-0.5 bg-black/10 rounded text-[10px]">
+                                  {msg.from_number}
+                                </span>
+                              )}
                             </div>
                           </div>
                         </div>
