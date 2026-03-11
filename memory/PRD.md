@@ -11,45 +11,57 @@ Build a comprehensive SMS platform "Merchant Follow Up" for automated payment re
 - SMS compliance tools
 - Performance analytics
 - Multi-provider SMS support (Twilio, Telnyx, Vonage, Plivo, Bandwidth)
+- Funded deals tracking and payment management
+- Team collaboration with roles
 
 ## Implementation Status - December 2025
 
 ### ✅ COMPLETED FEATURES
 
 #### Core Features
-- **Authentication**: JWT-based login/register, OTP verification (UI needs improvement)
+- **Authentication**: JWT-based login/register, OTP verification, role-based access
 - **Client Management**: CRUD operations, tags, notes, pipeline stages, balance tracking, address field
 - **Message Templates**: Create/edit templates, variable substitution, quick send from inbox
-- **Branding**: Company logo integrated into Login, Register pages, and Dashboard sidebar with professional styling
-- **Tag Management**: Inline tag editing on Client Profile page, Inbox/Contacts page with visual editor
-- **Phone Number Tracking**: Template sending and call initiation now properly track which from_number is being used
+- **Branding**: Company logo integrated into Login, Register pages, and Dashboard sidebar
+- **Tag Management**: Inline tag editing on Client Profile page, Inbox/Contacts page
+- **Phone Number Tracking**: Template sending and call initiation track from_number
 
-#### Deal Pipeline (NEW - Dec 2025)
-- **Kanban Board**: Drag-and-drop interface with 9 stages
-  - New Lead → Contacted → Interested → Application Sent → Docs Submitted → Approved → Funded → Dead → Future
+#### Deal Pipeline (Kanban Board)
+- **Drag-and-drop interface** with 9 stages: New Lead → Contacted → Interested → Application Sent → Docs Submitted → Approved → Funded → Dead → Future
 - **Pipeline Stats**: Total deals, pipeline value, funded deals, win rate
 - **Client Cards**: Show name, phone, tags, deal value
-- **Quick Actions**: View profile, send message from pipeline
 
-#### AI Deal Assistant (NEW - Dec 2025)
-- **Auto Message Generation**: Generate follow-up, intro, closing, reminder messages
-- **Tone Rewriting**: Professional, friendly, urgent tone options
-- **Deal Analysis**: Health score (1-10), status (hot/warm/cold/dead), risk factors
+#### AI Deal Assistant (GPT-5.2)
+- **Auto Message Generation**: Follow-up, intro, closing, reminder messages
+- **Tone Rewriting**: Professional, friendly, urgent options
+- **Deal Analysis**: Health score, risk factors, win probability
 - **Next Action Suggestions**: AI-powered recommendations
-- **Win Probability**: Percentage-based deal likelihood
 
-#### Lead Capture Forms (NEW - Dec 2025)
-- **Embeddable Forms**: Create custom forms with configurable fields
+#### Lead Capture Forms
+- **Embeddable Forms**: Custom forms with configurable fields
 - **CSV Import**: Bulk import contacts with auto-tagging
-- **Webhooks**: Receive leads via API from Zapier, Make, etc.
-- **Auto-tagging**: Automatically assign tags to new leads
+- **Webhooks**: API endpoints for Zapier/Make integration
 
 #### Team Collaboration (NEW - Dec 2025)
 - **Multi-User Support**: Team members with shared access
 - **Role-Based Permissions**: Admin, Agent, Viewer roles
 - **Team Invitations**: Email-based invite system
 - **Team Stats Dashboard**: Activity metrics per team member
-- **Contact Assignment**: Assign contacts to specific team members
+- **Admin Controls**: Manage roles, remove members
+
+#### Funded Deals & Book Value (NEW - Dec 2025)
+- **Funded Deals Management**: Complete funded deal lifecycle tracking
+- **Payment Schedule**: Auto-generated based on frequency (daily/weekly/bi-weekly/monthly)
+- **Manual Payment Tracking**: Cleared/Missed checkboxes with override controls
+- **Auto-Clear Logic**: Payments auto-marked cleared after due date (optimistic default)
+- **Deal-Level Rollup**: Total Payback, Collected, Remaining Balance, % Paid
+- **50% Milestone Alerts**: Dashboard notifications when clients reach 50% paid
+- **Collections Queue**: Upcoming and overdue payments dashboard widget
+- **Book Value Stats**: Total funded volume, outstanding balance, collected, late accounts
+- **Analytics Tab**: Monthly funded, collections by month, by deal type, by rep
+- **Funded Deal Profile**: Full detail view with payment schedule, messages, reminders
+- **Payment Reminders**: Pre-built reminder templates (3 days before → 7 days late)
+- **Message Integration**: Send SMS directly from funded deal profile
 
 #### Smart Drip Campaigns (NEW)
 - Multi-step automated sequences
