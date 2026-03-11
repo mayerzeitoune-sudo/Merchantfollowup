@@ -2238,11 +2238,16 @@ async def get_conversation_chains(client_id: str, current_user: dict = Depends(g
 @api_router.post("/contacts/{client_id}/send-sms")
 async def send_sms_to_contact(
     client_id: str,
-    message: str,
-    from_number: Optional[str] = None,
+    data: dict,
     current_user: dict = Depends(get_current_user)
 ):
     """Send SMS to a contact from a specific phone number"""
+    message = data.get("message", "")
+    from_number = data.get("from_number")
+    campaign_id = data.get("campaign_id")
+    campaign_name = data.get("campaign_name")
+    step_number = data.get("step_number")
+    
     client = await db.clients.find_one(
         {"id": client_id, "user_id": current_user["user_id"]}
     )
@@ -2287,7 +2292,7 @@ async def send_sms_to_contact(
     message_id = str(uuid.uuid4())
     now = datetime.now(timezone.utc).isoformat()
     
-    # Store the message with processed content
+    # Store the message with processed content and campaign info
     message_doc = {
         "id": message_id,
         "user_id": current_user["user_id"],
@@ -2296,7 +2301,10 @@ async def send_sms_to_contact(
         "content": processed_message,
         "from_number": from_number,
         "timestamp": now,
-        "status": "sent" if provider else "pending_provider"
+        "status": "sent" if provider else "pending_provider",
+        "campaign_id": campaign_id,
+        "campaign_name": campaign_name,
+        "step_number": step_number
     }
     
     await db.conversations.insert_one(message_doc)
