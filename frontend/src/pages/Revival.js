@@ -6,6 +6,7 @@ import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
 import { Textarea } from '../components/ui/textarea';
 import { Badge } from '../components/ui/badge';
+import { ScrollArea } from '../components/ui/scroll-area';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '../components/ui/dialog';
 import { 
@@ -18,9 +19,14 @@ import {
   Mail,
   Clock,
   Trash2,
-  BarChart3
+  BarChart3,
+  Sparkles,
+  Wand2,
+  Send,
+  Copy,
+  Loader2
 } from 'lucide-react';
-import { revivalApi, segmentsApi } from '../lib/api';
+import { revivalApi, segmentsApi, aiApi } from '../lib/api';
 import { toast } from 'sonner';
 
 const Revival = () => {
