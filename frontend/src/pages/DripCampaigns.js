@@ -111,15 +111,6 @@ const DripCampaigns = () => {
     }
   };
 
-  const fetchTags = async () => {
-    try {
-      const response = await segmentsApi.getAllTags();
-      setTags(response.data?.tags || []);
-    } catch (error) {
-      console.error('Failed to fetch tags');
-    }
-  };
-
   const fetchEnrollments = async (campaignId) => {
     try {
       const response = await enhancedCampaignsApi.getEnrollments(campaignId);
