@@ -35,10 +35,13 @@ const smsProviders = [
 ];
 
 const Settings = () => {
-  const { user } = useAuth();
+  const { user, token } = useAuth();
+  const [searchParams] = useSearchParams();
   const [providers, setProviders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [gmailStatus, setGmailStatus] = useState({ connected: false, email: null });
+  const [gmailLoading, setGmailLoading] = useState(true);
   const [formData, setFormData] = useState({
     provider: '',
     account_sid: '',
@@ -51,7 +54,46 @@ const Settings = () => {
 
   useEffect(() => {
     fetchProviders();
-  }, []);
+    fetchGmailStatus();
+    
+    // Check for Gmail callback params
+    if (searchParams.get('gmail_connected') === 'true') {
+      toast.success('Gmail connected successfully!');
+      fetchGmailStatus();
+    } else if (searchParams.get('gmail_error')) {
+      toast.error(`Gmail connection failed: ${searchParams.get('gmail_error')}`);
+    }
+  }, [searchParams]);
+
+  const fetchGmailStatus = async () => {
+    if (!token) return;
+    try {
+      const response = await gmailApi.getStatus(token);
+      setGmailStatus(response.data);
+    } catch (error) {
+      console.error('Failed to fetch Gmail status:', error);
+    } finally {
+      setGmailLoading(false);
+    }
+  };
+
+  const handleGmailConnect = () => {
+    if (!token) {
+      toast.error('Please log in first');
+      return;
+    }
+    window.location.href = gmailApi.getAuthUrl(token);
+  };
+
+  const handleGmailDisconnect = async () => {
+    try {
+      await gmailApi.disconnect(token);
+      setGmailStatus({ connected: false, email: null });
+      toast.success('Gmail disconnected');
+    } catch (error) {
+      toast.error('Failed to disconnect Gmail');
+    }
+  };
 
   const fetchProviders = async () => {
     try {
