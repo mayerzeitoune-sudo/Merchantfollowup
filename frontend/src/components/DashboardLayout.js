@@ -41,6 +41,8 @@ const navItems = [
   { divider: true, label: 'Growth' },
   { path: '/lead-capture', label: 'Lead Capture', icon: UserPlus },
   { path: '/analytics', label: 'Analytics', icon: BarChart3 },
+  { divider: true, label: 'Team' },
+  { path: '/team', label: 'Team Members', icon: Users, badge: 'New' },
   { divider: true, label: 'Settings' },
   { path: '/compliance', label: 'SMS Compliance', icon: Shield },
   { path: '/phone-numbers', label: 'Phone Numbers', icon: Phone },
