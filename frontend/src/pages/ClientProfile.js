@@ -466,30 +466,99 @@ const ClientProfile = () => {
                   <FileText className="h-4 w-4" />
                   Notes
                 </CardTitle>
-                <CardDescription>Keep track of important details about this client</CardDescription>
+                <CardDescription>Timestamped notes about this client (Admin can edit)</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
-                <Textarea
-                  value={notes}
-                  onChange={(e) => setNotes(e.target.value)}
-                  placeholder="Add notes about this client...
+                {/* Add New Note */}
+                <div className="space-y-2">
+                  <Textarea
+                    value={newNote}
+                    onChange={(e) => setNewNote(e.target.value)}
+                    placeholder="Add a new note..."
+                    rows={3}
+                    className="resize-none"
+                    data-testid="client-notes-textarea"
+                  />
+                  <Button 
+                    onClick={handleAddNote} 
+                    disabled={savingNotes || !newNote.trim()}
+                    className="w-full"
+                  >
+                    {savingNotes ? 'Saving...' : 'Add Note'}
+                  </Button>
+                </div>
 
-Examples:
-- Needs $120k working capital
-- Credit around 650
-- Processing $60k/month
-- Prefers morning calls"
-                  rows={8}
-                  className="resize-none"
-                  data-testid="client-notes-textarea"
-                />
-                <Button 
-                  onClick={handleSaveNotes} 
-                  disabled={savingNotes}
-                  className="w-full"
-                >
-                  {savingNotes ? 'Saving...' : 'Save Notes'}
-                </Button>
+                {/* Notes Log */}
+                <div className="border-t pt-4">
+                  <h4 className="text-sm font-medium mb-3">Note History</h4>
+                  <ScrollArea className="h-[280px]">
+                    <div className="space-y-3">
+                      {(client?.note_logs || []).length === 0 ? (
+                        <p className="text-muted-foreground text-sm text-center py-4">No notes yet</p>
+                      ) : (
+                        (client?.note_logs || []).map((note) => (
+                          <div key={note.id} className="p-3 rounded-lg bg-muted/50 border">
+                            <div className="flex items-start justify-between gap-2">
+                              <div className="flex-1">
+                                {editingNoteId === note.id ? (
+                                  <div className="space-y-2">
+                                    <Textarea
+                                      value={editNoteText}
+                                      onChange={(e) => setEditNoteText(e.target.value)}
+                                      rows={3}
+                                      className="text-sm"
+                                    />
+                                    <div className="flex gap-2">
+                                      <Button size="sm" onClick={() => handleEditNote(note.id)} disabled={savingNotes}>
+                                        Save
+                                      </Button>
+                                      <Button size="sm" variant="outline" onClick={() => setEditingNoteId(null)}>
+                                        Cancel
+                                      </Button>
+                                    </div>
+                                  </div>
+                                ) : (
+                                  <p className="text-sm whitespace-pre-wrap">{note.text}</p>
+                                )}
+                              </div>
+                              {isAdmin && editingNoteId !== note.id && (
+                                <div className="flex gap-1">
+                                  <Button 
+                                    size="icon" 
+                                    variant="ghost" 
+                                    className="h-7 w-7"
+                                    onClick={() => {
+                                      setEditingNoteId(note.id);
+                                      setEditNoteText(note.text);
+                                    }}
+                                  >
+                                    <Pencil className="h-3 w-3" />
+                                  </Button>
+                                  <Button 
+                                    size="icon" 
+                                    variant="ghost" 
+                                    className="h-7 w-7 text-destructive"
+                                    onClick={() => handleDeleteNote(note.id)}
+                                  >
+                                    <X className="h-3 w-3" />
+                                  </Button>
+                                </div>
+                              )}
+                            </div>
+                            <div className="flex items-center gap-2 mt-2 text-xs text-muted-foreground">
+                              <Clock className="h-3 w-3" />
+                              {new Date(note.created_at).toLocaleString()}
+                              <span className="text-primary">• {note.created_by_name}</span>
+                              {note.edited_at && (
+                                <span className="italic">(edited)</span>
+                              )}
+                            </div>
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  </ScrollArea>
+                </div>
               </CardContent>
             </Card>
           </div>
