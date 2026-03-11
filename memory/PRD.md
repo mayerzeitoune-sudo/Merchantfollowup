@@ -21,6 +21,8 @@ Build a comprehensive SMS platform "Merchant Follow Up" for automated payment re
 - **Client Management**: CRUD operations, tags, notes, pipeline stages, balance tracking, address field
 - **Message Templates**: Create/edit templates, variable substitution, quick send from inbox
 - **Branding**: Company logo integrated into Login, Register pages, and Dashboard sidebar with professional styling
+- **Tag Management (NEW)**: Inline tag editing on Client Profile page, Inbox/Contacts page with visual editor
+- **Phone Number Tracking (NEW)**: Template sending and call initiation now properly track which from_number is being used
 
 #### Smart Drip Campaigns (NEW)
 - Multi-step automated sequences
