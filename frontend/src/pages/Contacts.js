@@ -159,7 +159,10 @@ const Contacts = () => {
     setSending(true);
     try {
       const fromNumber = selectedFromNumber === 'default' ? null : selectedFromNumber;
-      await contactsApi.sendSms(selectedClient.id, message, fromNumber);
+      await contactsApi.sendSms(selectedClient.id, {
+        message: message,
+        from_number: fromNumber
+      });
       toast.success('Message sent!');
       setMessage('');
       // Refresh both chains and conversation
