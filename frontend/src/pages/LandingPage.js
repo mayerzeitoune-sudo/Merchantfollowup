@@ -179,9 +179,7 @@ const LandingPage = () => {
             <div className="rounded-2xl overflow-hidden shadow-2xl border border-gray-200 bg-gradient-to-br from-slate-100 to-slate-200 p-8">
               <div className="bg-white rounded-xl shadow-lg p-6">
                 <div className="flex items-center gap-4 mb-6">
-                  <div className="h-12 w-12 rounded-lg bg-gradient-to-br from-orange-500 to-orange-600 flex items-center justify-center">
-                    <BarChart3 className="h-6 w-6 text-white" />
-                  </div>
+                  <img src={logoUrl} alt="Merchant Follow Up" className="h-10 w-auto" />
                   <div>
                     <h3 className="font-bold text-xl">Dashboard Overview</h3>
                     <p className="text-gray-500 text-sm">Real-time insights at your fingertips</p>
@@ -193,7 +191,7 @@ const LandingPage = () => {
                     <p className="text-2xl font-bold text-blue-700">1,247</p>
                   </div>
                   <div className="p-4 bg-green-50 rounded-lg">
-                    <p className="text-sm text-green-600">Total Funded</p>
+                    <p className="text-sm text-green-600">Total Value</p>
                     <p className="text-2xl font-bold text-green-700">$2.4M</p>
                   </div>
                   <div className="p-4 bg-orange-50 rounded-lg">
@@ -205,8 +203,26 @@ const LandingPage = () => {
                     <p className="text-2xl font-bold text-purple-700">34%</p>
                   </div>
                 </div>
-                <div className="h-32 bg-gradient-to-r from-blue-100 to-green-100 rounded-lg flex items-center justify-center">
-                  <p className="text-gray-500">Analytics Chart</p>
+                {/* Recent Activity Feed */}
+                <div className="bg-gray-50 rounded-lg p-4">
+                  <p className="text-sm font-medium text-gray-700 mb-3">Recent Activity</p>
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-3 text-sm">
+                      <div className="h-2 w-2 rounded-full bg-green-500"></div>
+                      <span className="text-gray-600">New lead: Sarah M. from Google Ads</span>
+                      <span className="text-gray-400 ml-auto">2m ago</span>
+                    </div>
+                    <div className="flex items-center gap-3 text-sm">
+                      <div className="h-2 w-2 rounded-full bg-blue-500"></div>
+                      <span className="text-gray-600">SMS sent to 45 contacts in "Follow Up" campaign</span>
+                      <span className="text-gray-400 ml-auto">15m ago</span>
+                    </div>
+                    <div className="flex items-center gap-3 text-sm">
+                      <div className="h-2 w-2 rounded-full bg-orange-500"></div>
+                      <span className="text-gray-600">Mike R. replied: "Yes, I'm interested!"</span>
+                      <span className="text-gray-400 ml-auto">32m ago</span>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
