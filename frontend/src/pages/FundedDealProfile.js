@@ -234,6 +234,15 @@ const FundedDealProfile = () => {
               <Edit className="h-4 w-4 mr-2" />
               Edit Deal
             </Button>
+            <Button 
+              variant="outline" 
+              className="text-destructive hover:bg-destructive hover:text-destructive-foreground"
+              onClick={() => setDeleteDialogOpen(true)}
+              data-testid="delete-deal-btn"
+            >
+              <Trash2 className="h-4 w-4 mr-2" />
+              Delete
+            </Button>
           </div>
         </div>
 
