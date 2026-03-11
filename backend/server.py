@@ -1558,14 +1558,14 @@ async def get_team_stats(current_user: dict = Depends(get_current_user)):
 @api_router.post("/team/invite")
 async def invite_team_member(data: dict, current_user: dict = Depends(get_current_user)):
     """Invite a new team member"""
-    user = db.users.find_one({"id": current_user["user_id"]}, {"_id": 0})
+    user = await db.users.find_one({"id": current_user["user_id"]}, {"_id": 0})
     if user.get("role") != "admin":
         raise HTTPException(status_code=403, detail="Only admins can invite members")
     
     team_id = user.get("team_id") or current_user["user_id"]
     
     # Check if email already exists
-    existing = db.users.find_one({"email": data.get("email")})
+    existing = await db.users.find_one({"email": data.get("email")})
     if existing:
         raise HTTPException(status_code=400, detail="User with this email already exists")
     
@@ -1583,7 +1583,7 @@ async def invite_team_member(data: dict, current_user: dict = Depends(get_curren
         "created_at": now
     }
     
-    db.team_invites.insert_one(invite_doc)
+    await db.team_invites.insert_one(invite_doc)
     if "_id" in invite_doc:
         del invite_doc["_id"]
     return invite_doc
