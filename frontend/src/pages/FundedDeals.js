@@ -175,6 +175,19 @@ const FundedDeals = () => {
     }
   };
 
+  const handleDeleteDeal = async () => {
+    if (!dealToDelete) return;
+    try {
+      await fundedApi.delete(dealToDelete.id);
+      toast.success('Deal deleted');
+      setDeleteDialogOpen(false);
+      setDealToDelete(null);
+      fetchData();
+    } catch (error) {
+      toast.error('Failed to delete deal');
+    }
+  };
+
   const filteredDeals = deals.filter(deal =>
     search === '' ||
     deal.client_name?.toLowerCase().includes(search.toLowerCase()) ||
