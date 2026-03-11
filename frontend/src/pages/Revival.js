@@ -121,6 +121,56 @@ const Revival = () => {
     }
   };
 
+  // AI Functions
+  const handleAiGenerateRevival = async () => {
+    setAiLoading(true);
+    try {
+      const response = await aiApi.generateRevivalMessage(aiDaysInactive, aiLastStage, aiIndustry, aiApproach, '');
+      const newMessage = {
+        role: 'assistant',
+        content: response.data.message,
+        subject: response.data.subject
+      };
+      setAiChatMessages(prev => [...prev, newMessage]);
+      toast.success('Revival message generated!');
+    } catch (error) {
+      toast.error('Failed to generate message');
+    } finally {
+      setAiLoading(false);
+    }
+  };
+
+  const handleAiChat = async () => {
+    if (!aiInput.trim()) return;
+    
+    const userMessage = { role: 'user', content: aiInput };
+    setAiChatMessages(prev => [...prev, userMessage]);
+    setAiInput('');
+    setAiLoading(true);
+    
+    try {
+      const response = await aiApi.chat(aiInput, 'revival');
+      const assistantMessage = { role: 'assistant', content: response.data.response };
+      setAiChatMessages(prev => [...prev, assistantMessage]);
+    } catch (error) {
+      toast.error('AI request failed');
+    } finally {
+      setAiLoading(false);
+    }
+  };
+
+  const handleUseAiMessage = (content) => {
+    setFormData(prev => ({ ...prev, message: content }));
+    setAiDialogOpen(false);
+    setDialogOpen(true);
+    toast.success('Message added to campaign');
+  };
+
+  const handleCopy = (content) => {
+    navigator.clipboard.writeText(content);
+    toast.success('Copied to clipboard');
+  };
+
   return (
     <DashboardLayout>
       <div className="space-y-6" data-testid="revival-page">
