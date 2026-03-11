@@ -492,10 +492,12 @@ const Revival = () => {
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="new_lead">New Lead</SelectItem>
-                        <SelectItem value="contacted">Contacted</SelectItem>
                         <SelectItem value="interested">Interested</SelectItem>
                         <SelectItem value="application_sent">Application Sent</SelectItem>
-                        <SelectItem value="lost">Lost Deal</SelectItem>
+                        <SelectItem value="docs_submitted">Docs Submitted</SelectItem>
+                        <SelectItem value="approved">Approved</SelectItem>
+                        <SelectItem value="dead">Dead</SelectItem>
+                        <SelectItem value="future">Future</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
