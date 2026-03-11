@@ -343,7 +343,15 @@ const FundedDealProfile = () => {
                         <tr key={payment.payment_number} className="border-b hover:bg-muted/30">
                           <td className="p-3 font-medium">{payment.payment_number}</td>
                           <td className="p-3">{new Date(payment.due_date).toLocaleDateString()}</td>
-                          <td className="p-3 text-right font-medium">${payment.expected_amount?.toLocaleString()}</td>
+                          <td className="p-3 text-right">
+                            <Input
+                              type="number"
+                              value={payment.expected_amount || 0}
+                              onChange={(e) => handlePaymentUpdate(payment.payment_number, { expected_amount: parseFloat(e.target.value) || 0 })}
+                              className="h-8 text-xs w-24 text-right"
+                              data-testid={`payment-amount-${payment.payment_number}`}
+                            />
+                          </td>
                           <td className="p-3 text-center">
                             <Badge className={getStatusColor(payment.status || 'pending')}>
                               {payment.status || 'pending'}
