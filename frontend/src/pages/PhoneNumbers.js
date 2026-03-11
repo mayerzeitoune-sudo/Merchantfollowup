@@ -6,6 +6,8 @@ import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '../components/ui/dialog';
 import { Badge } from '../components/ui/badge';
+import { Checkbox } from '../components/ui/checkbox';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '../components/ui/alert-dialog';
 import { 
   Plus, 
   Search, 
@@ -26,6 +28,10 @@ const PhoneNumbers = () => {
   const [areaCode, setAreaCode] = useState('');
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [providerConfigured, setProviderConfigured] = useState(false);
+  const [selectedNumbers, setSelectedNumbers] = useState([]);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [numberToDelete, setNumberToDelete] = useState(null);
+  const [bulkDeleteDialogOpen, setBulkDeleteDialogOpen] = useState(false);
 
   useEffect(() => {
     fetchOwnedNumbers();
