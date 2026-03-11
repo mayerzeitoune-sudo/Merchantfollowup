@@ -60,7 +60,6 @@ const DashboardLayout = ({ children }) => {
   const { user, logout } = useAuth();
 
   const logoUrl = "https://customer-assets.emergentagent.com/job_8de675b6-2eb0-4aa2-9eba-eeadd9657b38/artifacts/gcg3jc1g_Image_20260311_161856_605.png";
-  const dripsUrl = "https://customer-assets.emergentagent.com/job_8de675b6-2eb0-4aa2-9eba-eeadd9657b38/artifacts/zyuvn2l4_Image_20260311_163436_629.png";
 
   const handleLogout = () => {
     // Navigate first, then logout to avoid ProtectedRoute redirect
@@ -110,7 +109,7 @@ const DashboardLayout = ({ children }) => {
       `}>
         <div className="flex flex-col h-full">
           {/* Logo */}
-          <div className="h-20 flex items-center justify-between px-4 border-b border-border sticky top-0 bg-white z-10 relative">
+          <div className="h-20 flex items-center justify-between px-4 border-b border-border sticky top-0 bg-white z-10">
             <Link to="/dashboard" className="flex items-center gap-3 group">
               <div className="relative">
                 <img 
@@ -130,13 +129,6 @@ const DashboardLayout = ({ children }) => {
             >
               <X className="h-5 w-5" />
             </button>
-            {/* Dripping effect under sidebar header */}
-            <div className="absolute left-0 right-0 top-full pointer-events-none h-8 flex justify-start overflow-hidden">
-              <img src={dripsUrl} alt="" className="h-6 w-auto opacity-70" />
-              <img src={dripsUrl} alt="" className="h-6 w-auto opacity-70 -ml-1" />
-              <img src={dripsUrl} alt="" className="h-6 w-auto opacity-70 -ml-1" />
-              <img src={dripsUrl} alt="" className="h-6 w-auto opacity-70 -ml-1" />
-            </div>
           </div>
 
           {/* Navigation */}

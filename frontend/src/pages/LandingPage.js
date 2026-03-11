@@ -103,12 +103,10 @@ const LandingPage = () => {
     }
   ];
 
-  const dripsUrl = "https://customer-assets.emergentagent.com/job_8de675b6-2eb0-4aa2-9eba-eeadd9657b38/artifacts/zyuvn2l4_Image_20260311_163436_629.png";
-
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-50 to-white">
       {/* Navigation Header */}
-      <header className="sticky top-0 z-50 bg-white/80 backdrop-blur-md border-b relative">
+      <header className="sticky top-0 z-50 bg-white/80 backdrop-blur-md border-b">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
             {/* Logo */}
@@ -137,14 +135,6 @@ const LandingPage = () => {
                 </Button>
               </Link>
             </div>
-          </div>
-        </div>
-        {/* Dripping effect */}
-        <div className="absolute left-0 right-0 top-full pointer-events-none overflow-hidden h-12 z-40">
-          <div className="flex justify-center">
-            <img src={dripsUrl} alt="" className="h-10 w-auto opacity-90" />
-            <img src={dripsUrl} alt="" className="h-10 w-auto opacity-90 -ml-1" />
-            <img src={dripsUrl} alt="" className="h-10 w-auto opacity-90 -ml-1" />
           </div>
         </div>
       </header>
