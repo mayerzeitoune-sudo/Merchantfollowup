@@ -282,14 +282,11 @@ const Team = () => {
                       </div>
                     </div>
                   </div>
-                      </Select>
-                    </div>
-                  </div>
                   
                   <DialogFooter>
                     <Button variant="outline" onClick={() => setInviteDialogOpen(false)}>Cancel</Button>
                     <Button onClick={handleInvite} data-testid="send-invite-btn">
-                      <Mail className="h-4 w-4 mr-2" />
+                      <Send className="h-4 w-4 mr-2" />
                       Send Invitation
                     </Button>
                   </DialogFooter>
