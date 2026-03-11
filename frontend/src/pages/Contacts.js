@@ -189,12 +189,16 @@ const Contacts = () => {
         client_balance: selectedClient.balance?.toString() || '0'
       };
       
-      await templatesApi.sendToContact(selectedClient.id, selectedTemplate.id, variables);
+      // Use the currently selected from_number
+      const fromNumber = selectedFromNumber === 'default' ? null : selectedFromNumber;
+      await templatesApi.sendToContact(selectedClient.id, selectedTemplate.id, variables, fromNumber);
       toast.success('Template message sent!');
       setShowTemplateDialog(false);
       setSelectedTemplate(null);
       setTemplateVariables({});
-      fetchConversation(selectedClient.id);
+      // Refresh both chains and conversation with current active chain
+      fetchConversationChains(selectedClient.id);
+      fetchConversation(selectedClient.id, activeChain);
     } catch (error) {
       toast.error(error.response?.data?.detail || 'Failed to send template message');
     } finally {
@@ -222,11 +226,30 @@ const Contacts = () => {
     
     setTemplateVariables(userVars);
     
-    // If no user input needed, send directly
-    if (Object.keys(userVars).length === 0) {
-      handleSendTemplate();
+    // If no user input needed, we still show the dialog for confirmation
+    setShowTemplateDialog(true);
+  };
+
+  // Tag editing handler
+  const handleQuickTagUpdate = async (tag) => {
+    if (!selectedClient) return;
+    
+    let updatedTags;
+    if (selectedClient.tags?.includes(tag)) {
+      updatedTags = selectedClient.tags.filter(t => t !== tag);
     } else {
-      setShowTemplateDialog(true);
+      updatedTags = [...(selectedClient.tags || []), tag];
+    }
+    
+    try {
+      await clientsApi.update(selectedClient.id, { tags: updatedTags });
+      toast.success('Tag updated');
+      // Update local state
+      setSelectedClient({ ...selectedClient, tags: updatedTags });
+      // Refresh clients list
+      fetchClients();
+    } catch (error) {
+      toast.error('Failed to update tag');
     }
   };
 
