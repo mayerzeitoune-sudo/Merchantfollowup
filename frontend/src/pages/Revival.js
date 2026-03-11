@@ -446,6 +446,145 @@ const Revival = () => {
           </CardContent>
         </Card>
       </div>
+
+      {/* AI Assistant Dialog */}
+      <Dialog open={aiDialogOpen} onOpenChange={setAiDialogOpen}>
+        <DialogContent className="sm:max-w-2xl max-h-[80vh]">
+          <DialogHeader>
+            <DialogTitle className="font-['Outfit'] flex items-center gap-2">
+              <Sparkles className="h-5 w-5 text-purple-500" />
+              AI Revival Assistant
+            </DialogTitle>
+            <DialogDescription>
+              Generate effective revival messages to re-engage inactive leads
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4 mt-4">
+            {/* Quick Generate */}
+            <Card className="bg-gradient-to-r from-purple-50 to-pink-50 border-purple-200">
+              <CardContent className="pt-4">
+                <h4 className="font-medium mb-3 flex items-center gap-2">
+                  <Wand2 className="h-4 w-4" />
+                  Quick Generate Revival Message
+                </h4>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>Days Inactive</Label>
+                    <Select value={aiDaysInactive.toString()} onValueChange={(v) => setAiDaysInactive(parseInt(v))}>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="14">14 days</SelectItem>
+                        <SelectItem value="30">30 days</SelectItem>
+                        <SelectItem value="60">60 days</SelectItem>
+                        <SelectItem value="90">90 days</SelectItem>
+                        <SelectItem value="180">180 days</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Last Stage</Label>
+                    <Select value={aiLastStage} onValueChange={setAiLastStage}>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="new_lead">New Lead</SelectItem>
+                        <SelectItem value="contacted">Contacted</SelectItem>
+                        <SelectItem value="interested">Interested</SelectItem>
+                        <SelectItem value="application_sent">Application Sent</SelectItem>
+                        <SelectItem value="lost">Lost Deal</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Approach</Label>
+                    <Select value={aiApproach} onValueChange={setAiApproach}>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="friendly">Friendly Check-in</SelectItem>
+                        <SelectItem value="value">Value Proposition</SelectItem>
+                        <SelectItem value="urgency">Create Urgency</SelectItem>
+                        <SelectItem value="curiosity">Spark Curiosity</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Industry (optional)</Label>
+                    <Input
+                      value={aiIndustry}
+                      onChange={(e) => setAiIndustry(e.target.value)}
+                      placeholder="e.g., Restaurant, Retail"
+                    />
+                  </div>
+                </div>
+                <Button 
+                  className="w-full mt-4" 
+                  onClick={handleAiGenerateRevival}
+                  disabled={aiLoading}
+                >
+                  {aiLoading ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Sparkles className="h-4 w-4 mr-2" />}
+                  Generate Revival Message
+                </Button>
+              </CardContent>
+            </Card>
+
+            {/* Chat with AI */}
+            <div className="space-y-2">
+              <Label>Ask AI for Help</Label>
+              <div className="flex gap-2">
+                <Input
+                  value={aiInput}
+                  onChange={(e) => setAiInput(e.target.value)}
+                  placeholder="e.g., Write a message to revive leads who stopped responding after we sent pricing..."
+                  onKeyDown={(e) => e.key === 'Enter' && handleAiChat()}
+                />
+                <Button onClick={handleAiChat} disabled={aiLoading || !aiInput.trim()}>
+                  <Send className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+
+            {/* Chat Messages */}
+            {aiChatMessages.length > 0 && (
+              <ScrollArea className="h-[250px] border rounded-lg p-4">
+                <div className="space-y-3">
+                  {aiChatMessages.map((msg, i) => (
+                    <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                      <div className={`max-w-[85%] p-3 rounded-lg ${
+                        msg.role === 'user' ? 'bg-primary text-primary-foreground' : 'bg-muted'
+                      }`}>
+                        {msg.subject && (
+                          <p className="text-xs font-medium mb-1 opacity-70">Subject: {msg.subject}</p>
+                        )}
+                        <p className="text-sm whitespace-pre-wrap">{msg.content}</p>
+                        {msg.role === 'assistant' && (
+                          <div className="flex gap-2 mt-2">
+                            <Button size="sm" variant="outline" onClick={() => handleUseAiMessage(msg.content)}>
+                              Use This
+                            </Button>
+                            <Button size="sm" variant="ghost" onClick={() => handleCopy(msg.content)}>
+                              <Copy className="h-3 w-3" />
+                            </Button>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </ScrollArea>
+            )}
+          </div>
+          
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setAiDialogOpen(false)}>Close</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </DashboardLayout>
   );
 };
