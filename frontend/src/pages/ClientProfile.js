@@ -53,14 +53,19 @@ const getTagColor = (tag) => {
 const ClientProfile = () => {
   const { clientId } = useParams();
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [client, setClient] = useState(null);
   const [conversation, setConversation] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [notes, setNotes] = useState('');
+  const [newNote, setNewNote] = useState('');
   const [savingNotes, setSavingNotes] = useState(false);
   const [aiSummary, setAiSummary] = useState(null);
   const [generatingSummary, setGeneratingSummary] = useState(false);
   const [showTagEditor, setShowTagEditor] = useState(false);
+  const [editingNoteId, setEditingNoteId] = useState(null);
+  const [editNoteText, setEditNoteText] = useState('');
+  
+  const isAdmin = user?.role === 'admin';
 
   useEffect(() => {
     if (clientId) {
@@ -73,7 +78,6 @@ const ClientProfile = () => {
     try {
       const response = await clientsApi.getOne(clientId);
       setClient(response.data);
-      setNotes(response.data.notes || '');
       setAiSummary(response.data.ai_summary);
     } catch (error) {
       toast.error('Failed to load client');
