@@ -96,15 +96,75 @@ const ClientProfile = () => {
     }
   };
 
-  const handleSaveNotes = async () => {
+  const handleAddNote = async () => {
+    if (!newNote.trim()) return;
+    
     setSavingNotes(true);
     try {
-      await clientsApi.update(clientId, { notes });
-      toast.success('Notes saved!');
+      // Create a new note log entry
+      const noteEntry = {
+        id: Date.now().toString(),
+        text: newNote,
+        created_at: new Date().toISOString(),
+        created_by: user?.email || 'Unknown',
+        created_by_name: user?.name || user?.email || 'Unknown'
+      };
+      
+      const existingNotes = client.note_logs || [];
+      const updatedNoteLogs = [noteEntry, ...existingNotes];
+      
+      await clientsApi.update(clientId, { note_logs: updatedNoteLogs });
+      setClient({ ...client, note_logs: updatedNoteLogs });
+      setNewNote('');
+      toast.success('Note added!');
     } catch (error) {
-      toast.error('Failed to save notes');
+      toast.error('Failed to add note');
     } finally {
       setSavingNotes(false);
+    }
+  };
+
+  const handleEditNote = async (noteId) => {
+    if (!isAdmin) {
+      toast.error('Only admins can edit notes');
+      return;
+    }
+    
+    setSavingNotes(true);
+    try {
+      const updatedNoteLogs = (client.note_logs || []).map(note => 
+        note.id === noteId 
+          ? { ...note, text: editNoteText, edited_at: new Date().toISOString(), edited_by: user?.email }
+          : note
+      );
+      
+      await clientsApi.update(clientId, { note_logs: updatedNoteLogs });
+      setClient({ ...client, note_logs: updatedNoteLogs });
+      setEditingNoteId(null);
+      setEditNoteText('');
+      toast.success('Note updated!');
+    } catch (error) {
+      toast.error('Failed to update note');
+    } finally {
+      setSavingNotes(false);
+    }
+  };
+
+  const handleDeleteNote = async (noteId) => {
+    if (!isAdmin) {
+      toast.error('Only admins can delete notes');
+      return;
+    }
+    
+    if (!window.confirm('Are you sure you want to delete this note?')) return;
+    
+    try {
+      const updatedNoteLogs = (client.note_logs || []).filter(note => note.id !== noteId);
+      await clientsApi.update(clientId, { note_logs: updatedNoteLogs });
+      setClient({ ...client, note_logs: updatedNoteLogs });
+      toast.success('Note deleted!');
+    } catch (error) {
+      toast.error('Failed to delete note');
     }
   };
 
