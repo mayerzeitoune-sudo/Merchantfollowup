@@ -126,11 +126,24 @@ const Team = () => {
       return;
     }
     
+    if (!newInvite.message) {
+      toast.error('Please compose a message for the invitation');
+      return;
+    }
+    
     try {
-      await teamApi.inviteMember(newInvite);
-      toast.success('Invitation sent!');
+      const response = await teamApi.inviteMember(newInvite);
+      
+      if (response.data.email_sent) {
+        toast.success(`Invitation sent to ${newInvite.email}!`);
+      } else if (response.data.email_error) {
+        toast.warning(`Invitation created but email failed: ${response.data.email_error}`);
+      } else {
+        toast.success('Invitation created! Connect Gmail in Settings to send emails.');
+      }
+      
       setInviteDialogOpen(false);
-      setNewInvite({ email: '', role: 'agent' });
+      setNewInvite({ email: '', name: '', role: 'agent', subject: 'You\'re Invited to Join Merchant Followup', message: '' });
       fetchTeamData();
     } catch (error) {
       toast.error(error.response?.data?.detail || 'Failed to send invitation');
