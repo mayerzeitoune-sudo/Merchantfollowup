@@ -177,12 +177,39 @@ const LandingPage = () => {
           {/* Hero Image - Dashboard Preview */}
           <div className="mt-20 relative">
             <div className="absolute inset-0 bg-gradient-to-t from-white via-transparent to-transparent z-10 pointer-events-none" />
-            <div className="rounded-2xl overflow-hidden shadow-2xl border border-gray-200 bg-white">
-              <img 
-                src="/screenshots/dashboard.png" 
-                alt="Merchant Follow Up Dashboard" 
-                className="w-full"
-              />
+            <div className="rounded-2xl overflow-hidden shadow-2xl border border-gray-200 bg-gradient-to-br from-slate-100 to-slate-200 p-8">
+              <div className="bg-white rounded-xl shadow-lg p-6">
+                <div className="flex items-center gap-4 mb-6">
+                  <div className="h-12 w-12 rounded-lg bg-gradient-to-br from-orange-500 to-orange-600 flex items-center justify-center">
+                    <BarChart3 className="h-6 w-6 text-white" />
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-xl">Dashboard Overview</h3>
+                    <p className="text-gray-500 text-sm">Real-time insights at your fingertips</p>
+                  </div>
+                </div>
+                <div className="grid grid-cols-4 gap-4 mb-6">
+                  <div className="p-4 bg-blue-50 rounded-lg">
+                    <p className="text-sm text-blue-600">Total Clients</p>
+                    <p className="text-2xl font-bold text-blue-700">1,247</p>
+                  </div>
+                  <div className="p-4 bg-green-50 rounded-lg">
+                    <p className="text-sm text-green-600">Total Funded</p>
+                    <p className="text-2xl font-bold text-green-700">$2.4M</p>
+                  </div>
+                  <div className="p-4 bg-orange-50 rounded-lg">
+                    <p className="text-sm text-orange-600">Active Campaigns</p>
+                    <p className="text-2xl font-bold text-orange-700">23</p>
+                  </div>
+                  <div className="p-4 bg-purple-50 rounded-lg">
+                    <p className="text-sm text-purple-600">Response Rate</p>
+                    <p className="text-2xl font-bold text-purple-700">34%</p>
+                  </div>
+                </div>
+                <div className="h-32 bg-gradient-to-r from-blue-100 to-green-100 rounded-lg flex items-center justify-center">
+                  <p className="text-gray-500">Analytics Chart</p>
+                </div>
+              </div>
             </div>
           </div>
         </div>
