@@ -105,6 +105,7 @@ class ClientUpdate(BaseModel):
     phone: Optional[str] = None
     company: Optional[str] = None
     notes: Optional[str] = None
+    note_logs: Optional[List[Dict]] = None
     balance: Optional[float] = None
     tags: Optional[List[str]] = None
     birthday: Optional[str] = None
