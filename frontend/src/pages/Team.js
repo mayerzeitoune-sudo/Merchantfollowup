@@ -48,7 +48,9 @@ const Team = () => {
   const [newInvite, setNewInvite] = useState({
     email: '',
     role: 'agent',
-    name: ''
+    name: '',
+    password: '',
+    createDirectly: true
   });
 
   useEffect(() => {
