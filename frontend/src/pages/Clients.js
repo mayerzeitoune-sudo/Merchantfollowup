@@ -58,6 +58,8 @@ const Clients = () => {
   const [tagFilter, setTagFilter] = useState('all');
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingClient, setEditingClient] = useState(null);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [clientToDelete, setClientToDelete] = useState(null);
   const [formData, setFormData] = useState({
     name: '',
     email: '',
