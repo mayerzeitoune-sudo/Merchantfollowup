@@ -154,16 +154,16 @@ const Team = () => {
           {isAdmin && (
             <Dialog open={inviteDialogOpen} onOpenChange={setInviteDialogOpen}>
               <DialogTrigger asChild>
-                <Button data-testid="invite-member-btn">
+                <Button data-testid="add-user-btn" className="bg-orange-600 hover:bg-orange-700">
                   <UserPlus className="h-4 w-4 mr-2" />
-                  Invite Member
+                  Add User
                 </Button>
               </DialogTrigger>
               <DialogContent>
                 <DialogHeader>
-                  <DialogTitle>Add Team Member</DialogTitle>
+                  <DialogTitle>Add New User</DialogTitle>
                   <DialogDescription>
-                    Create a new user account and send them their login details
+                    Create a new team member account with login credentials
                   </DialogDescription>
                 </DialogHeader>
                 
@@ -174,7 +174,7 @@ const Team = () => {
                       value={newInvite.name}
                       onChange={(e) => setNewInvite({ ...newInvite, name: e.target.value })}
                       placeholder="John Doe"
-                      data-testid="invite-name-input"
+                      data-testid="user-name-input"
                     />
                   </div>
                   
@@ -185,7 +185,7 @@ const Team = () => {
                       value={newInvite.email}
                       onChange={(e) => setNewInvite({ ...newInvite, email: e.target.value })}
                       placeholder="john@company.com"
-                      data-testid="invite-email-input"
+                      data-testid="user-email-input"
                     />
                   </div>
 
@@ -196,15 +196,15 @@ const Team = () => {
                       value={newInvite.password}
                       onChange={(e) => setNewInvite({ ...newInvite, password: e.target.value })}
                       placeholder="Enter a secure password"
-                      data-testid="invite-password-input"
+                      data-testid="user-password-input"
                     />
-                    <p className="text-xs text-muted-foreground">This will be sent to the user via email</p>
+                    <p className="text-xs text-muted-foreground">Share these credentials with the new user</p>
                   </div>
                   
                   <div className="space-y-2">
                     <Label>Role</Label>
                     <Select value={newInvite.role} onValueChange={(value) => setNewInvite({ ...newInvite, role: value })}>
-                      <SelectTrigger data-testid="invite-role-select">
+                      <SelectTrigger data-testid="user-role-select">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
@@ -223,7 +223,7 @@ const Team = () => {
                 
                 <DialogFooter>
                   <Button variant="outline" onClick={() => setInviteDialogOpen(false)}>Cancel</Button>
-                  <Button onClick={handleInvite} data-testid="send-invite-btn">
+                  <Button onClick={handleInvite} data-testid="create-user-btn" className="bg-orange-600 hover:bg-orange-700">
                     <UserPlus className="h-4 w-4 mr-2" />
                     Create User
                   </Button>
