@@ -333,7 +333,7 @@ const Team = () => {
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
-                          {ROLES.map((role) => (
+                          {ROLES.filter(role => role.value !== 'org_admin').map((role) => (
                             <SelectItem key={role.value} value={role.value}>
                               <div className="flex items-center gap-2">
                                 <Badge className={role.color}>{role.label}</Badge>
