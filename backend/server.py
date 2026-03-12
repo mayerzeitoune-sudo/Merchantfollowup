@@ -3828,6 +3828,14 @@ try:
 except Exception as e:
     logger.warning(f"Could not load Gmail routes: {e}")
 
+# Load Organization routes
+try:
+    from routes.organizations import router as org_router
+    app.include_router(org_router, prefix="/api")
+    logger.info("Organization routes loaded successfully")
+except Exception as e:
+    logger.warning(f"Could not load Organization routes: {e}")
+
 # Include the main router AFTER enhanced routes
 app.include_router(api_router)
 
