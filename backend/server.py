@@ -1543,7 +1543,7 @@ async def get_team_members(current_user: dict = Depends(get_current_user)):
 async def get_team_invites(current_user: dict = Depends(get_current_user)):
     """Get pending team invitations"""
     user = await db.users.find_one({"id": current_user["user_id"]}, {"_id": 0})
-    if user.get("role") != "admin":
+    if not is_admin_or_above(user):
         return []
     
     team_id = user.get("team_id") or current_user["user_id"]
