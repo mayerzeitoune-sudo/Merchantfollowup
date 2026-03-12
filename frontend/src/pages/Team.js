@@ -691,7 +691,7 @@ const Team = () => {
                                 <SelectValue />
                               </SelectTrigger>
                               <SelectContent>
-                                {ROLES.map((role) => (
+                                {ROLES.filter(role => role.value !== 'org_admin').map((role) => (
                                   <SelectItem key={role.value} value={role.value}>
                                     {role.label}
                                   </SelectItem>
