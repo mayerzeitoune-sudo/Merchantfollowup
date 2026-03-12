@@ -34,7 +34,7 @@ const PIPELINE_STAGES = [
   { id: 'application_sent', name: 'Application Sent', color: 'bg-indigo-500', textColor: 'text-indigo-700', bgLight: 'bg-indigo-50' },
   { id: 'docs_submitted', name: 'Docs Submitted', color: 'bg-orange-500', textColor: 'text-orange-700', bgLight: 'bg-orange-50' },
   { id: 'approved', name: 'Approved', color: 'bg-emerald-500', textColor: 'text-emerald-700', bgLight: 'bg-emerald-50' },
-  { id: 'funded', name: 'Funded', color: 'bg-green-600', textColor: 'text-green-700', bgLight: 'bg-green-50' },
+  { id: 'funded', name: 'Closed', color: 'bg-green-600', textColor: 'text-green-700', bgLight: 'bg-green-50' },
   { id: 'dead', name: 'Dead', color: 'bg-red-500', textColor: 'text-red-700', bgLight: 'bg-red-50' },
   { id: 'future', name: 'Future', color: 'bg-gray-500', textColor: 'text-gray-700', bgLight: 'bg-gray-50' },
 ];
