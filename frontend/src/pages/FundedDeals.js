@@ -75,6 +75,8 @@ const FundedDeals = () => {
   const [dealToDelete, setDealToDelete] = useState(null);
   const [selectedDeals, setSelectedDeals] = useState([]);
   const [bulkDeleteDialogOpen, setBulkDeleteDialogOpen] = useState(false);
+  const [statDetailOpen, setStatDetailOpen] = useState(false);
+  const [selectedStat, setSelectedStat] = useState(null);
   
   const [newDeal, setNewDeal] = useState({
     client_id: '',
