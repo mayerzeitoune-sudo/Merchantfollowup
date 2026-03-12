@@ -230,8 +230,8 @@ const Pipeline = () => {
                   <TrendingUp className="h-5 w-5 text-emerald-600" />
                 </div>
                 <div>
-                  <p className="text-2xl font-bold">{fundedDeals}</p>
-                  <p className="text-sm text-muted-foreground">Funded Deals</p>
+                  <p className="text-2xl font-bold">{closedDeals}</p>
+                  <p className="text-sm text-muted-foreground">Closed Deals</p>
                 </div>
               </div>
             </CardContent>
