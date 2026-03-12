@@ -46,7 +46,7 @@ const STAGE_TO_TAG = {
   'application_sent': 'Application Sent',
   'docs_submitted': 'Docs Submitted',
   'approved': 'Approved',
-  'funded': 'Funded',
+  'funded': 'Closed',
   'dead': 'Dead',
   'future': 'Future',
 };
@@ -128,7 +128,7 @@ const Pipeline = () => {
       'application_sent': 'Application Sent',
       'docs_submitted': 'Docs Submitted',
       'approved': 'Approved',
-      'funded': 'Funded',
+      'funded': 'Closed',
       'dead': 'Dead',
       'future': 'Future',
     };
