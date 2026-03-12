@@ -658,7 +658,9 @@ async def login(data: UserLogin):
             "email": user["email"],
             "name": user["name"],
             "is_verified": user.get("is_verified", False),
-            "role": user.get("role", "agent")
+            "role": user.get("role", "user"),
+            "org_id": user.get("org_id"),
+            "org_name": user.get("org_name")
         }
     }
 
