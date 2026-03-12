@@ -57,6 +57,7 @@ const Dashboard = () => {
   const [fundedStats, setFundedStats] = useState(null);
   const [onboardingStatus, setOnboardingStatus] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [smsSetupExpanded, setSmsSetupExpanded] = useState(false);
 
   useEffect(() => {
     fetchAllData();
