@@ -278,3 +278,16 @@ export const gmailApi = {
   getMessage: (token, messageId) => axios.get(`${API}/gmail/messages/${messageId}`, { params: { token } }),
   getLabels: (token) => axios.get(`${API}/gmail/labels`, { params: { token } })
 };
+
+// Organizations API (Org Admin only)
+export const organizationsApi = {
+  getAll: (token) => axios.get(`${API}/organizations`, { params: { authorization: `Bearer ${token}` } }),
+  getOne: (token, id) => axios.get(`${API}/organizations/${id}`, { params: { authorization: `Bearer ${token}` } }),
+  create: (token, data) => axios.post(`${API}/organizations`, data, { params: { authorization: `Bearer ${token}` } }),
+  update: (token, id, data) => axios.put(`${API}/organizations/${id}`, data, { params: { authorization: `Bearer ${token}` } }),
+  delete: (token, id) => axios.delete(`${API}/organizations/${id}`, { params: { authorization: `Bearer ${token}` } }),
+  getUsers: (token, orgId) => axios.get(`${API}/organizations/${orgId}/users`, { params: { authorization: `Bearer ${token}` } }),
+  addUser: (token, orgId, data) => axios.post(`${API}/organizations/${orgId}/users`, data, { params: { authorization: `Bearer ${token}` } }),
+  removeUser: (token, orgId, userId) => axios.delete(`${API}/organizations/${orgId}/users/${userId}`, { params: { authorization: `Bearer ${token}` } }),
+  getStats: (token) => axios.get(`${API}/organizations/stats/overview`, { params: { authorization: `Bearer ${token}` } })
+};
