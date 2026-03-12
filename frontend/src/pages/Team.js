@@ -272,7 +272,8 @@ const Team = () => {
     }
   };
 
-  const isAdmin = user?.role === 'admin';
+  const isAdmin = user?.role === 'admin' || user?.role === 'org_admin';
+  const isOrgAdmin = user?.role === 'org_admin';
 
   return (
     <DashboardLayout>
