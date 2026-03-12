@@ -462,6 +462,104 @@ const Team = () => {
                   </DialogFooter>
                 </DialogContent>
               </Dialog>
+
+              {/* Bulk Upload Dialog */}
+              <Dialog open={bulkUploadOpen} onOpenChange={setBulkUploadOpen}>
+                <DialogTrigger asChild>
+                  <Button variant="outline" data-testid="bulk-upload-btn">
+                    <Upload className="h-4 w-4 mr-2" />
+                    Bulk Upload
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="max-w-2xl">
+                  <DialogHeader>
+                    <DialogTitle className="flex items-center gap-2">
+                      <FileSpreadsheet className="h-5 w-5" />
+                      Bulk Upload Agents
+                    </DialogTitle>
+                    <DialogDescription>
+                      Upload a CSV file to add multiple team members at once
+                    </DialogDescription>
+                  </DialogHeader>
+                  
+                  <div className="space-y-4 mt-4">
+                    <div className="flex items-center gap-4">
+                      <div className="flex-1">
+                        <Label htmlFor="csv-upload" className="cursor-pointer">
+                          <div className="border-2 border-dashed rounded-lg p-6 text-center hover:bg-secondary/50 transition">
+                            <Upload className="h-8 w-8 mx-auto mb-2 text-muted-foreground" />
+                            <p className="text-sm font-medium">Click to upload CSV file</p>
+                            <p className="text-xs text-muted-foreground mt-1">Format: Name, Email, Password, Role</p>
+                          </div>
+                        </Label>
+                        <Input
+                          id="csv-upload"
+                          type="file"
+                          accept=".csv"
+                          className="hidden"
+                          onChange={handleBulkFileUpload}
+                        />
+                      </div>
+                      <Button variant="outline" onClick={downloadTemplate}>
+                        <Download className="h-4 w-4 mr-2" />
+                        Download Template
+                      </Button>
+                    </div>
+
+                    {bulkUsers.length > 0 && (
+                      <div className="border rounded-lg overflow-hidden">
+                        <div className="max-h-64 overflow-y-auto">
+                          <table className="w-full text-sm">
+                            <thead className="bg-secondary sticky top-0">
+                              <tr>
+                                <th className="text-left p-2">Name</th>
+                                <th className="text-left p-2">Email</th>
+                                <th className="text-left p-2">Password</th>
+                                <th className="text-left p-2">Role</th>
+                                <th className="text-left p-2">Status</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {bulkUsers.map((u, idx) => (
+                                <tr key={idx} className="border-t">
+                                  <td className="p-2">{u.name}</td>
+                                  <td className="p-2">{u.email}</td>
+                                  <td className="p-2 font-mono text-xs">{u.password}</td>
+                                  <td className="p-2">
+                                    <Badge variant="outline">{u.role}</Badge>
+                                  </td>
+                                  <td className="p-2">
+                                    {u.status === 'pending' && <Badge variant="outline">Pending</Badge>}
+                                    {u.status === 'success' && <Badge className="bg-green-100 text-green-700">Success</Badge>}
+                                    {u.status === 'failed' && <Badge className="bg-red-100 text-red-700">{u.error || 'Failed'}</Badge>}
+                                  </td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                        <div className="bg-secondary p-2 text-sm text-muted-foreground">
+                          {bulkUsers.length} users loaded
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                  
+                  <DialogFooter>
+                    <Button variant="outline" onClick={() => {
+                      setBulkUploadOpen(false);
+                      setBulkUsers([]);
+                    }}>Cancel</Button>
+                    <Button 
+                      onClick={handleBulkUpload} 
+                      disabled={bulkUsers.length === 0 || bulkUploading}
+                      className="bg-orange-600 hover:bg-orange-700"
+                    >
+                      {bulkUploading ? 'Uploading...' : `Upload ${bulkUsers.length} Users`}
+                    </Button>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
             </div>
           )}
         </div>
