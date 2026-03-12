@@ -1790,7 +1790,7 @@ async def remove_team_member(member_id: str, current_user: dict = Depends(get_cu
 async def cancel_team_invite(invite_id: str, current_user: dict = Depends(get_current_user)):
     """Cancel a pending invitation"""
     user = await db.users.find_one({"id": current_user["user_id"]}, {"_id": 0})
-    if user.get("role") != "admin":
+    if not is_admin_or_above(user):
         raise HTTPException(status_code=403, detail="Only admins can cancel invites")
     
     result = await db.team_invites.delete_one({"id": invite_id})
