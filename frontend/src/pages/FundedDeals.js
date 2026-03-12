@@ -301,20 +301,20 @@ const FundedDeals = () => {
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
-            <h1 className="text-3xl font-bold font-['Outfit']">Funded Deals & Book Value</h1>
+            <h1 className="text-3xl font-bold font-['Outfit']">Deals & Projected Value</h1>
             <p className="text-muted-foreground mt-1">Track closed revenue, collections, and payment status</p>
           </div>
           <Dialog open={showNewDealDialog} onOpenChange={setShowNewDealDialog}>
             <DialogTrigger asChild>
               <Button data-testid="new-funded-deal-btn">
                 <Plus className="h-4 w-4 mr-2" />
-                New Funded Deal
+                New Deal
               </Button>
             </DialogTrigger>
             <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
               <DialogHeader>
-                <DialogTitle>Create Funded Deal</DialogTitle>
-                <DialogDescription>Record a new funded deal to track payments</DialogDescription>
+                <DialogTitle>Create Deal</DialogTitle>
+                <DialogDescription>Record a new deal to track payments</DialogDescription>
               </DialogHeader>
               
               <div className="grid grid-cols-2 gap-4 mt-4">
