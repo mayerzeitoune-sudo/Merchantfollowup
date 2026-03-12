@@ -25,7 +25,8 @@ import {
   Shield,
   RefreshCw,
   Kanban,
-  DollarSign
+  DollarSign,
+  Building2
 } from 'lucide-react';
 
 const navItems = [
