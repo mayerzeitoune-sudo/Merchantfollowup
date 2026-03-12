@@ -475,21 +475,27 @@ const FundedDeals = () => {
           </Dialog>
         </div>
 
-        {/* Stats Cards */}
+        {/* Stats Grid - Clickable Cards */}
         {stats && (
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-            <Card>
+            <Card 
+              className="cursor-pointer hover:shadow-md hover:border-green-300 transition-all"
+              onClick={() => { setSelectedStat({ title: 'Projected Volume', value: stats.total_funded_volume || 0, type: 'currency', icon: DollarSign, color: 'green', description: 'Total projected deal volume', deals: deals }); setStatDetailOpen(true); }}
+            >
               <CardContent className="pt-4">
                 <div className="flex items-center gap-2">
                   <DollarSign className="h-5 w-5 text-green-600" />
                   <div>
                     <p className="text-xl font-bold">${(stats.total_funded_volume || 0).toLocaleString()}</p>
-                    <p className="text-xs text-muted-foreground">Funded Volume</p>
+                    <p className="text-xs text-muted-foreground">Projected Volume</p>
                   </div>
                 </div>
               </CardContent>
             </Card>
-            <Card>
+            <Card 
+              className="cursor-pointer hover:shadow-md hover:border-blue-300 transition-all"
+              onClick={() => { setSelectedStat({ title: 'Active Deals', value: stats.active_deals || 0, type: 'number', icon: FileText, color: 'blue', description: 'Currently active deals', deals: deals.filter(d => d.status === 'active') }); setStatDetailOpen(true); }}
+            >
               <CardContent className="pt-4">
                 <div className="flex items-center gap-2">
                   <FileText className="h-5 w-5 text-blue-600" />
@@ -500,7 +506,10 @@ const FundedDeals = () => {
                 </div>
               </CardContent>
             </Card>
-            <Card>
+            <Card 
+              className="cursor-pointer hover:shadow-md hover:border-purple-300 transition-all"
+              onClick={() => { setSelectedStat({ title: 'Outstanding', value: stats.total_outstanding || 0, type: 'currency', icon: TrendingUp, color: 'purple', description: 'Total amount still owed', deals: deals.filter(d => d.status === 'active') }); setStatDetailOpen(true); }}
+            >
               <CardContent className="pt-4">
                 <div className="flex items-center gap-2">
                   <TrendingUp className="h-5 w-5 text-purple-600" />
@@ -511,7 +520,10 @@ const FundedDeals = () => {
                 </div>
               </CardContent>
             </Card>
-            <Card>
+            <Card 
+              className="cursor-pointer hover:shadow-md hover:border-emerald-300 transition-all"
+              onClick={() => { setSelectedStat({ title: 'Collected', value: stats.total_collected || 0, type: 'currency', icon: CheckCircle2, color: 'emerald', description: 'Total payments collected', deals: deals }); setStatDetailOpen(true); }}
+            >
               <CardContent className="pt-4">
                 <div className="flex items-center gap-2">
                   <CheckCircle2 className="h-5 w-5 text-emerald-600" />
@@ -522,7 +534,10 @@ const FundedDeals = () => {
                 </div>
               </CardContent>
             </Card>
-            <Card>
+            <Card 
+              className="cursor-pointer hover:shadow-md hover:border-orange-300 transition-all"
+              onClick={() => { setSelectedStat({ title: 'Late Accounts', value: stats.late_accounts || 0, type: 'number', icon: AlertTriangle, color: 'orange', description: 'Accounts with overdue payments', deals: deals.filter(d => d.status === 'late' || d.status === 'delinquent') }); setStatDetailOpen(true); }}
+            >
               <CardContent className="pt-4">
                 <div className="flex items-center gap-2">
                   <AlertTriangle className="h-5 w-5 text-orange-600" />
@@ -533,7 +548,10 @@ const FundedDeals = () => {
                 </div>
               </CardContent>
             </Card>
-            <Card>
+            <Card 
+              className="cursor-pointer hover:shadow-md hover:border-cyan-300 transition-all"
+              onClick={() => { setSelectedStat({ title: 'Avg Deal Size', value: stats.average_deal_size || 0, type: 'currency', icon: BarChart3, color: 'cyan', description: 'Average projected deal size', deals: deals }); setStatDetailOpen(true); }}
+            >
               <CardContent className="pt-4">
                 <div className="flex items-center gap-2">
                   <BarChart3 className="h-5 w-5 text-cyan-600" />
@@ -546,6 +564,48 @@ const FundedDeals = () => {
             </Card>
           </div>
         )}
+
+        {/* Stat Detail Dialog */}
+        <Dialog open={statDetailOpen} onOpenChange={setStatDetailOpen}>
+          <DialogContent className="max-w-2xl">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                {selectedStat && React.createElement(selectedStat.icon, { className: `h-5 w-5 text-${selectedStat.color}-600` })}
+                {selectedStat?.title}
+              </DialogTitle>
+              <DialogDescription>{selectedStat?.description}</DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div className="text-center p-6 bg-secondary/50 rounded-lg">
+                <p className="text-4xl font-bold">
+                  {selectedStat?.type === 'currency' ? `$${(selectedStat?.value || 0).toLocaleString()}` : selectedStat?.value}
+                </p>
+              </div>
+              
+              {selectedStat?.deals?.length > 0 && (
+                <div className="space-y-2">
+                  <p className="font-medium text-sm">Related Deals ({selectedStat.deals.length})</p>
+                  <ScrollArea className="h-48">
+                    <div className="space-y-2">
+                      {selectedStat.deals.slice(0, 10).map(deal => (
+                        <div key={deal.id} className="flex justify-between items-center p-2 bg-secondary/30 rounded">
+                          <div>
+                            <p className="font-medium text-sm">{deal.client_name || deal.business_name}</p>
+                            <p className="text-xs text-muted-foreground">{deal.deal_type}</p>
+                          </div>
+                          <div className="text-right">
+                            <p className="font-medium text-sm">${(deal.funded_amount || 0).toLocaleString()}</p>
+                            <Badge variant="outline" className="text-xs">{deal.status}</Badge>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </ScrollArea>
+                </div>
+              )}
+            </div>
+          </DialogContent>
+        </Dialog>
 
         {/* Milestones Alert */}
         {milestones.length > 0 && (
