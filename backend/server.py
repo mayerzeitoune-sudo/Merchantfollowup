@@ -1589,7 +1589,7 @@ async def get_team_stats(current_user: dict = Depends(get_current_user)):
 async def invite_team_member(data: dict, current_user: dict = Depends(get_current_user)):
     """Invite a new team member via email"""
     user = await db.users.find_one({"id": current_user["user_id"]}, {"_id": 0})
-    if user.get("role") != "admin":
+    if not is_admin_or_above(user):
         raise HTTPException(status_code=403, detail="Only admins can invite members")
     
     team_id = user.get("team_id") or current_user["user_id"]
