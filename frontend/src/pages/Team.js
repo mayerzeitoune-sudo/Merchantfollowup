@@ -22,7 +22,10 @@ import {
   TrendingUp,
   MessageSquare,
   DollarSign,
-  Send
+  Send,
+  Upload,
+  FileSpreadsheet,
+  Download
 } from 'lucide-react';
 import { teamApi } from '../lib/api';
 import { toast } from 'sonner';
