@@ -87,7 +87,10 @@ const DashboardLayout = ({ children }) => {
             alt="Merchant Follow Up" 
             className="h-10 w-auto"
           />
-          <span className="text-sm font-bold">MERCHANT</span>
+          <div className="flex flex-col">
+            <span className="text-sm font-bold leading-tight">MERCHANT</span>
+            <span className="text-xs font-semibold text-orange-500">FOLLOWUP</span>
+          </div>
         </div>
         <div className="w-10" />
       </header>
