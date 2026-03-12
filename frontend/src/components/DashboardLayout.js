@@ -31,7 +31,7 @@ import {
 const navItems = [
   { path: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { path: '/pipeline', label: 'Pipeline', icon: Kanban },
-  { path: '/funded', label: 'Funded Deals', icon: DollarSign, badge: 'New' },
+  { path: '/funded', label: 'Projections', icon: DollarSign, badge: 'New' },
   { path: '/clients', label: 'Clients', icon: Users },
   { path: '/contacts', label: 'Inbox', icon: MessageSquare },
   { path: '/templates', label: 'Templates', icon: FileText },
