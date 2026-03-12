@@ -138,7 +138,7 @@ const DashboardLayout = ({ children }) => {
 
           {/* Navigation */}
           <nav className="flex-1 p-4 space-y-1">
-            {navItems.map((item, index) => {
+            {navItems.filter(item => !item.orgAdminOnly || user?.role === 'org_admin').map((item, index) => {
               if (item.divider) {
                 return (
                   <div key={index} className="pt-4 pb-2">
