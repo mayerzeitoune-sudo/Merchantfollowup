@@ -243,7 +243,7 @@ const Pipeline = () => {
                   <Clock className="h-5 w-5 text-orange-600" />
                 </div>
                 <div>
-                  <p className="text-2xl font-bold">{totalDeals > 0 ? Math.round((fundedDeals / totalDeals) * 100) : 0}%</p>
+                  <p className="text-2xl font-bold">{totalDeals > 0 ? Math.round((closedDeals / totalDeals) * 100) : 0}%</p>
                   <p className="text-sm text-muted-foreground">Win Rate</p>
                 </div>
               </div>
