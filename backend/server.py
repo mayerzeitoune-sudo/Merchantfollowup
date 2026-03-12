@@ -1772,7 +1772,7 @@ async def update_member_role(member_id: str, role: str, current_user: dict = Dep
 async def remove_team_member(member_id: str, current_user: dict = Depends(get_current_user)):
     """Remove a team member"""
     user = await db.users.find_one({"id": current_user["user_id"]}, {"_id": 0})
-    if user.get("role") != "admin":
+    if not is_admin_or_above(user):
         raise HTTPException(status_code=403, detail="Only admins can remove members")
     
     if member_id == current_user["user_id"]:
