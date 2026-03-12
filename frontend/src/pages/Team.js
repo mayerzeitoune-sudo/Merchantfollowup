@@ -773,7 +773,7 @@ const Team = () => {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4">
               {ROLES.map((role) => (
                 <div key={role.value} className="p-4 rounded-lg border">
                   <div className="flex items-center gap-2 mb-2">
@@ -781,10 +781,17 @@ const Team = () => {
                   </div>
                   <p className="text-sm text-muted-foreground">{role.description}</p>
                   <ul className="mt-3 space-y-1 text-xs text-muted-foreground">
+                    {role.value === 'org_admin' && (
+                      <>
+                        <li className="flex items-center gap-1"><Check className="h-3 w-3 text-green-500" /> Manage all organizations</li>
+                        <li className="flex items-center gap-1"><Check className="h-3 w-3 text-green-500" /> Access all data</li>
+                        <li className="flex items-center gap-1"><Check className="h-3 w-3 text-green-500" /> Create organizations</li>
+                      </>
+                    )}
                     {role.value === 'admin' && (
                       <>
                         <li className="flex items-center gap-1"><Check className="h-3 w-3 text-green-500" /> Manage team members</li>
-                        <li className="flex items-center gap-1"><Check className="h-3 w-3 text-green-500" /> Access all contacts</li>
+                        <li className="flex items-center gap-1"><Check className="h-3 w-3 text-green-500" /> Access org contacts</li>
                         <li className="flex items-center gap-1"><Check className="h-3 w-3 text-green-500" /> Billing & settings</li>
                       </>
                     )}
@@ -793,6 +800,13 @@ const Team = () => {
                         <li className="flex items-center gap-1"><Check className="h-3 w-3 text-green-500" /> Manage assigned contacts</li>
                         <li className="flex items-center gap-1"><Check className="h-3 w-3 text-green-500" /> Send messages</li>
                         <li className="flex items-center gap-1"><X className="h-3 w-3 text-red-500" /> Team management</li>
+                      </>
+                    )}
+                    {role.value === 'user' && (
+                      <>
+                        <li className="flex items-center gap-1"><Check className="h-3 w-3 text-green-500" /> Manage own data only</li>
+                        <li className="flex items-center gap-1"><Check className="h-3 w-3 text-green-500" /> Send messages</li>
+                        <li className="flex items-center gap-1"><X className="h-3 w-3 text-red-500" /> See other users' data</li>
                       </>
                     )}
                     {role.value === 'viewer' && (
