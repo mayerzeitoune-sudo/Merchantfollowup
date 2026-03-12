@@ -326,13 +326,13 @@ const Dashboard = () => {
           })}
         </div>
 
-        {/* Funded Deals Balance Cards */}
+        {/* Projected Value Cards */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <Card className="bg-gradient-to-br from-blue-600 to-blue-700 text-white">
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium opacity-90">Total Funded</p>
+                  <p className="text-sm font-medium opacity-90">Projected Volume</p>
                   <p className="text-3xl font-bold mt-1 font-['Outfit']">
                     ${loading ? '-' : (fundedStats?.total_funded_volume || 0).toLocaleString('en-US', { minimumFractionDigits: 0 })}
                   </p>
