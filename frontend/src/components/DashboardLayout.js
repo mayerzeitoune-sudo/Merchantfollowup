@@ -46,6 +46,7 @@ const navItems = [
   { path: '/analytics', label: 'Analytics', icon: BarChart3 },
   { divider: true, label: 'Team' },
   { path: '/team', label: 'Team Members', icon: Users },
+  { path: '/organizations', label: 'Organizations', icon: Building2, orgAdminOnly: true },
   { divider: true, label: 'Settings' },
   { path: '/compliance', label: 'SMS Compliance', icon: Shield },
   { path: '/phone-numbers', label: 'Phone Numbers', icon: Phone },
