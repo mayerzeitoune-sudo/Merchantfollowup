@@ -164,7 +164,7 @@ const Pipeline = () => {
   // Calculate overall stats
   const totalDeals = clients.length;
   const totalValue = clients.reduce((sum, c) => sum + (c.balance || 0), 0);
-  const fundedDeals = clients.filter(c => c.pipeline_stage === 'funded').length;
+  const closedDeals = clients.filter(c => c.pipeline_stage === 'funded').length;
 
   return (
     <DashboardLayout>
