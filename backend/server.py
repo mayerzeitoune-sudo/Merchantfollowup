@@ -1751,10 +1751,10 @@ async def create_team_member(data: dict, current_user: dict = Depends(get_curren
 async def update_member_role(member_id: str, role: str, current_user: dict = Depends(get_current_user)):
     """Update a team member's role"""
     user = await db.users.find_one({"id": current_user["user_id"]}, {"_id": 0})
-    if user.get("role") != "admin":
+    if not is_admin_or_above(user):
         raise HTTPException(status_code=403, detail="Only admins can update roles")
     
-    valid_roles = ["admin", "agent", "viewer"]
+    valid_roles = ["admin", "agent", "viewer", "user"]
     if role not in valid_roles:
         raise HTTPException(status_code=400, detail=f"Invalid role. Must be one of: {valid_roles}")
     
