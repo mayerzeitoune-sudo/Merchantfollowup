@@ -13,280 +13,115 @@ Build a comprehensive SMS platform "Merchant Follow Up" for automated payment re
 - Multi-provider SMS support (Twilio, Telnyx, Vonage, Plivo, Bandwidth)
 - Funded deals tracking and payment management
 - Team collaboration with roles
+- **Multi-Organization Architecture** (NEW - March 2026)
 
 ## Implementation Status - March 2026
 
-### ✅ COMPLETED FEATURES (Updated March 11, 2026)
+### ✅ COMPLETED FEATURES
 
-#### Drip Campaign Reply Context (NEW - March 11, 2026)
-- **Inbound SMS Context Linking**: When customers reply, the system automatically links their response to the last outbound message
-- **Campaign Context Displayed**: Inbox shows "Responding to:" block with quoted original message
-- **Campaign Badge**: Messages from drip campaigns show the campaign name badge
-- **Simulate Reply Feature**: Test tube button allows testing reply context without real Twilio
-- **Backend Webhook Ready**: `/api/sms/inbound` endpoint ready for Twilio webhook integration
-- **Files Updated**: `/app/backend/server.py` (inbound SMS endpoints), `/app/frontend/src/pages/Contacts.js` (UI), `/app/frontend/src/lib/api.js` (API methods)
+#### Multi-Organization Architecture (NEW - March 12, 2026)
+- **Three-Tier Role Hierarchy**:
+  - **Org Admin (Super Admin)**: Can create/manage all organizations and has full visibility across the platform
+  - **Admin**: Manages users and data only within their assigned organization
+  - **User/Agent**: Can only see and manage their OWN data within their organization
+- **Organization Management Page**: New page at `/organizations` visible only to org_admin users
+- **Organization CRUD**: Create, view, update, and delete organizations
+- **User Management within Orgs**: Add users to organizations with role assignment
+- **Data Scoping**: Backend helper functions `is_admin_or_above()` and `is_org_admin()` for role-based access control
+- **Team Page Fixed**: Now correctly shows "Add User", "Invite Member", and "Bulk Upload" buttons for both admin and org_admin roles
+- **Files Updated/Created**:
+  - `/app/backend/server.py` - Updated `get_current_user()`, `is_admin_or_above()`, role checks
+  - `/app/backend/routes/organizations.py` - Full CRUD endpoints for organization management
+  - `/app/frontend/src/pages/Organizations.js` - New organization management UI
+  - `/app/frontend/src/pages/Team.js` - Updated role checks and ROLES array
+  - `/app/frontend/src/lib/api.js` - Added `organizationsApi`
+  - `/app/frontend/src/components/DashboardLayout.js` - Added Organizations nav link
 
-#### Drip Campaign Duration Settings (NEW - March 11, 2026)
-- **Flexible Duration**: Campaign duration no longer capped at 30 days - options from 7 days to 2 years
-- **Use Funded Deal Term**: When "Funded" tag is selected, toggle to auto-match campaign duration to each client's funding term
-- **Dynamic Day Selection**: Step day dropdown now shows options up to the configured campaign duration
-- **Files Updated**: `/app/backend/models/enhanced.py`, `/app/backend/routes/enhanced.py`, `/app/frontend/src/pages/DripCampaigns.js`
+#### Drip Campaign Reply Context (March 11, 2026)
+- Inbound SMS Context Linking
+- Campaign Context Displayed with "Responding to:" block
+- Campaign Badge on messages
 
-#### Bug Fixes Completed
-- **Delete Buttons Fixed**: All dropdown menu delete buttons now use `onSelect` instead of `onClick`
-- **Error Handling Fixed**: Validation errors from API now display properly as strings
+#### Gmail Integration (March 2026)
+- Google OAuth 2.0 with PKCE
+- Send emails directly from the app
+- Team invitation emails via Gmail
 
-#### Tags & Pipeline Sync (NEW - March 2026)
-- **Unified Tags & Stages**: Tags now match pipeline stages (removed "Contacted", "Responded", "Not Interested", "Follow Up", "Lost Deal")
-- **Bidirectional Sync**: Changing a tag automatically updates pipeline stage, and vice versa
-- **8 Pipeline Stages**: New Lead → Interested → Application Sent → Docs Submitted → Approved → Funded → Dead → Future
+#### Funded Deals & Projections
+- Complete funded deal lifecycle tracking
+- Payment schedule management
+- Book value stats and analytics
 
-#### AI Template Assistant Improvements (NEW - March 2026)
-- **Automated/Robotic Tone**: Added "Automated / Robotic" tone option for system-like messages
-- **Dialog Reset**: Dialog now resets all options (type, tone, messages) when closed
-- **Better Organization**: Improved UI layout with clearer sections and generated template cards
-
-#### Funded Deals Editing (NEW - March 2026)
-- **Edit Deal Dialog**: Full edit functionality for deal information (amounts, frequency, type, notes)
-- **Delete Funded Deals**: Delete functionality from both list view and detail view with confirmation dialog
-- **Editable Payment Amounts**: Payment schedule amounts can now be edited inline
-- **Payment Status Auto-Update**: Clicking cleared/missed checkboxes automatically updates payment status
-- **Real-time Updates**: Changes save immediately with confirmation toasts
-
-#### Client Notes System (NEW - March 2026)
-- **Timestamped Note Logs**: Notes are now logged with timestamps and author information
-- **Admin-Only Editing**: Only admin users can edit or delete existing notes
-- **Note History**: Complete history of all notes with creation dates and authors
-
-#### AI Content Generation (NEW - March 2026)
-- **Templates AI Assistant**: Generate message templates with AI, multiple tone options including "Automated/Robotic"
-- **Drip Campaigns AI Assistant**: AI-generated multi-step sequences with customizable goals
-- **Drip Campaign Triggers AI**: AI generates keyword triggers and auto-response messages
-- **Lead Revival AI Assistant**: AI-powered revival messages with inactive period and approach options
-- **AI Chat**: Ask AI for help with content in all areas
-
-#### Core Features
-- **Authentication**: JWT-based login/register, OTP verification, role-based access
-- **Client Management**: CRUD operations, tags, notes, pipeline stages, balance tracking, address field
-- **Message Templates**: Create/edit templates, variable substitution, quick send from inbox
-- **Branding**: Company logo integrated into Login, Register pages, and Dashboard sidebar
-- **Tag Management**: Inline tag editing on Client Profile page, Inbox/Contacts page
-- **Phone Number Tracking**: Template sending and call initiation track from_number
-
-#### Deal Pipeline (Kanban Board)
-- **Drag-and-drop interface** with 9 stages: New Lead → Contacted → Interested → Application Sent → Docs Submitted → Approved → Funded → Dead → Future
-- **Pipeline Stats**: Total deals, pipeline value, funded deals, win rate
-- **Client Cards**: Show name, phone, tags, deal value
-
-#### AI Deal Assistant (GPT-5.2)
-- **Auto Message Generation**: Follow-up, intro, closing, reminder messages
-- **Tone Rewriting**: Professional, friendly, urgent options
-- **Deal Analysis**: Health score, risk factors, win probability
-- **Next Action Suggestions**: AI-powered recommendations
-
-#### Lead Capture Forms
-- **Embeddable Forms**: Custom forms with configurable fields
-- **CSV Import**: Bulk import contacts with auto-tagging
-- **Webhooks**: API endpoints for Zapier/Make integration
-
-#### Team Collaboration (NEW - Dec 2025)
-- **Multi-User Support**: Team members with shared access
-- **Role-Based Permissions**: Admin, Agent, Viewer roles
-- **Team Invitations**: Email-based invite system
-- **Team Stats Dashboard**: Activity metrics per team member
-- **Admin Controls**: Manage roles, remove members
-
-#### Funded Deals & Book Value (NEW - Dec 2025)
-- **Funded Deals Management**: Complete funded deal lifecycle tracking
-- **Payment Schedule**: Auto-generated based on frequency (daily/weekly/bi-weekly/monthly)
-- **Manual Payment Tracking**: Cleared/Missed checkboxes with override controls
-- **Auto-Clear Logic**: Payments auto-marked cleared after due date (optimistic default)
-- **Deal-Level Rollup**: Total Payback, Collected, Remaining Balance, % Paid
-- **50% Milestone Alerts**: Dashboard notifications when clients reach 50% paid
-- **Collections Queue**: Upcoming and overdue payments dashboard widget
-- **Book Value Stats**: Total funded volume, outstanding balance, collected, late accounts
-- **Analytics Tab**: Monthly funded, collections by month, by deal type, by rep
-- **Funded Deal Profile**: Full detail view with payment schedule, messages, reminders
-- **Payment Reminders**: Pre-built reminder templates (3 days before → 7 days late)
-- **Message Integration**: Send SMS directly from funded deal profile
-
-#### Smart Drip Campaigns (NEW)
-- Multi-step automated sequences
-- SMS and Email channel support
-- Auto-stop on reply feature
-- Manual resume capability
-- Enroll contacts individually or by tags
-- Track campaign progress per contact
-- Trigger-based responses
-
-#### Follow-Up Reminder System (NEW)
-- Today's follow-ups dashboard
-- Snooze, complete, reschedule actions
-- Priority levels (high/normal/low)
-- Miss detection for past-due follow-ups
-- Client info integration
-
-#### Performance Analytics (NEW)
-- Messages sent/received tracking
-- Response rate calculation
-- Top templates by usage
-- Campaign performance metrics
-- Engagement tips
-
-#### Lead Capture (NEW)
-- Embeddable lead capture forms
-- CSV import with auto-tagging
-- Webhook endpoints for Zapier/Make
-- Auto-enroll in campaigns
-
-#### Dead Lead Revival (NEW)
-- Target inactive leads by days
-- Filter by tags
-- Customizable revival messages
-- Track revival success rate
-
-#### SMS Compliance (NEW)
-- STOP keyword detection
-- Opt-out management
-- Auto-reply on unsubscribe
-- Quiet hours configuration
-- Do Not Contact list
-- Compliance best practices
-
-#### Contact Segmentation (ENHANCED)
-- Pipeline stages (new → won/lost)
-- Bulk tag operations
-- Filter by tags and stage
-- Extended tag library
-
-#### AI Integration
-- Response matching using GPT-5.2
-- AI suggestions for follow-ups
-- Message rewriting with tone adjustment
-
-#### Placeholder Features (UI Only)
-- Phone number marketplace
-- Browser-based calling
-- Gift store
-- Domain management
+#### AI Integration (GPT-5.2)
+- Message generation and rewriting
+- Deal analysis with health scores
+- Template generation
 
 ### Technical Stack
-- **Backend**: FastAPI + MongoDB
+- **Backend**: FastAPI + MongoDB + Motor
 - **Frontend**: React + Tailwind + Shadcn/UI
 - **AI**: OpenAI GPT-5.2 via Emergent LLM Key
-- **Auth**: JWT tokens
+- **Auth**: JWT tokens with role-based access
 
-### API Version: 2.0.0
+### Database Collections
+- **users**: Now includes `role` (org_admin/admin/user/agent/viewer), `org_id`, `org_name`
+- **organizations**: New collection for multi-tenancy (id, name, description, is_active, created_at, created_by)
+- **clients, conversations, deals, etc.**: All data collections support `org_id` scoping
 
-## Database Collections
-- users, clients, conversations
-- message_templates, reminder_schedules
-- followups, appointments
-- enhanced_campaigns, campaign_enrollments
-- lead_forms, lead_webhooks
-- revival_campaigns
-- opt_outs, compliance_settings
-- notifications
+### Key API Endpoints
 
-## Key API Endpoints
+#### Organizations (Org Admin Only)
+- `GET /api/organizations` - List all organizations
+- `POST /api/organizations` - Create organization
+- `GET /api/organizations/{id}` - Get organization details
+- `PUT /api/organizations/{id}` - Update organization
+- `DELETE /api/organizations/{id}` - Delete organization and all data
+- `GET /api/organizations/{id}/users` - List users in organization
+- `POST /api/organizations/{id}/users` - Add user to organization
+- `DELETE /api/organizations/{id}/users/{user_id}` - Remove user from organization
+- `GET /api/organizations/stats/overview` - Platform-wide stats
 
-### Authentication
-- POST /api/auth/register
-- POST /api/auth/login
-- POST /api/auth/verify_otp
-
-### Clients & Contacts
-- GET/POST /api/clients
-- GET/PUT/DELETE /api/clients/{id}
-- PUT /api/clients/{id}/pipeline
-
-### Enhanced Campaigns
-- GET/POST /api/campaigns/enhanced
-- POST /api/campaigns/enhanced/{id}/enroll
-- POST /api/campaigns/enhanced/{id}/stop/{client_id}
-- POST /api/campaigns/enhanced/{id}/resume/{client_id}
-
-### Follow-ups
-- GET /api/followups/today
-- GET /api/followups/missed
-- POST /api/followups/{id}/snooze
-- POST /api/followups/{id}/complete
-
-### Lead Capture
-- GET/POST /api/leads/forms
-- POST /api/leads/import/csv
-- POST /api/leads/webhook
-
-### Analytics
-- GET /api/analytics/overview
-- GET /api/analytics/campaigns/{id}
-
-### Compliance
-- GET/PUT /api/compliance/settings
-- GET /api/compliance/opt-outs
-- POST/DELETE /api/compliance/opt-out
-
-### Revival
-- GET/POST /api/revival/campaigns
-- POST /api/revival/campaigns/{id}/run
-
-### AI
-- POST /api/ai/suggest
-- POST /api/ai/rewrite
+#### Team Management
+- `GET /api/team/members` - List team members
+- `POST /api/team/create-member` - Create team member directly
+- `POST /api/team/invite` - Invite via email
+- `PUT /api/team/members/{id}/role` - Update member role
 
 ## Prioritized Backlog
 
 ### P0 - Critical (Before Production)
-1. Connect actual SMS provider (Twilio) for real message sending
-2. Implement SMS delivery webhooks
-3. Background job scheduler for automated campaigns
+1. ~~Multi-Organization Architecture~~ ✅ COMPLETE
+2. Connect actual SMS provider (Twilio) for real message sending
+3. Implement SMS delivery webhooks
+4. Background job scheduler for automated campaigns
 
 ### P1 - Important
-1. Multi-user team accounts with roles
-2. Mobile push notifications
-3. Calendar sync (Google/Outlook)
-4. Email channel integration (SendGrid/Resend)
-5. Appointment booking with links
+1. Data scoping by organization_id across ALL endpoints (clients, deals, conversations, etc.)
+2. Twilio A2P 10DLC Backend Integration
+3. Fix OTP Input Component
+4. Bulk Upload Backend Implementation
 
 ### P2 - Nice to Have
-1. Real-time conversation updates (WebSocket)
-2. Bulk message sending
+1. Email Inbox View for Gmail integration
+2. Auto-import leads from email
 3. Advanced reporting exports
-4. Client payment tracking
-5. Invoice generation
-6. Real gift delivery integration
-7. Domain registrar integration
 
 ## Test Credentials
-- Email: template_test@example.com
-- Password: password123
+- **Org Admin**: admin@merchant.com / admin123
+- **Test User**: template_test@example.com / password123
+
+## Test Reports
+- `/app/test_reports/iteration_8.json` - Multi-Organization Architecture tests (14/14 PASS)
 
 ## Known Issues
 1. OTP input component has usability issues (P3)
 2. All SMS/Voice functionality is mocked (requires provider setup)
-
-## Mocked Features (UI Placeholders)
-- Phone number purchasing
-- Browser-based calling  
-- Gift ordering and delivery
-- Domain purchasing
-- Actual SMS sending (pending provider credentials)
+3. Data scoping by org_id not yet implemented across all endpoints
 
 ## Recent Changes Log
-- **March 11, 2026**: Implemented Drip Campaign Reply Context feature - inbound messages now show "Responding to:" with quoted original message and campaign badge. Added Simulate Reply test feature with test tube button.
-- **March 11, 2026**: Fixed payment reminder delete button (converted from window.confirm to AlertDialog), removed Net Profit from Dashboard, updated funded deals cards to 3-column layout
-- **March 11, 2026**: Added rate calculation feature to Create Funded Deal form - auto-calculates Total Payback and Payment Amount based on funded amount, rate %, and term
-- **March 11, 2026**: Fixed conversation messages combining issue on Client Profile - added dropdown to filter by phone number chain, messages now show phone number labels when viewing "All Conversations"
-- **March 11, 2026**: Fixed delete buttons (onClick → onSelect), Added AI Assistant to Revival page, Fixed AI Dialog in DripCampaigns, Fixed error handling for validation errors
-- **March 11, 2026**: Unified tags with pipeline stages, removed "Contacted" stage, implemented bidirectional tag↔stage sync
-- **March 11, 2026**: Improved AI Template Assistant (added Automated tone, dialog reset, better UI), Added Funded Deals edit dialog and editable payments, Implemented timestamped client notes with admin-only editing
-
-## Pending Tasks (P0 - Next)
-1. **Twilio A2P 10DLC Integration**: Backend API calls for Brand/Campaign registration using data from OnboardingPage
-2. **Background Automation**: Schedulers for drip campaigns and payment status updates
-3. **OTP Input Fix**: Replace buggy InputOTP component with simpler text input
-4. **Email Service Integration**: Team member credentials sent via email (SendGrid/Resend)
-
-## Technical Debt
-1. **server.py Monolith**: File is 3500+ lines - urgently needs refactoring into route modules
-2. **No Automated Tests**: Need pytest for backend, jest for frontend
+- **March 12, 2026**: Implemented Multi-Organization Architecture
+  - Created role hierarchy (org_admin > admin > user)
+  - Built Organizations management page
+  - Updated Team page role checks
+  - Added backend helper functions for role-based access
+  - All 14 backend tests passing
