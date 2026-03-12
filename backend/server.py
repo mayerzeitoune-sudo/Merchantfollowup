@@ -451,11 +451,39 @@ async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(s
         user_id = payload.get("user_id")
         if user_id is None:
             raise HTTPException(status_code=401, detail="Invalid token")
-        return {"user_id": user_id, "email": payload.get("email")}
+        
+        # Fetch full user to get role and org_id
+        user = await db.users.find_one({"id": user_id}, {"_id": 0, "password": 0})
+        if not user:
+            raise HTTPException(status_code=401, detail="User not found")
+        
+        return {
+            "user_id": user_id, 
+            "email": payload.get("email"),
+            "role": user.get("role", "user"),
+            "org_id": user.get("org_id"),
+            "org_name": user.get("org_name")
+        }
     except jwt.ExpiredSignatureError:
         raise HTTPException(status_code=401, detail="Token expired")
     except jwt.InvalidTokenError:
         raise HTTPException(status_code=401, detail="Invalid token")
+
+
+def is_admin_or_above(user: dict) -> bool:
+    """Check if user has admin or org_admin role"""
+    return user.get("role") in ["admin", "org_admin"]
+
+
+def is_org_admin(user: dict) -> bool:
+    """Check if user is org_admin (super admin)"""
+    return user.get("role") == "org_admin"
+
+
+def require_admin_or_above(user: dict):
+    """Raise exception if user is not admin or org_admin"""
+    if not is_admin_or_above(user):
+        raise HTTPException(status_code=403, detail="Admin access required")
 
 async def ai_match_response(incoming_message: str, keywords: List[str]) -> dict:
     """Use AI to match incoming message to keywords with semantic understanding"""
