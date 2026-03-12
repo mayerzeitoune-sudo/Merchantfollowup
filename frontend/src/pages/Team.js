@@ -156,6 +156,90 @@ const Team = () => {
     }
   };
 
+  const handleBulkFileUpload = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const text = event.target.result;
+      const lines = text.split('\n').filter(line => line.trim());
+      
+      // Skip header row if present
+      const startIndex = lines[0].toLowerCase().includes('email') ? 1 : 0;
+      
+      const users = [];
+      for (let i = startIndex; i < lines.length; i++) {
+        const parts = lines[i].split(',').map(p => p.trim().replace(/"/g, ''));
+        if (parts.length >= 2) {
+          users.push({
+            name: parts[0] || '',
+            email: parts[1] || '',
+            password: parts[2] || generatePassword(),
+            role: parts[3] || 'agent',
+            status: 'pending'
+          });
+        }
+      }
+      
+      setBulkUsers(users);
+      toast.success(`Loaded ${users.length} users from file`);
+    };
+    reader.readAsText(file);
+  };
+
+  const generatePassword = () => {
+    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789';
+    let password = '';
+    for (let i = 0; i < 10; i++) {
+      password += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    return password;
+  };
+
+  const handleBulkUpload = async () => {
+    if (bulkUsers.length === 0) {
+      toast.error('No users to upload');
+      return;
+    }
+    
+    setBulkUploading(true);
+    let successCount = 0;
+    let failCount = 0;
+    
+    for (const user of bulkUsers) {
+      try {
+        await teamApi.createMember({
+          name: user.name,
+          email: user.email,
+          password: user.password,
+          role: user.role
+        });
+        user.status = 'success';
+        successCount++;
+      } catch (error) {
+        user.status = 'failed';
+        user.error = error.response?.data?.detail || 'Failed';
+        failCount++;
+      }
+      setBulkUsers([...bulkUsers]);
+    }
+    
+    setBulkUploading(false);
+    toast.success(`Bulk upload complete: ${successCount} succeeded, ${failCount} failed`);
+    fetchTeamData();
+  };
+
+  const downloadTemplate = () => {
+    const template = 'Name,Email,Password,Role\nJohn Doe,john@example.com,password123,agent\nJane Smith,jane@example.com,password456,agent';
+    const blob = new Blob([template], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'team_upload_template.csv';
+    a.click();
+  };
+
   const handleUpdateRole = async (memberId, newRole) => {
     try {
       await teamApi.updateMemberRole(memberId, newRole);
