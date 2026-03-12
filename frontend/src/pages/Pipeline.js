@@ -121,9 +121,27 @@ const Pipeline = () => {
     const newStage = destination.droppableId;
     const oldStage = source.droppableId;
 
-    // Optimistic update
+    // Map stages to tags
+    const STAGE_TO_TAG = {
+      'new_lead': 'New Lead',
+      'interested': 'Interested',
+      'application_sent': 'Application Sent',
+      'docs_submitted': 'Docs Submitted',
+      'approved': 'Approved',
+      'funded': 'Funded',
+      'dead': 'Dead',
+      'future': 'Future',
+    };
+
+    // Update tags - remove old stage tags and add new one
+    const stageTagValues = Object.values(STAGE_TO_TAG);
+    const currentTags = client.tags || [];
+    const updatedTags = currentTags.filter(t => !stageTagValues.includes(t));
+    updatedTags.push(STAGE_TO_TAG[newStage] || newStage);
+
+    // Optimistic update - update both pipeline_stage and tags
     setClients(prev => prev.map(c => 
-      c.id === draggableId ? { ...c, pipeline_stage: newStage } : c
+      c.id === draggableId ? { ...c, pipeline_stage: newStage, tags: updatedTags } : c
     ));
 
     try {
@@ -132,7 +150,7 @@ const Pipeline = () => {
     } catch (error) {
       // Revert on error
       setClients(prev => prev.map(c => 
-        c.id === draggableId ? { ...c, pipeline_stage: oldStage } : c
+        c.id === draggableId ? { ...c, pipeline_stage: oldStage, tags: currentTags } : c
       ));
       toast.error('Failed to update pipeline stage');
     }
