@@ -27,7 +27,7 @@ GOOGLE_CLIENT_ID = os.environ.get("GOOGLE_CLIENT_ID")
 GOOGLE_CLIENT_SECRET = os.environ.get("GOOGLE_CLIENT_SECRET")
 MONGO_URL = os.environ.get("MONGO_URL", "mongodb://localhost:27017")
 DB_NAME = os.environ.get("DB_NAME", "test_database")
-FRONTEND_URL = os.environ.get("FRONTEND_URL", "https://sms-deal-pipeline.preview.emergentagent.com")
+FRONTEND_URL = os.environ.get("FRONTEND_URL", "https://lead-pipeline-47.preview.emergentagent.com")
 
 # Initialize MongoDB
 client = AsyncIOMotorClient(MONGO_URL)

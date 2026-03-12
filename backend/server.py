@@ -1372,7 +1372,7 @@ async def create_lead_form(data: dict, current_user: dict = Depends(get_current_
     """Create a lead capture form"""
     form_id = str(uuid.uuid4())
     now = datetime.now(timezone.utc).isoformat()
-    base_url = os.environ.get('REACT_APP_BACKEND_URL', 'https://sms-deal-pipeline.preview.emergentagent.com')
+    base_url = os.environ.get('REACT_APP_BACKEND_URL', 'https://lead-pipeline-47.preview.emergentagent.com')
     
     form_doc = {
         "id": form_id,
@@ -1395,7 +1395,7 @@ async def create_lead_form(data: dict, current_user: dict = Depends(get_current_
 async def create_webhook(current_user: dict = Depends(get_current_user)):
     """Create a webhook endpoint for receiving leads"""
     webhook_id = str(uuid.uuid4())
-    base_url = os.environ.get('REACT_APP_BACKEND_URL', 'https://sms-deal-pipeline.preview.emergentagent.com')
+    base_url = os.environ.get('REACT_APP_BACKEND_URL', 'https://lead-pipeline-47.preview.emergentagent.com')
     
     webhook_doc = {
         "id": webhook_id,
