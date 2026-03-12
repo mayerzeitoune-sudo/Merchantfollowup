@@ -1684,7 +1684,7 @@ async def invite_team_member(data: dict, current_user: dict = Depends(get_curren
 async def create_team_member(data: dict, current_user: dict = Depends(get_current_user)):
     """Directly create a new team member account and send login details via email"""
     user = await db.users.find_one({"id": current_user["user_id"]}, {"_id": 0})
-    if user.get("role") != "admin":
+    if not is_admin_or_above(user):
         raise HTTPException(status_code=403, detail="Only admins can create members")
     
     team_id = user.get("team_id") or current_user["user_id"]
