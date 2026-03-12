@@ -28,6 +28,8 @@ import {
   Shield,
   CheckCircle,
   Circle,
+  ChevronDown,
+  ChevronUp,
   Loader2
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
