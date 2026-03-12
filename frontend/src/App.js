@@ -32,6 +32,7 @@ import Team from "./pages/Team";
 import FundedDeals from "./pages/FundedDeals";
 import FundedDealProfile from "./pages/FundedDealProfile";
 import OnboardingPage from "./pages/OnboardingPage";
+import Organizations from "./pages/Organizations";
 
 // Protected Route Component
 const ProtectedRoute = ({ children }) => {
