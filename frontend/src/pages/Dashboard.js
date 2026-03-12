@@ -179,145 +179,124 @@ const Dashboard = () => {
           )}
         </div>
 
-        {/* SMS Onboarding Card */}
+        {/* SMS Onboarding Dropdown - Collapsible */}
         {onboardingStatus?.status !== 'approved' && (
           <Card className="border-orange-200 bg-gradient-to-r from-orange-50 to-amber-50">
-            <CardHeader className="pb-3">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="h-10 w-10 rounded-lg bg-orange-100 flex items-center justify-center">
-                    <MessageSquare className="h-5 w-5 text-orange-600" />
-                  </div>
-                  <div>
-                    <CardTitle className="text-lg">SMS Setup Required</CardTitle>
-                    <CardDescription>Complete A2P 10DLC registration to start sending messages</CardDescription>
-                  </div>
+            <div 
+              className="flex items-center justify-between p-4 cursor-pointer"
+              onClick={() => setSmsSetupExpanded(!smsSetupExpanded)}
+            >
+              <div className="flex items-center gap-3">
+                <div className="h-10 w-10 rounded-lg bg-orange-100 flex items-center justify-center">
+                  <MessageSquare className="h-5 w-5 text-orange-600" />
                 </div>
-                {onboardingStatus?.status === 'not_started' ? (
-                  <Link to="/onboarding">
-                    <Button className="bg-orange-600 hover:bg-orange-700">
-                      Start Setup
-                      <ArrowRight className="h-4 w-4 ml-2" />
-                    </Button>
-                  </Link>
-                ) : onboardingStatus?.status === 'pending' ? (
+                <div>
+                  <p className="font-semibold">SMS Setup Required</p>
+                  <p className="text-sm text-muted-foreground">A2P 10DLC registration for sending messages</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-3">
+                {onboardingStatus?.status === 'pending' && (
                   <Badge className="bg-yellow-100 text-yellow-800 px-3 py-1">
                     <Loader2 className="h-3 w-3 mr-1 animate-spin" />
                     Under Review
                   </Badge>
-                ) : null}
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {/* Progress Bar */}
-                <div className="space-y-2">
-                  <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">Registration Progress</span>
-                    <span className="font-medium">
-                      {onboardingStatus?.status === 'not_started' ? '0%' : 
-                       onboardingStatus?.status === 'pending' ? '50%' : 
-                       onboardingStatus?.brand_status === 'approved' && onboardingStatus?.campaign_status === 'approved' ? '100%' : '75%'}
-                    </span>
-                  </div>
-                  <Progress 
-                    value={
-                      onboardingStatus?.status === 'not_started' ? 0 : 
-                      onboardingStatus?.status === 'pending' ? 50 : 
-                      onboardingStatus?.brand_status === 'approved' && onboardingStatus?.campaign_status === 'approved' ? 100 : 75
-                    } 
-                    className="h-2"
-                  />
-                </div>
-
-                {/* Steps */}
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                  {/* Step 1: Business Info */}
-                  <div className={`p-4 rounded-lg border ${onboardingStatus?.status !== 'not_started' ? 'bg-green-50 border-green-200' : 'bg-white border-gray-200'}`}>
-                    <div className="flex items-center gap-2 mb-2">
-                      {onboardingStatus?.status !== 'not_started' ? (
-                        <CheckCircle className="h-5 w-5 text-green-600" />
-                      ) : (
-                        <Circle className="h-5 w-5 text-gray-300" />
-                      )}
-                      <span className="font-medium text-sm">Business Info</span>
-                    </div>
-                    <p className="text-xs text-muted-foreground">Register your business details</p>
-                  </div>
-
-                  {/* Step 2: Brand Registration */}
-                  <div className={`p-4 rounded-lg border ${onboardingStatus?.brand_status === 'approved' ? 'bg-green-50 border-green-200' : onboardingStatus?.brand_status === 'pending' ? 'bg-yellow-50 border-yellow-200' : 'bg-white border-gray-200'}`}>
-                    <div className="flex items-center gap-2 mb-2">
-                      {onboardingStatus?.brand_status === 'approved' ? (
-                        <CheckCircle className="h-5 w-5 text-green-600" />
-                      ) : onboardingStatus?.brand_status === 'pending' ? (
-                        <Loader2 className="h-5 w-5 text-yellow-600 animate-spin" />
-                      ) : (
-                        <Circle className="h-5 w-5 text-gray-300" />
-                      )}
-                      <span className="font-medium text-sm">Brand Registration</span>
-                    </div>
-                    <p className="text-xs text-muted-foreground">Verify with Twilio Trust Hub</p>
-                  </div>
-
-                  {/* Step 3: Campaign Registration */}
-                  <div className={`p-4 rounded-lg border ${onboardingStatus?.campaign_status === 'approved' ? 'bg-green-50 border-green-200' : onboardingStatus?.campaign_status === 'pending' ? 'bg-yellow-50 border-yellow-200' : 'bg-white border-gray-200'}`}>
-                    <div className="flex items-center gap-2 mb-2">
-                      {onboardingStatus?.campaign_status === 'approved' ? (
-                        <CheckCircle className="h-5 w-5 text-green-600" />
-                      ) : onboardingStatus?.campaign_status === 'pending' ? (
-                        <Loader2 className="h-5 w-5 text-yellow-600 animate-spin" />
-                      ) : (
-                        <Circle className="h-5 w-5 text-gray-300" />
-                      )}
-                      <span className="font-medium text-sm">Campaign Registration</span>
-                    </div>
-                    <p className="text-xs text-muted-foreground">Register messaging use case</p>
-                  </div>
-
-                  {/* Step 4: Number Association */}
-                  <div className={`p-4 rounded-lg border ${onboardingStatus?.phone_number ? 'bg-green-50 border-green-200' : 'bg-white border-gray-200'}`}>
-                    <div className="flex items-center gap-2 mb-2">
-                      {onboardingStatus?.phone_number ? (
-                        <CheckCircle className="h-5 w-5 text-green-600" />
-                      ) : (
-                        <Circle className="h-5 w-5 text-gray-300" />
-                      )}
-                      <span className="font-medium text-sm">Number Association</span>
-                    </div>
-                    <p className="text-xs text-muted-foreground">Link phone number to campaign</p>
-                  </div>
-                </div>
-
-                {/* Info Box */}
+                )}
                 {onboardingStatus?.status === 'not_started' && (
-                  <div className="flex items-start gap-3 p-4 bg-white rounded-lg border">
-                    <AlertCircle className="h-5 w-5 text-orange-500 mt-0.5" />
-                    <div>
-                      <p className="text-sm font-medium">Why is this required?</p>
-                      <p className="text-xs text-muted-foreground mt-1">
-                        A2P 10DLC registration is required by US carriers to send business SMS messages. 
-                        This process verifies your business and messaging use case to ensure compliance 
-                        and improve message deliverability.
-                      </p>
-                    </div>
-                  </div>
+                  <Badge variant="outline" className="text-orange-600 border-orange-300">Not Started</Badge>
                 )}
-
-                {onboardingStatus?.status === 'pending' && (
-                  <div className="flex items-start gap-3 p-4 bg-white rounded-lg border">
-                    <Clock className="h-5 w-5 text-yellow-500 mt-0.5" />
-                    <div>
-                      <p className="text-sm font-medium">Registration Under Review</p>
-                      <p className="text-xs text-muted-foreground mt-1">
-                        Your registration is being reviewed. This typically takes 1-7 business days. 
-                        We'll notify you once your registration is approved.
-                      </p>
-                    </div>
-                  </div>
+                {smsSetupExpanded ? (
+                  <ChevronUp className="h-5 w-5 text-muted-foreground" />
+                ) : (
+                  <ChevronDown className="h-5 w-5 text-muted-foreground" />
                 )}
               </div>
-            </CardContent>
+            </div>
+            
+            {smsSetupExpanded && (
+              <CardContent className="pt-0 border-t">
+                <div className="space-y-4 pt-4">
+                  {/* Progress Bar */}
+                  <div className="space-y-2">
+                    <div className="flex justify-between text-sm">
+                      <span className="text-muted-foreground">Registration Progress</span>
+                      <span className="font-medium">
+                        {onboardingStatus?.status === 'not_started' ? '0%' : 
+                         onboardingStatus?.status === 'pending' ? '50%' : 
+                         onboardingStatus?.brand_status === 'approved' && onboardingStatus?.campaign_status === 'approved' ? '100%' : '75%'}
+                      </span>
+                    </div>
+                    <Progress 
+                      value={
+                        onboardingStatus?.status === 'not_started' ? 0 : 
+                        onboardingStatus?.status === 'pending' ? 50 : 
+                        onboardingStatus?.brand_status === 'approved' && onboardingStatus?.campaign_status === 'approved' ? 100 : 75
+                      } 
+                      className="h-2"
+                    />
+                  </div>
+
+                  {/* Steps */}
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                    <div className={`p-3 rounded-lg border ${onboardingStatus?.status !== 'not_started' ? 'bg-green-50 border-green-200' : 'bg-white border-gray-200'}`}>
+                      <div className="flex items-center gap-2 mb-1">
+                        {onboardingStatus?.status !== 'not_started' ? (
+                          <CheckCircle className="h-4 w-4 text-green-600" />
+                        ) : (
+                          <Circle className="h-4 w-4 text-gray-300" />
+                        )}
+                        <span className="font-medium text-xs">Business Info</span>
+                      </div>
+                    </div>
+                    <div className={`p-3 rounded-lg border ${onboardingStatus?.brand_status === 'approved' ? 'bg-green-50 border-green-200' : onboardingStatus?.brand_status === 'pending' ? 'bg-yellow-50 border-yellow-200' : 'bg-white border-gray-200'}`}>
+                      <div className="flex items-center gap-2 mb-1">
+                        {onboardingStatus?.brand_status === 'approved' ? (
+                          <CheckCircle className="h-4 w-4 text-green-600" />
+                        ) : onboardingStatus?.brand_status === 'pending' ? (
+                          <Loader2 className="h-4 w-4 text-yellow-600 animate-spin" />
+                        ) : (
+                          <Circle className="h-4 w-4 text-gray-300" />
+                        )}
+                        <span className="font-medium text-xs">Brand</span>
+                      </div>
+                    </div>
+                    <div className={`p-3 rounded-lg border ${onboardingStatus?.campaign_status === 'approved' ? 'bg-green-50 border-green-200' : onboardingStatus?.campaign_status === 'pending' ? 'bg-yellow-50 border-yellow-200' : 'bg-white border-gray-200'}`}>
+                      <div className="flex items-center gap-2 mb-1">
+                        {onboardingStatus?.campaign_status === 'approved' ? (
+                          <CheckCircle className="h-4 w-4 text-green-600" />
+                        ) : onboardingStatus?.campaign_status === 'pending' ? (
+                          <Loader2 className="h-4 w-4 text-yellow-600 animate-spin" />
+                        ) : (
+                          <Circle className="h-4 w-4 text-gray-300" />
+                        )}
+                        <span className="font-medium text-xs">Campaign</span>
+                      </div>
+                    </div>
+                    <div className={`p-3 rounded-lg border ${onboardingStatus?.phone_number ? 'bg-green-50 border-green-200' : 'bg-white border-gray-200'}`}>
+                      <div className="flex items-center gap-2 mb-1">
+                        {onboardingStatus?.phone_number ? (
+                          <CheckCircle className="h-4 w-4 text-green-600" />
+                        ) : (
+                          <Circle className="h-4 w-4 text-gray-300" />
+                        )}
+                        <span className="font-medium text-xs">Number</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {onboardingStatus?.status === 'not_started' && (
+                    <div className="flex justify-end">
+                      <Link to="/onboarding">
+                        <Button className="bg-orange-600 hover:bg-orange-700">
+                          Start Setup
+                          <ArrowRight className="h-4 w-4 ml-2" />
+                        </Button>
+                      </Link>
+                    </div>
+                  )}
+                </div>
+              </CardContent>
+            )}
           </Card>
         )}
 
