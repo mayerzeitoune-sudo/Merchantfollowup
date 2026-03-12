@@ -49,7 +49,10 @@ const Team = () => {
   const [loading, setLoading] = useState(true);
   const [addUserDialogOpen, setAddUserDialogOpen] = useState(false);
   const [inviteDialogOpen, setInviteDialogOpen] = useState(false);
+  const [bulkUploadOpen, setBulkUploadOpen] = useState(false);
   const [teamStats, setTeamStats] = useState(null);
+  const [bulkUsers, setBulkUsers] = useState([]);
+  const [bulkUploading, setBulkUploading] = useState(false);
   
   const [newUser, setNewUser] = useState({
     email: '',
