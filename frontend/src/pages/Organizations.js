@@ -365,25 +365,11 @@ const Organizations = () => {
         <Dialog open={viewOrgDialogOpen} onOpenChange={setViewOrgDialogOpen}>
           <DialogContent className="max-w-2xl">
             <DialogHeader>
-              <div className="flex items-center justify-between">
-                <div>
-                  <DialogTitle className="flex items-center gap-2">
-                    <Building2 className="h-5 w-5" />
-                    {selectedOrg?.name}
-                  </DialogTitle>
-                  <DialogDescription>{selectedOrg?.description}</DialogDescription>
-                </div>
-                <div className="flex gap-2">
-                  <Button 
-                    variant="destructive" 
-                    size="sm"
-                    onClick={() => handleDeleteOrg(selectedOrg?.id)}
-                  >
-                    <Trash2 className="h-4 w-4 mr-1" />
-                    Delete
-                  </Button>
-                </div>
-              </div>
+              <DialogTitle className="flex items-center gap-2">
+                <Building2 className="h-5 w-5" />
+                {selectedOrg?.name}
+              </DialogTitle>
+              <DialogDescription>{selectedOrg?.description}</DialogDescription>
             </DialogHeader>
             
             <div className="mt-4">
@@ -391,7 +377,7 @@ const Organizations = () => {
                 <h3 className="font-semibold">Users ({orgUsers.length})</h3>
                 <Dialog open={addUserDialogOpen} onOpenChange={setAddUserDialogOpen}>
                   <DialogTrigger asChild>
-                    <Button size="sm">
+                    <Button size="sm" className="bg-orange-600 hover:bg-orange-700">
                       <UserPlus className="h-4 w-4 mr-1" />
                       Add User
                     </Button>
