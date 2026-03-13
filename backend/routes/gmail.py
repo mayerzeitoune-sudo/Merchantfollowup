@@ -25,9 +25,15 @@ from motor.motor_asyncio import AsyncIOMotorClient
 # Environment variables
 GOOGLE_CLIENT_ID = os.environ.get("GOOGLE_CLIENT_ID")
 GOOGLE_CLIENT_SECRET = os.environ.get("GOOGLE_CLIENT_SECRET")
-MONGO_URL = os.environ.get("MONGO_URL", "mongodb://localhost:27017")
-DB_NAME = os.environ.get("DB_NAME", "test_database")
-FRONTEND_URL = os.environ.get("FRONTEND_URL", "https://lead-pipeline-47.preview.emergentagent.com")
+MONGO_URL = os.environ.get("MONGO_URL")
+DB_NAME = os.environ.get("DB_NAME")
+FRONTEND_URL = os.environ.get("FRONTEND_URL") or os.environ.get("REACT_APP_BACKEND_URL")
+
+# Validate required environment variables
+if not MONGO_URL:
+    raise RuntimeError("MONGO_URL environment variable is required")
+if not DB_NAME:
+    raise RuntimeError("DB_NAME environment variable is required")
 
 # Initialize MongoDB
 client = AsyncIOMotorClient(MONGO_URL)
