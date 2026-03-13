@@ -85,9 +85,10 @@ async def list_organizations(authorization: str = Query(...)):
     
     orgs = await db.organizations.find({}, {"_id": 0}).to_list(1000)
     
-    # Add user count for each org
+    # Add user and client count for each org
     for org in orgs:
         org["user_count"] = await db.users.count_documents({"org_id": org["id"]})
+        org["client_count"] = await db.clients.count_documents({"org_id": org["id"]})
     
     return orgs
 
