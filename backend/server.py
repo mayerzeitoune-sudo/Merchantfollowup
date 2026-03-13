@@ -1704,7 +1704,7 @@ async def create_team_member(data: dict, current_user: dict = Depends(get_curren
     plaintext_password = data.get("password")
     
     # Hash the password
-    hashed_password = pwd_context.hash(plaintext_password)
+    hashed_password = hash_password(plaintext_password)
     
     new_user_id = str(uuid.uuid4())
     now = datetime.now(timezone.utc).isoformat()
