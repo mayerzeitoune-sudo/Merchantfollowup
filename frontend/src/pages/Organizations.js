@@ -214,7 +214,7 @@ const Organizations = () => {
 
         {/* Stats Cards */}
         {stats && (
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-4">
             <Card>
               <CardContent className="pt-6">
                 <div className="flex items-center gap-3">
@@ -236,7 +236,7 @@ const Organizations = () => {
                   </div>
                   <div>
                     <p className="text-2xl font-bold">{stats.total_users || 0}</p>
-                    <p className="text-sm text-muted-foreground">Total Users</p>
+                    <p className="text-sm text-muted-foreground">Users in Orgs</p>
                   </div>
                 </div>
               </CardContent>
@@ -262,7 +262,33 @@ const Organizations = () => {
                   </div>
                   <div>
                     <p className="text-2xl font-bold">{stats.total_clients || 0}</p>
-                    <p className="text-sm text-muted-foreground">Total Clients</p>
+                    <p className="text-sm text-muted-foreground">Clients in Orgs</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+            <Card className="border-dashed border-orange-300 bg-orange-50/50">
+              <CardContent className="pt-6">
+                <div className="flex items-center gap-3">
+                  <div className="h-10 w-10 rounded-lg bg-orange-100 flex items-center justify-center">
+                    <Users className="h-5 w-5 text-orange-600" />
+                  </div>
+                  <div>
+                    <p className="text-2xl font-bold text-orange-600">{stats.unassigned_users || 0}</p>
+                    <p className="text-sm text-muted-foreground">Unassigned Users</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+            <Card className="border-dashed border-orange-300 bg-orange-50/50">
+              <CardContent className="pt-6">
+                <div className="flex items-center gap-3">
+                  <div className="h-10 w-10 rounded-lg bg-orange-100 flex items-center justify-center">
+                    <BarChart3 className="h-5 w-5 text-orange-600" />
+                  </div>
+                  <div>
+                    <p className="text-2xl font-bold text-orange-600">{stats.unassigned_clients || 0}</p>
+                    <p className="text-sm text-muted-foreground">Unassigned Clients</p>
                   </div>
                 </div>
               </CardContent>
