@@ -14,9 +14,17 @@ from pydantic import BaseModel
 from motor.motor_asyncio import AsyncIOMotorClient
 import jwt
 
-MONGO_URL = os.environ.get("MONGO_URL", "mongodb://localhost:27017")
-DB_NAME = os.environ.get("DB_NAME", "test_database")
-JWT_SECRET = os.environ.get("JWT_SECRET", "merchant-followup-secret-key-2024")
+MONGO_URL = os.environ.get("MONGO_URL")
+DB_NAME = os.environ.get("DB_NAME")
+JWT_SECRET = os.environ.get("JWT_SECRET")
+
+# Validate required environment variables
+if not MONGO_URL:
+    raise RuntimeError("MONGO_URL environment variable is required")
+if not DB_NAME:
+    raise RuntimeError("DB_NAME environment variable is required")
+if not JWT_SECRET:
+    raise RuntimeError("JWT_SECRET environment variable is required")
 
 client = AsyncIOMotorClient(MONGO_URL)
 db = client[DB_NAME]
