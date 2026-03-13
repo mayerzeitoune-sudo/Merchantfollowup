@@ -216,8 +216,7 @@ async def list_org_users(org_id: str, authorization: str = Query(...)):
 @router.post("/{org_id}/users")
 async def add_user_to_org(org_id: str, data: UserCreate, authorization: str = Query(...)):
     """Add a user to an organization (Org Admin or Admin of that org)"""
-    from passlib.context import CryptContext
-    pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+    import bcrypt
     
     user = await get_current_user(authorization)
     
@@ -246,11 +245,14 @@ async def add_user_to_org(org_id: str, data: UserCreate, authorization: str = Qu
     user_id = str(uuid.uuid4())
     now = datetime.now(timezone.utc).isoformat()
     
+    # Hash password using bcrypt
+    hashed_password = bcrypt.hashpw(data.password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
+    
     new_user = {
         "id": user_id,
         "email": data.email,
         "name": data.name,
-        "password": pwd_context.hash(data.password),
+        "password": hashed_password,
         "role": data.role,
         "org_id": org_id,
         "org_name": org["name"],
