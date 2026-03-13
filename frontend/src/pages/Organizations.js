@@ -336,10 +336,16 @@ const Organizations = () => {
                 </CardHeader>
                 <CardContent>
                   <div className="flex items-center justify-between text-sm">
-                    <span className="text-muted-foreground">
-                      <Users className="h-4 w-4 inline mr-1" />
-                      {org.user_count || 0} users
-                    </span>
+                    <div className="flex gap-4 text-muted-foreground">
+                      <span>
+                        <Users className="h-4 w-4 inline mr-1" />
+                        {org.user_count || 0} users
+                      </span>
+                      <span>
+                        <BarChart3 className="h-4 w-4 inline mr-1" />
+                        {org.client_count || 0} clients
+                      </span>
+                    </div>
                     <Button 
                       variant="ghost" 
                       size="sm"
