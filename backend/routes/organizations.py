@@ -299,13 +299,38 @@ async def get_org_overview_stats(authorization: str = Query(...)):
     require_org_admin(user)
     
     total_orgs = await db.organizations.count_documents({})
-    total_users = await db.users.count_documents({"role": {"$ne": "org_admin"}})
-    total_admins = await db.users.count_documents({"role": "admin"})
-    total_clients = await db.clients.count_documents({})
+    
+    # Count only users that belong to an organization (have org_id)
+    total_users_in_orgs = await db.users.count_documents({
+        "org_id": {"$exists": True, "$ne": None},
+        "role": {"$ne": "org_admin"}
+    })
+    
+    # Count admins in organizations
+    total_admins = await db.users.count_documents({
+        "org_id": {"$exists": True, "$ne": None},
+        "role": "admin"
+    })
+    
+    # Count clients that belong to organizations
+    total_clients_in_orgs = await db.clients.count_documents({
+        "org_id": {"$exists": True, "$ne": None}
+    })
+    
+    # Also get unassigned counts for reference
+    unassigned_users = await db.users.count_documents({
+        "$or": [{"org_id": {"$exists": False}}, {"org_id": None}],
+        "role": {"$ne": "org_admin"}
+    })
+    unassigned_clients = await db.clients.count_documents({
+        "$or": [{"org_id": {"$exists": False}}, {"org_id": None}]
+    })
     
     return {
         "total_organizations": total_orgs,
-        "total_users": total_users,
+        "total_users": total_users_in_orgs,
         "total_admins": total_admins,
-        "total_clients": total_clients
+        "total_clients": total_clients_in_orgs,
+        "unassigned_users": unassigned_users,
+        "unassigned_clients": unassigned_clients
     }
