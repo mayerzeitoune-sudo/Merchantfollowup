@@ -263,7 +263,16 @@ export const teamApi = {
   assignAgentToLeader: (leaderId, agentId) => axios.post(`${API}/team/leaders/${leaderId}/agents`, { agent_id: agentId }),
   removeAgentFromLeader: (leaderId, agentId) => axios.delete(`${API}/team/leaders/${leaderId}/agents/${agentId}`),
   getMyAgents: () => axios.get(`${API}/team/my-agents`),
-  getAgentClients: (agentId) => axios.get(`${API}/team/agent/${agentId}/clients`)
+  getAgentClients: (agentId) => axios.get(`${API}/team/agent/${agentId}/clients`),
+  // Archive functionality
+  archiveMember: (memberId) => axios.post(`${API}/team/members/${memberId}/archive`),
+  restoreMember: (memberId) => axios.post(`${API}/team/members/${memberId}/restore`),
+  getArchivedMembers: () => axios.get(`${API}/team/members/archived`)
+};
+
+// User History API
+export const userHistoryApi = {
+  getUserHistory: (userId) => axios.get(`${API}/users/${userId}/history`)
 };
 
 
