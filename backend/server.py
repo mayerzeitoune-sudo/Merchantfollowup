@@ -2517,9 +2517,10 @@ async def send_reminder(reminder_id: str, current_user: dict = Depends(get_curre
 
 @api_router.post("/followups", response_model=FollowUpResponse)
 async def create_followup(data: FollowUpCreate, current_user: dict = Depends(get_current_user)):
-    # Verify client exists
+    # Verify client exists (use role-based access)
+    accessible_ids = await get_accessible_user_ids(current_user)
     client = await db.clients.find_one(
-        {"id": data.client_id, "user_id": current_user["user_id"]},
+        {"id": data.client_id, "user_id": {"$in": accessible_ids}},
         {"_id": 0}
     )
     if not client:
@@ -2886,8 +2887,10 @@ async def get_conversation(
 @api_router.get("/contacts/{client_id}/chains")
 async def get_conversation_chains(client_id: str, current_user: dict = Depends(get_current_user)):
     """Get all conversation chains (by phone number) for a client"""
+    # Use role-based access
+    accessible_ids = await get_accessible_user_ids(current_user)
     client = await db.clients.find_one(
-        {"id": client_id, "user_id": current_user["user_id"]},
+        {"id": client_id, "user_id": {"$in": accessible_ids}},
         {"_id": 0}
     )
     if not client:
@@ -2895,7 +2898,7 @@ async def get_conversation_chains(client_id: str, current_user: dict = Depends(g
     
     # Get all unique from_numbers used with this client
     pipeline = [
-        {"$match": {"user_id": current_user["user_id"], "client_id": client_id}},
+        {"$match": {"user_id": {"$in": accessible_ids}, "client_id": client_id}},
         {"$group": {
             "_id": "$from_number",
             "message_count": {"$sum": 1},
@@ -2951,8 +2954,10 @@ async def send_sms_to_contact(
     campaign_name = data.get("campaign_name")
     step_number = data.get("step_number")
     
+    # Use role-based access
+    accessible_ids = await get_accessible_user_ids(current_user)
     client = await db.clients.find_one(
-        {"id": client_id, "user_id": current_user["user_id"]}
+        {"id": client_id, "user_id": {"$in": accessible_ids}}
     )
     if not client:
         raise HTTPException(status_code=404, detail="Client not found")
