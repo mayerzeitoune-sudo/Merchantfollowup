@@ -1926,6 +1926,138 @@ Merchant Follow Up Team
     }
 
 
+# ============== TEAM LEADER MANAGEMENT ==============
+
+@api_router.get("/team/leaders")
+async def get_team_leaders(current_user: dict = Depends(get_current_user)):
+    """Get all team leaders in the organization"""
+    user = await db.users.find_one({"id": current_user["user_id"]}, {"_id": 0})
+    if not is_admin_or_above(user):
+        raise HTTPException(status_code=403, detail="Admin access required")
+    
+    team_id = user.get("team_id") or current_user["user_id"]
+    leaders = await db.users.find(
+        {"team_id": team_id, "role": "team_leader"},
+        {"_id": 0, "password": 0}
+    ).to_list(100)
+    
+    # Add agent count for each leader
+    for leader in leaders:
+        agent_count = await db.users.count_documents({"team_leader_id": leader["id"]})
+        leader["agent_count"] = agent_count
+    
+    return leaders
+
+
+@api_router.get("/team/leaders/{leader_id}/agents")
+async def get_leader_agents(leader_id: str, current_user: dict = Depends(get_current_user)):
+    """Get agents assigned to a team leader"""
+    user = await db.users.find_one({"id": current_user["user_id"]}, {"_id": 0})
+    
+    # Admin, org_admin, or the team leader themselves can view
+    if not is_admin_or_above(user) and current_user["user_id"] != leader_id:
+        raise HTTPException(status_code=403, detail="Access denied")
+    
+    agents = await db.users.find(
+        {"team_leader_id": leader_id},
+        {"_id": 0, "password": 0}
+    ).to_list(100)
+    
+    return agents
+
+
+@api_router.post("/team/leaders/{leader_id}/agents")
+async def assign_agent_to_leader(leader_id: str, data: dict, current_user: dict = Depends(get_current_user)):
+    """Assign an agent to a team leader (Admin only)"""
+    user = await db.users.find_one({"id": current_user["user_id"]}, {"_id": 0})
+    if not is_admin_or_above(user):
+        raise HTTPException(status_code=403, detail="Admin access required")
+    
+    # Verify leader exists and is a team_leader
+    leader = await db.users.find_one({"id": leader_id, "role": "team_leader"})
+    if not leader:
+        raise HTTPException(status_code=404, detail="Team leader not found")
+    
+    agent_id = data.get("agent_id")
+    if not agent_id:
+        raise HTTPException(status_code=400, detail="agent_id is required")
+    
+    # Verify agent exists
+    agent = await db.users.find_one({"id": agent_id})
+    if not agent:
+        raise HTTPException(status_code=404, detail="Agent not found")
+    
+    # Update agent with team_leader_id
+    await db.users.update_one(
+        {"id": agent_id},
+        {"$set": {"team_leader_id": leader_id}}
+    )
+    
+    logger.info(f"Agent {agent['email']} assigned to team leader {leader['email']}")
+    
+    return {"message": f"Agent {agent['email']} assigned to {leader['name']}"}
+
+
+@api_router.delete("/team/leaders/{leader_id}/agents/{agent_id}")
+async def remove_agent_from_leader(leader_id: str, agent_id: str, current_user: dict = Depends(get_current_user)):
+    """Remove an agent from a team leader (Admin only)"""
+    user = await db.users.find_one({"id": current_user["user_id"]}, {"_id": 0})
+    if not is_admin_or_above(user):
+        raise HTTPException(status_code=403, detail="Admin access required")
+    
+    await db.users.update_one(
+        {"id": agent_id, "team_leader_id": leader_id},
+        {"$unset": {"team_leader_id": ""}}
+    )
+    
+    return {"message": "Agent removed from team leader"}
+
+
+@api_router.get("/team/my-agents")
+async def get_my_agents(current_user: dict = Depends(get_current_user)):
+    """Get agents assigned to the current team leader"""
+    user = await db.users.find_one({"id": current_user["user_id"]}, {"_id": 0})
+    
+    if user.get("role") != "team_leader":
+        raise HTTPException(status_code=403, detail="Only team leaders can access this")
+    
+    agents = await db.users.find(
+        {"team_leader_id": current_user["user_id"]},
+        {"_id": 0, "password": 0}
+    ).to_list(100)
+    
+    # Get client count and message count for each agent
+    for agent in agents:
+        agent["clients_count"] = await db.clients.count_documents({"user_id": agent["id"]})
+        agent["messages_sent"] = await db.conversations.count_documents({"user_id": agent["id"], "direction": "outbound"})
+    
+    return agents
+
+
+@api_router.get("/team/agent/{agent_id}/clients")
+async def get_agent_clients(agent_id: str, current_user: dict = Depends(get_current_user)):
+    """Team leader can view their agent's clients"""
+    user = await db.users.find_one({"id": current_user["user_id"]}, {"_id": 0})
+    
+    # Check if user is admin, org_admin, or the team leader of this agent
+    if is_admin_or_above(user):
+        pass  # Admins can access anyone
+    elif user.get("role") == "team_leader":
+        # Verify agent belongs to this team leader
+        agent = await db.users.find_one({"id": agent_id, "team_leader_id": current_user["user_id"]})
+        if not agent:
+            raise HTTPException(status_code=403, detail="This agent is not on your team")
+    else:
+        raise HTTPException(status_code=403, detail="Access denied")
+    
+    clients = await db.clients.find(
+        {"user_id": agent_id},
+        {"_id": 0}
+    ).to_list(500)
+    
+    return clients
+
+
 # ============== REMINDER ROUTES ==============
 
 @api_router.post("/reminders", response_model=ReminderResponse)
