@@ -237,6 +237,9 @@ const DashboardLayout = ({ children }) => {
           {children}
         </div>
       </main>
+      
+      {/* Phone Dialer - Floating Button */}
+      <PhoneDialer />
     </div>
   );
 };
