@@ -1,168 +1,237 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Search, X, User, MessageSquare, DollarSign, Loader2 } from 'lucide-react';
-import { Input } from './ui/input';
-import { Button } from './ui/button';
-import { searchApi } from '../lib/api';
 import { useNavigate } from 'react-router-dom';
+import { Input } from './ui/input';
+import { Badge } from './ui/badge';
+import { ScrollArea } from './ui/scroll-area';
+import { Search, User, MessageSquare, DollarSign, X } from 'lucide-react';
+import { searchApi } from '../lib/api';
 
 const GlobalSearch = () => {
   const [query, setQuery] = useState('');
   const [results, setResults] = useState(null);
   const [loading, setLoading] = useState(false);
-  const [open, setOpen] = useState(false);
-  const searchRef = useRef(null);
+  const [isOpen, setIsOpen] = useState(false);
   const navigate = useNavigate();
+  const searchRef = useRef(null);
+  const inputRef = useRef(null);
+  const debounceRef = useRef(null);
 
+  // Close dropdown when clicking outside
   useEffect(() => {
-    const handleClickOutside = (e) => {
-      if (searchRef.current && !searchRef.current.contains(e.target)) {
-        setOpen(false);
+    const handleClickOutside = (event) => {
+      if (searchRef.current && !searchRef.current.contains(event.target)) {
+        setIsOpen(false);
       }
     };
+
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
+  // Debounced search - only search when user has typed at least 2 characters
   useEffect(() => {
-    const searchTimeout = setTimeout(async () => {
-      if (query.length >= 2) {
-        setLoading(true);
-        try {
-          const res = await searchApi.search(query);
-          setResults(res.data);
-          setOpen(true);
-        } catch (error) {
-          console.error('Search error:', error);
-        } finally {
-          setLoading(false);
-        }
-      } else {
-        setResults(null);
-        setOpen(false);
-      }
-    }, 300);
+    if (debounceRef.current) {
+      clearTimeout(debounceRef.current);
+    }
 
-    return () => clearTimeout(searchTimeout);
+    // Don't search if query is too short
+    if (query.trim().length < 2) {
+      setResults(null);
+      setIsOpen(false);
+      return;
+    }
+
+    debounceRef.current = setTimeout(async () => {
+      setLoading(true);
+      try {
+        const response = await searchApi.search(query);
+        setResults(response.data);
+        setIsOpen(true);
+      } catch (error) {
+        console.error('Search failed:', error);
+        setResults(null);
+      } finally {
+        setLoading(false);
+      }
+    }, 300); // 300ms debounce
+
+    return () => {
+      if (debounceRef.current) {
+        clearTimeout(debounceRef.current);
+      }
+    };
   }, [query]);
 
-  const handleSelect = (type, item) => {
-    setOpen(false);
+  const handleResultClick = (type, item) => {
+    setIsOpen(false);
     setQuery('');
-    if (type === 'client') {
-      navigate(`/clients/${item.id}`);
-    } else if (type === 'deal') {
-      navigate(`/pipeline`);
+    setResults(null);
+    
+    switch (type) {
+      case 'client':
+        navigate(`/clients/${item.id}`);
+        break;
+      case 'message':
+        navigate(`/contacts?client=${item.client_id}`);
+        break;
+      case 'deal':
+        navigate(`/funded-deals`);
+        break;
+      default:
+        break;
     }
   };
 
-  const totalResults = results 
-    ? (results.clients?.length || 0) + (results.messages?.length || 0) + (results.deals?.length || 0)
-    : 0;
+  const handleClear = () => {
+    setQuery('');
+    setResults(null);
+    setIsOpen(false);
+    inputRef.current?.focus();
+  };
+
+  const handleKeyDown = (e) => {
+    if (e.key === 'Escape') {
+      setIsOpen(false);
+      setQuery('');
+    }
+  };
+
+  const totalResults = results ? 
+    (results.clients?.length || 0) + (results.messages?.length || 0) + (results.deals?.length || 0) : 0;
 
   return (
-    <div className="relative" ref={searchRef}>
+    <div className="relative w-full max-w-md" ref={searchRef}>
       <div className="relative">
-        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
         <Input
-          type="text"
-          placeholder="Search clients, messages, deals..."
+          ref={inputRef}
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          className="pl-10 pr-10 w-64 lg:w-80"
+          onFocus={() => query.length >= 2 && results && setIsOpen(true)}
+          onKeyDown={handleKeyDown}
+          placeholder="Search clients, messages... (min 2 chars)"
+          className="pl-10 pr-8 w-full"
           data-testid="global-search-input"
         />
-        {loading && (
-          <Loader2 className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 animate-spin text-muted-foreground" />
-        )}
-        {query && !loading && (
-          <Button
-            variant="ghost"
-            size="icon"
-            className="absolute right-1 top-1/2 transform -translate-y-1/2 h-6 w-6"
-            onClick={() => { setQuery(''); setResults(null); setOpen(false); }}
+        {query && (
+          <button
+            onClick={handleClear}
+            className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground hover:text-foreground"
           >
-            <X className="h-3 w-3" />
-          </Button>
+            <X className="h-4 w-4" />
+          </button>
         )}
       </div>
 
-      {open && results && (
-        <div className="absolute top-full left-0 right-0 mt-2 bg-background border rounded-lg shadow-lg z-50 max-h-96 overflow-y-auto">
-          {totalResults === 0 ? (
+      {/* Search Results Dropdown */}
+      {isOpen && query.length >= 2 && (
+        <div className="absolute top-full left-0 right-0 mt-1 bg-background border rounded-lg shadow-lg z-50 overflow-hidden">
+          {loading ? (
+            <div className="p-4 text-center text-muted-foreground">
+              <div className="h-4 w-4 border-2 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-2" />
+              Searching...
+            </div>
+          ) : totalResults === 0 ? (
             <div className="p-4 text-center text-muted-foreground">
               No results found for "{query}"
             </div>
           ) : (
-            <div className="p-2">
-              {/* Clients */}
-              {results.clients?.length > 0 && (
-                <div className="mb-2">
-                  <div className="px-2 py-1 text-xs font-semibold text-muted-foreground uppercase">
-                    Clients ({results.clients.length})
+            <ScrollArea className="max-h-80">
+              {/* Clients Section */}
+              {results?.clients?.length > 0 && (
+                <div>
+                  <div className="px-3 py-2 bg-muted/50 flex items-center justify-between">
+                    <span className="text-xs font-semibold text-muted-foreground uppercase flex items-center gap-1">
+                      <User className="h-3 w-3" />
+                      Clients
+                    </span>
+                    <Badge variant="secondary" className="text-xs">
+                      {results.clients.length}
+                    </Badge>
                   </div>
-                  {results.clients.map((client) => (
+                  {results.clients.slice(0, 5).map((client) => (
                     <button
                       key={client.id}
-                      className="w-full flex items-center gap-3 p-2 hover:bg-muted rounded-md text-left"
-                      onClick={() => handleSelect('client', client)}
+                      onClick={() => handleResultClick('client', client)}
+                      className="w-full px-3 py-2 text-left hover:bg-muted/50 flex items-center gap-3 border-b last:border-b-0"
+                      data-testid={`search-result-client-${client.id}`}
                     >
-                      <User className="h-4 w-4 text-blue-500" />
-                      <div>
-                        <div className="font-medium text-sm">{client.name}</div>
-                        <div className="text-xs text-muted-foreground">{client.email || client.phone}</div>
+                      <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                        <span className="text-primary font-medium text-xs">
+                          {client.name?.charAt(0).toUpperCase() || '?'}
+                        </span>
                       </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="font-medium text-sm truncate">{client.name}</p>
+                        <p className="text-xs text-muted-foreground truncate">{client.phone}</p>
+                      </div>
+                    </button>
+                  ))}
+                  {results.clients.length > 5 && (
+                    <div className="px-3 py-1 text-xs text-muted-foreground text-center">
+                      +{results.clients.length - 5} more clients
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Messages Section */}
+              {results?.messages?.length > 0 && (
+                <div>
+                  <div className="px-3 py-2 bg-muted/50 flex items-center justify-between">
+                    <span className="text-xs font-semibold text-muted-foreground uppercase flex items-center gap-1">
+                      <MessageSquare className="h-3 w-3" />
+                      Messages
+                    </span>
+                    <Badge variant="secondary" className="text-xs">
+                      {results.messages.length}
+                    </Badge>
+                  </div>
+                  {results.messages.slice(0, 3).map((message) => (
+                    <button
+                      key={message.id}
+                      onClick={() => handleResultClick('message', message)}
+                      className="w-full px-3 py-2 text-left hover:bg-muted/50 border-b last:border-b-0"
+                      data-testid={`search-result-message-${message.id}`}
+                    >
+                      <p className="text-sm truncate">{message.message}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {new Date(message.timestamp || message.created_at).toLocaleDateString()}
+                      </p>
                     </button>
                   ))}
                 </div>
               )}
 
-              {/* Messages */}
-              {results.messages?.length > 0 && (
-                <div className="mb-2">
-                  <div className="px-2 py-1 text-xs font-semibold text-muted-foreground uppercase">
-                    Messages ({results.messages.length})
-                  </div>
-                  {results.messages.slice(0, 5).map((msg) => (
-                    <div
-                      key={msg.id}
-                      className="flex items-center gap-3 p-2 hover:bg-muted rounded-md"
-                    >
-                      <MessageSquare className="h-4 w-4 text-green-500" />
-                      <div className="flex-1 min-w-0">
-                        <div className="text-sm truncate">{msg.message}</div>
-                        <div className="text-xs text-muted-foreground">
-                          {new Date(msg.created_at).toLocaleDateString()}
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-
-              {/* Deals */}
-              {results.deals?.length > 0 && (
+              {/* Deals Section */}
+              {results?.deals?.length > 0 && (
                 <div>
-                  <div className="px-2 py-1 text-xs font-semibold text-muted-foreground uppercase">
-                    Deals ({results.deals.length})
+                  <div className="px-3 py-2 bg-muted/50 flex items-center justify-between">
+                    <span className="text-xs font-semibold text-muted-foreground uppercase flex items-center gap-1">
+                      <DollarSign className="h-3 w-3" />
+                      Deals
+                    </span>
+                    <Badge variant="secondary" className="text-xs">
+                      {results.deals.length}
+                    </Badge>
                   </div>
-                  {results.deals.map((deal) => (
+                  {results.deals.slice(0, 3).map((deal) => (
                     <button
                       key={deal.id}
-                      className="w-full flex items-center gap-3 p-2 hover:bg-muted rounded-md text-left"
-                      onClick={() => handleSelect('deal', deal)}
+                      onClick={() => handleResultClick('deal', deal)}
+                      className="w-full px-3 py-2 text-left hover:bg-muted/50 border-b last:border-b-0"
+                      data-testid={`search-result-deal-${deal.id}`}
                     >
-                      <DollarSign className="h-4 w-4 text-orange-500" />
-                      <div>
-                        <div className="font-medium text-sm">{deal.business_name}</div>
-                        <div className="text-xs text-muted-foreground">
-                          ${deal.amount?.toLocaleString() || 0}
-                        </div>
+                      <p className="font-medium text-sm truncate">{deal.business_name}</p>
+                      <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                        <span>${deal.amount?.toLocaleString() || 0}</span>
+                        <Badge variant="outline" className="text-xs">{deal.status}</Badge>
                       </div>
                     </button>
                   ))}
                 </div>
               )}
-            </div>
+            </ScrollArea>
           )}
         </div>
       )}
