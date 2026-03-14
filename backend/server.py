@@ -4219,6 +4219,56 @@ except Exception as e:
 
 # ============== CALLING FEATURE ==============
 
+@api_router.get("/messages/unread")
+async def get_unread_messages(current_user: dict = Depends(get_current_user)):
+    """Get unread inbound messages"""
+    accessible_ids = await get_accessible_user_ids(current_user)
+    
+    unread = await db.conversations.find(
+        {
+            "user_id": {"$in": accessible_ids},
+            "direction": "inbound",
+            "$or": [{"read": False}, {"read": {"$exists": False}}]
+        },
+        {"_id": 0}
+    ).sort("created_at", -1).to_list(100)
+    
+    # Get client info for each message
+    for msg in unread:
+        if msg.get("client_id"):
+            client = await db.clients.find_one({"id": msg["client_id"]}, {"_id": 0, "name": 1, "phone": 1})
+            msg["client_name"] = client.get("name") if client else "Unknown"
+            msg["client_phone"] = client.get("phone") if client else msg.get("from_number")
+    
+    return {"messages": unread, "count": len(unread)}
+
+
+@api_router.put("/messages/{message_id}/read")
+async def mark_message_read(message_id: str, current_user: dict = Depends(get_current_user)):
+    """Mark a message as read"""
+    await db.conversations.update_one(
+        {"id": message_id},
+        {"$set": {"read": True, "read_at": datetime.now(timezone.utc).isoformat()}}
+    )
+    return {"success": True}
+
+
+@api_router.put("/messages/mark-all-read")
+async def mark_all_messages_read(current_user: dict = Depends(get_current_user)):
+    """Mark all messages as read for the current user"""
+    accessible_ids = await get_accessible_user_ids(current_user)
+    
+    await db.conversations.update_many(
+        {
+            "user_id": {"$in": accessible_ids},
+            "direction": "inbound",
+            "read": {"$ne": True}
+        },
+        {"$set": {"read": True, "read_at": datetime.now(timezone.utc).isoformat()}}
+    )
+    return {"success": True}
+
+
 @api_router.post("/calls/initiate")
 async def initiate_call(data: dict, current_user: dict = Depends(get_current_user)):
     """Initiate an outbound call"""
