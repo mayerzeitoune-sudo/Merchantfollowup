@@ -1,194 +1,208 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import DashboardLayout from '../components/DashboardLayout';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Badge } from '../components/ui/badge';
 import { Textarea } from '../components/ui/textarea';
 import { ScrollArea } from '../components/ui/scroll-area';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs';
+import { Tabs, TabsList, TabsTrigger } from '../components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
-import { Checkbox } from '../components/ui/checkbox';
 import { 
   Search, 
   Inbox as InboxIcon,
   Send,
-  Star,
   Archive,
-  Trash2,
-  MoreHorizontal,
   Clock,
   User,
   Phone,
   MessageSquare,
-  Filter,
   RefreshCw,
   CheckCheck,
-  Circle,
   ArrowLeft,
-  Reply,
   ChevronRight,
   Smartphone,
-  Mail,
-  AlertCircle
+  Zap,
+  Filter,
+  MoreVertical,
+  ExternalLink,
+  Sparkles
 } from 'lucide-react';
-import { clientsApi, contactsApi, phoneNumbersApi } from '../lib/api';
+import { clientsApi, contactsApi, phoneNumbersApi, templatesApi } from '../lib/api';
 import { toast } from 'sonner';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '../components/ui/dropdown-menu';
+
+const PIPELINE_STAGES = [
+  { value: "new_lead", label: "New Lead", color: "bg-blue-100 text-blue-700" },
+  { value: "interested", label: "Interested", color: "bg-cyan-100 text-cyan-700" },
+  { value: "application_sent", label: "Application Sent", color: "bg-indigo-100 text-indigo-700" },
+  { value: "docs_submitted", label: "Docs Submitted", color: "bg-orange-100 text-orange-700" },
+  { value: "approved", label: "Approved", color: "bg-emerald-100 text-emerald-700" },
+  { value: "funded", label: "Funded", color: "bg-green-100 text-green-800" },
+  { value: "dead", label: "Dead", color: "bg-red-100 text-red-700" },
+  { value: "future", label: "Future", color: "bg-gray-100 text-gray-700" },
+];
+
+const getStageInfo = (stage) => {
+  return PIPELINE_STAGES.find(s => s.value === stage) || PIPELINE_STAGES[0];
+};
 
 const Inbox = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
+  const messagesEndRef = useRef(null);
+  
+  // State
   const [loading, setLoading] = useState(true);
-  const [conversations, setConversations] = useState([]);
-  const [selectedConversation, setSelectedConversation] = useState(null);
+  const [clients, setClients] = useState([]);
+  const [selectedClient, setSelectedClient] = useState(null);
   const [messages, setMessages] = useState([]);
+  const [conversationChains, setConversationChains] = useState([]);
+  const [activeChain, setActiveChain] = useState('default');
   const [search, setSearch] = useState('');
-  const [filter, setFilter] = useState('all'); // all, unread, starred
+  const [stageFilter, setStageFilter] = useState('all');
   const [replyText, setReplyText] = useState('');
   const [sending, setSending] = useState(false);
-  const [selectedItems, setSelectedItems] = useState([]);
   const [ownedNumbers, setOwnedNumbers] = useState([]);
+  const [templates, setTemplates] = useState([]);
 
   useEffect(() => {
-    fetchConversations();
-    fetchOwnedNumbers();
-  }, [filter]);
+    fetchData();
+  }, [stageFilter]);
 
   useEffect(() => {
-    // Check for client param in URL
     const clientId = searchParams.get('client');
-    if (clientId && conversations.length > 0) {
-      const conv = conversations.find(c => c.client_id === clientId);
-      if (conv) {
-        setSelectedConversation(conv);
+    if (clientId && clients.length > 0) {
+      const client = clients.find(c => c.id === clientId);
+      if (client) {
+        handleSelectClient(client);
       }
     }
-  }, [searchParams, conversations]);
+  }, [searchParams, clients]);
 
   useEffect(() => {
-    if (selectedConversation) {
-      fetchMessages(selectedConversation.client_id);
-    }
-  }, [selectedConversation]);
+    scrollToBottom();
+  }, [messages]);
 
-  const fetchConversations = async () => {
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  };
+
+  const fetchData = async () => {
     try {
-      const response = await contactsApi.getInbox(filter);
-      setConversations(response.data || []);
+      const [clientsRes, numbersRes, templatesRes] = await Promise.all([
+        clientsApi.getAll(stageFilter === 'all' ? null : stageFilter),
+        phoneNumbersApi.getOwned(),
+        templatesApi.getAll()
+      ]);
+      
+      setClients(clientsRes.data || []);
+      setOwnedNumbers(numbersRes.data || []);
+      setTemplates(templatesRes.data || []);
     } catch (error) {
-      console.error('Failed to fetch conversations:', error);
-      // Fallback: fetch clients and build conversation list
-      try {
-        const clientsRes = await clientsApi.getAll();
-        const clients = clientsRes.data || [];
-        const convList = clients.map(client => ({
-          client_id: client.id,
-          client_name: client.name,
-          client_phone: client.phone,
-          last_message: '',
-          last_message_time: client.updated_at,
-          unread_count: 0,
-          is_starred: false
-        }));
-        setConversations(convList);
-      } catch (e) {
-        toast.error('Failed to load inbox');
-      }
+      toast.error('Failed to fetch data');
     } finally {
       setLoading(false);
     }
   };
 
-  const fetchOwnedNumbers = async () => {
+  const handleSelectClient = async (client) => {
+    setSelectedClient(client);
+    setMessages([]);
+    
     try {
-      const response = await phoneNumbersApi.getOwned();
-      setOwnedNumbers(response.data || []);
+      // Fetch conversation chains
+      const chainsRes = await contactsApi.getChains(client.id);
+      const chains = chainsRes.data.chains || [];
+      setConversationChains(chains);
+      
+      // Set active chain
+      const firstChain = chains.length > 0 ? chains[0].from_number : 'default';
+      setActiveChain(firstChain);
+      
+      // Fetch messages
+      await fetchMessages(client.id, firstChain);
     } catch (error) {
-      console.error('Failed to fetch phone numbers');
+      console.error('Failed to fetch conversation:', error);
+      setConversationChains([]);
+      setMessages([]);
     }
   };
 
-  const fetchMessages = async (clientId) => {
+  const fetchMessages = async (clientId, fromNumber) => {
     try {
-      const response = await contactsApi.getConversation(clientId);
-      setMessages(response.data.messages || []);
+      const response = await contactsApi.getConversation(clientId, fromNumber === 'default' ? null : fromNumber);
+      // Reverse to show oldest first
+      setMessages((response.data.messages || []).reverse());
     } catch (error) {
-      console.error('Failed to fetch messages');
+      console.error('Failed to fetch messages:', error);
       setMessages([]);
     }
   };
 
   const handleSendReply = async () => {
-    if (!replyText.trim() || !selectedConversation) return;
+    if (!replyText.trim() || !selectedClient) return;
     
     setSending(true);
     try {
-      await contactsApi.sendSms(selectedConversation.client_id, {
-        message: replyText
+      const fromNumber = activeChain === 'default' ? null : activeChain;
+      await contactsApi.sendSms(selectedClient.id, {
+        message: replyText,
+        from_number: fromNumber
       });
       toast.success('Message sent!');
       setReplyText('');
-      fetchMessages(selectedConversation.client_id);
-      fetchConversations();
+      
+      // Refresh messages
+      await fetchMessages(selectedClient.id, activeChain);
+      
+      // Refresh chains
+      const chainsRes = await contactsApi.getChains(selectedClient.id);
+      setConversationChains(chainsRes.data.chains || []);
     } catch (error) {
-      toast.error('Failed to send message');
+      toast.error(error.response?.data?.detail || 'Failed to send message');
     } finally {
       setSending(false);
     }
   };
 
-  const handleMarkAsRead = async (clientId) => {
+  const handleSendTemplate = async (template) => {
+    if (!selectedClient) return;
+    
+    setSending(true);
     try {
-      await contactsApi.markAsRead(clientId);
-      fetchConversations();
+      const variables = {
+        client_name: selectedClient.name,
+        client_company: selectedClient.company || '',
+        client_balance: selectedClient.balance?.toString() || '0'
+      };
+      
+      const fromNumber = activeChain === 'default' ? null : activeChain;
+      await templatesApi.sendToContact(selectedClient.id, template.id, variables, fromNumber);
+      toast.success('Template sent!');
+      
+      // Refresh messages
+      await fetchMessages(selectedClient.id, activeChain);
     } catch (error) {
-      console.error('Failed to mark as read');
+      toast.error('Failed to send template');
+    } finally {
+      setSending(false);
     }
   };
 
-  const handleToggleStar = async (clientId, e) => {
-    e.stopPropagation();
-    try {
-      await contactsApi.toggleStar(clientId);
-      fetchConversations();
-    } catch (error) {
-      console.error('Failed to toggle star');
+  const handleChainSelect = async (fromNumber) => {
+    setActiveChain(fromNumber);
+    if (selectedClient) {
+      await fetchMessages(selectedClient.id, fromNumber);
     }
   };
-
-  const handleArchive = async (clientIds) => {
-    try {
-      await Promise.all(clientIds.map(id => contactsApi.archiveConversation(id)));
-      toast.success(`Archived ${clientIds.length} conversation(s)`);
-      setSelectedItems([]);
-      fetchConversations();
-    } catch (error) {
-      toast.error('Failed to archive');
-    }
-  };
-
-  const handleSelectItem = (clientId, checked) => {
-    if (checked) {
-      setSelectedItems([...selectedItems, clientId]);
-    } else {
-      setSelectedItems(selectedItems.filter(id => id !== clientId));
-    }
-  };
-
-  const handleSelectAll = (checked) => {
-    if (checked) {
-      setSelectedItems(filteredConversations.map(c => c.client_id));
-    } else {
-      setSelectedItems([]);
-    }
-  };
-
-  const filteredConversations = conversations.filter(conv => {
-    const matchesSearch = conv.client_name?.toLowerCase().includes(search.toLowerCase()) ||
-                         conv.client_phone?.includes(search);
-    return matchesSearch;
-  });
 
   const formatTime = (timestamp) => {
     if (!timestamp) return '';
@@ -196,14 +210,25 @@ const Inbox = () => {
     const now = new Date();
     const diff = now - date;
     
-    if (diff < 86400000) { // Less than 24 hours
+    if (diff < 86400000) {
       return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-    } else if (diff < 604800000) { // Less than 7 days
+    } else if (diff < 604800000) {
       return date.toLocaleDateString([], { weekday: 'short' });
     } else {
       return date.toLocaleDateString([], { month: 'short', day: 'numeric' });
     }
   };
+
+  const filteredClients = clients.filter(client => {
+    const matchesSearch = client.name?.toLowerCase().includes(search.toLowerCase()) ||
+                         client.phone?.includes(search);
+    return matchesSearch;
+  });
+
+  // Sort by most recent activity (you could enhance this with actual last message time)
+  const sortedClients = [...filteredClients].sort((a, b) => {
+    return new Date(b.updated_at || 0) - new Date(a.updated_at || 0);
+  });
 
   return (
     <DashboardLayout>
@@ -212,19 +237,19 @@ const Inbox = () => {
         <div className="flex items-center justify-between mb-4">
           <div>
             <h1 className="text-3xl font-bold font-['Outfit']">Inbox</h1>
-            <p className="text-muted-foreground">All your conversations in one place</p>
+            <p className="text-muted-foreground">Manage all your client conversations</p>
           </div>
-          <Button variant="outline" onClick={fetchConversations}>
+          <Button variant="outline" onClick={fetchData} data-testid="refresh-inbox-btn">
             <RefreshCw className="h-4 w-4 mr-2" />
             Refresh
           </Button>
         </div>
 
-        {/* Main Content */}
-        <div className="flex-1 flex gap-4 min-h-0">
-          {/* Conversation List */}
-          <Card className="w-full max-w-md flex flex-col">
-            <CardHeader className="pb-3 space-y-3">
+        {/* Main Content - Split View */}
+        <div className="flex-1 flex gap-4 min-h-0 overflow-hidden">
+          {/* Left Panel - Conversation List */}
+          <Card className="w-full max-w-sm flex flex-col shrink-0">
+            <CardHeader className="pb-3 space-y-3 shrink-0">
               {/* Search */}
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -237,37 +262,21 @@ const Inbox = () => {
                 />
               </div>
               
-              {/* Tabs */}
-              <Tabs value={filter} onValueChange={setFilter} className="w-full">
-                <TabsList className="grid w-full grid-cols-3">
-                  <TabsTrigger value="all">
-                    <InboxIcon className="h-4 w-4 mr-1" />
-                    All
-                  </TabsTrigger>
-                  <TabsTrigger value="unread">
-                    <Circle className="h-4 w-4 mr-1 fill-primary" />
-                    Unread
-                  </TabsTrigger>
-                  <TabsTrigger value="starred">
-                    <Star className="h-4 w-4 mr-1" />
-                    Starred
-                  </TabsTrigger>
-                </TabsList>
-              </Tabs>
-
-              {/* Bulk Actions */}
-              {selectedItems.length > 0 && (
-                <div className="flex items-center gap-2 p-2 bg-muted rounded-lg">
-                  <span className="text-sm text-muted-foreground">{selectedItems.length} selected</span>
-                  <Button variant="ghost" size="sm" onClick={() => handleArchive(selectedItems)}>
-                    <Archive className="h-4 w-4 mr-1" />
-                    Archive
-                  </Button>
-                  <Button variant="ghost" size="sm" onClick={() => setSelectedItems([])}>
-                    Clear
-                  </Button>
-                </div>
-              )}
+              {/* Stage Filter */}
+              <Select value={stageFilter} onValueChange={setStageFilter}>
+                <SelectTrigger className="w-full" data-testid="inbox-stage-filter">
+                  <Filter className="h-4 w-4 mr-2" />
+                  <SelectValue placeholder="Filter by stage" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Stages</SelectItem>
+                  {PIPELINE_STAGES.map((stage) => (
+                    <SelectItem key={stage.value} value={stage.value}>
+                      {stage.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </CardHeader>
 
             <CardContent className="p-0 flex-1 overflow-hidden">
@@ -276,107 +285,136 @@ const Inbox = () => {
                   <div className="flex items-center justify-center py-12">
                     <div className="h-6 w-6 border-2 border-primary border-t-transparent rounded-full animate-spin" />
                   </div>
-                ) : filteredConversations.length === 0 ? (
+                ) : sortedClients.length === 0 ? (
                   <div className="text-center py-12 text-muted-foreground">
                     <InboxIcon className="h-12 w-12 mx-auto mb-4 opacity-50" />
                     <p>No conversations found</p>
                   </div>
                 ) : (
                   <div className="divide-y">
-                    {filteredConversations.map((conv) => (
-                      <div
-                        key={conv.client_id}
-                        className={`flex items-start gap-3 p-4 cursor-pointer transition-colors hover:bg-muted/50 ${
-                          selectedConversation?.client_id === conv.client_id ? 'bg-primary/5 border-l-2 border-l-primary' : ''
-                        } ${conv.unread_count > 0 ? 'bg-blue-50/50' : ''}`}
-                        onClick={() => {
-                          setSelectedConversation(conv);
-                          if (conv.unread_count > 0) handleMarkAsRead(conv.client_id);
-                        }}
-                        data-testid={`conversation-${conv.client_id}`}
-                      >
-                        <Checkbox
-                          checked={selectedItems.includes(conv.client_id)}
-                          onCheckedChange={(checked) => handleSelectItem(conv.client_id, checked)}
-                          onClick={(e) => e.stopPropagation()}
-                          className="mt-1"
-                        />
-                        
-                        <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
-                          <User className="h-5 w-5 text-primary" />
-                        </div>
-                        
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center justify-between mb-1">
-                            <span className={`font-medium truncate ${conv.unread_count > 0 ? 'font-semibold' : ''}`}>
-                              {conv.client_name}
-                            </span>
-                            <span className="text-xs text-muted-foreground shrink-0">
-                              {formatTime(conv.last_message_time)}
-                            </span>
-                          </div>
-                          <p className={`text-sm truncate ${conv.unread_count > 0 ? 'text-foreground font-medium' : 'text-muted-foreground'}`}>
-                            {conv.last_message || 'No messages yet'}
-                          </p>
-                          <div className="flex items-center gap-2 mt-1">
-                            {conv.unread_count > 0 && (
-                              <Badge className="h-5 px-1.5 text-xs bg-primary">
-                                {conv.unread_count}
-                              </Badge>
-                            )}
-                            <span className="text-xs text-muted-foreground">{conv.client_phone}</span>
-                          </div>
-                        </div>
-                        
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="shrink-0"
-                          onClick={(e) => handleToggleStar(conv.client_id, e)}
+                    {sortedClients.map((client) => {
+                      const stageInfo = getStageInfo(client.pipeline_stage);
+                      const isSelected = selectedClient?.id === client.id;
+                      
+                      return (
+                        <div
+                          key={client.id}
+                          className={`p-4 cursor-pointer transition-all hover:bg-muted/50 ${
+                            isSelected ? 'bg-primary/5 border-l-2 border-l-primary' : ''
+                          }`}
+                          onClick={() => handleSelectClient(client)}
+                          data-testid={`inbox-client-${client.id}`}
                         >
-                          <Star className={`h-4 w-4 ${conv.is_starred ? 'fill-yellow-400 text-yellow-400' : 'text-muted-foreground'}`} />
-                        </Button>
-                      </div>
-                    ))}
+                          <div className="flex items-start gap-3">
+                            <div className="h-10 w-10 rounded-full bg-gradient-to-br from-primary/20 to-primary/10 flex items-center justify-center shrink-0">
+                              <User className="h-5 w-5 text-primary" />
+                            </div>
+                            
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center justify-between mb-1">
+                                <span className="font-medium truncate">{client.name}</span>
+                                {client.balance > 0 && (
+                                  <Badge variant="outline" className="text-xs ml-2 shrink-0">
+                                    ${client.balance.toLocaleString()}
+                                  </Badge>
+                                )}
+                              </div>
+                              <p className="text-sm text-muted-foreground truncate mb-2">
+                                {client.phone}
+                              </p>
+                              <Badge className={`text-xs ${stageInfo.color}`}>
+                                {stageInfo.label}
+                              </Badge>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
                   </div>
                 )}
               </ScrollArea>
             </CardContent>
           </Card>
 
-          {/* Message View */}
+          {/* Right Panel - Conversation View */}
           <Card className="flex-1 flex flex-col min-w-0">
-            {selectedConversation ? (
+            {selectedClient ? (
               <>
                 {/* Conversation Header */}
-                <CardHeader className="border-b pb-4">
+                <CardHeader className="border-b pb-4 shrink-0">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
-                      <Button variant="ghost" size="icon" className="lg:hidden" onClick={() => setSelectedConversation(null)}>
+                      <Button 
+                        variant="ghost" 
+                        size="icon" 
+                        className="md:hidden" 
+                        onClick={() => setSelectedClient(null)}
+                      >
                         <ArrowLeft className="h-5 w-5" />
                       </Button>
-                      <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center">
+                      <div className="h-12 w-12 rounded-full bg-gradient-to-br from-primary/20 to-primary/10 flex items-center justify-center">
                         <User className="h-6 w-6 text-primary" />
                       </div>
                       <div>
-                        <h2 className="font-semibold text-lg">{selectedConversation.client_name}</h2>
+                        <h2 className="font-semibold text-lg">{selectedClient.name}</h2>
                         <p className="text-sm text-muted-foreground flex items-center gap-2">
                           <Phone className="h-3 w-3" />
-                          {selectedConversation.client_phone}
+                          {selectedClient.phone}
+                          {selectedClient.company && (
+                            <span className="ml-2">• {selectedClient.company}</span>
+                          )}
                         </p>
                       </div>
                     </div>
                     <div className="flex items-center gap-2">
-                      <Button 
-                        variant="outline" 
-                        size="sm"
-                        onClick={() => navigate(`/clients/${selectedConversation.client_id}`)}
-                      >
-                        View Profile
-                        <ChevronRight className="h-4 w-4 ml-1" />
-                      </Button>
+                      <Badge className={getStageInfo(selectedClient.pipeline_stage).color}>
+                        {getStageInfo(selectedClient.pipeline_stage).label}
+                      </Badge>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="icon">
+                            <MoreVertical className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem onClick={() => navigate(`/clients/${selectedClient.id}`)}>
+                            <ExternalLink className="h-4 w-4 mr-2" />
+                            View Full Profile
+                          </DropdownMenuItem>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem onClick={() => navigate(`/pipeline`)}>
+                            <Sparkles className="h-4 w-4 mr-2" />
+                            Open Pipeline
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                     </div>
                   </div>
+
+                  {/* Conversation Chains */}
+                  {conversationChains.length > 0 && (
+                    <div className="flex items-center gap-2 mt-4 pt-4 border-t overflow-x-auto">
+                      <span className="text-xs text-muted-foreground whitespace-nowrap">From:</span>
+                      {conversationChains.map((chain) => (
+                        <Button
+                          key={chain.from_number}
+                          variant={activeChain === chain.from_number ? "default" : "outline"}
+                          size="sm"
+                          className="whitespace-nowrap h-8"
+                          onClick={() => handleChainSelect(chain.from_number)}
+                          data-testid={`chain-${chain.from_number}`}
+                        >
+                          <Smartphone className="h-3 w-3 mr-1" />
+                          {chain.display_name}
+                          {chain.message_count > 0 && (
+                            <Badge variant="secondary" className="ml-2 h-5 px-1.5 text-xs">
+                              {chain.message_count}
+                            </Badge>
+                          )}
+                        </Button>
+                      ))}
+                    </div>
+                  )}
                 </CardHeader>
 
                 {/* Messages */}
@@ -385,30 +423,40 @@ const Inbox = () => {
                     <div className="flex items-center justify-center h-full text-muted-foreground">
                       <div className="text-center">
                         <MessageSquare className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                        <p>No messages yet</p>
+                        <p className="font-medium">No messages yet</p>
                         <p className="text-sm">Send a message to start the conversation</p>
                       </div>
                     </div>
                   ) : (
-                    <div className="space-y-4">
+                    <div className="space-y-4 pb-4">
                       {messages.map((msg, index) => (
                         <div
                           key={index}
                           className={`flex ${msg.direction === 'outbound' ? 'justify-end' : 'justify-start'}`}
                         >
-                          <div className={`max-w-[70%] ${msg.direction === 'outbound' ? 'order-2' : 'order-1'}`}>
-                            <div className={`rounded-2xl px-4 py-2 ${
+                          <div className={`max-w-[75%] ${msg.direction === 'outbound' ? 'order-2' : 'order-1'}`}>
+                            {/* Campaign badge for outbound */}
+                            {msg.direction === 'outbound' && msg.campaign_name && (
+                              <div className="flex justify-end mb-1">
+                                <Badge variant="secondary" className="text-[10px] px-2 py-0.5">
+                                  <Zap className="h-3 w-3 mr-1" />
+                                  {msg.campaign_name}
+                                </Badge>
+                              </div>
+                            )}
+                            
+                            <div className={`rounded-2xl px-4 py-3 ${
                               msg.direction === 'outbound' 
                                 ? 'bg-primary text-white rounded-br-md' 
                                 : 'bg-muted rounded-bl-md'
                             }`}>
-                              <p className="text-sm">{msg.content}</p>
+                              <p className="text-sm whitespace-pre-wrap">{msg.content}</p>
                             </div>
                             <div className={`flex items-center gap-1 mt-1 text-xs text-muted-foreground ${
                               msg.direction === 'outbound' ? 'justify-end' : 'justify-start'
                             }`}>
                               <Clock className="h-3 w-3" />
-                              {new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                              {formatTime(msg.timestamp)}
                               {msg.direction === 'outbound' && (
                                 <CheckCheck className="h-3 w-3 ml-1 text-blue-500" />
                               )}
@@ -416,12 +464,34 @@ const Inbox = () => {
                           </div>
                         </div>
                       ))}
+                      <div ref={messagesEndRef} />
                     </div>
                   )}
                 </ScrollArea>
 
                 {/* Reply Input */}
-                <div className="p-4 border-t">
+                <div className="p-4 border-t shrink-0 space-y-3">
+                  {/* Quick Templates */}
+                  {templates.length > 0 && (
+                    <div className="flex gap-2 overflow-x-auto pb-2">
+                      {templates.slice(0, 4).map((template) => (
+                        <Button
+                          key={template.id}
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleSendTemplate(template)}
+                          disabled={sending}
+                          className="whitespace-nowrap shrink-0"
+                          data-testid={`quick-template-${template.id}`}
+                        >
+                          <Zap className="h-3 w-3 mr-1" />
+                          {template.name}
+                        </Button>
+                      ))}
+                    </div>
+                  )}
+                  
+                  {/* Message Input */}
                   <div className="flex gap-2">
                     <Textarea
                       placeholder="Type your message..."
@@ -434,27 +504,34 @@ const Inbox = () => {
                           handleSendReply();
                         }
                       }}
-                      data-testid="reply-input"
+                      data-testid="inbox-reply-input"
                     />
-                    <div className="flex flex-col gap-2">
-                      <Button
-                        onClick={handleSendReply}
-                        disabled={sending || !replyText.trim()}
-                        className="h-full"
-                        data-testid="send-reply-btn"
-                      >
-                        <Send className="h-4 w-4" />
-                      </Button>
-                    </div>
+                    <Button
+                      onClick={handleSendReply}
+                      disabled={sending || !replyText.trim()}
+                      className="h-auto px-6"
+                      data-testid="inbox-send-btn"
+                    >
+                      <Send className="h-4 w-4" />
+                    </Button>
+                  </div>
+                  
+                  {/* Current number indicator */}
+                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                    <Smartphone className="h-3 w-3" />
+                    <span>Sending from:</span>
+                    <span className="font-medium">
+                      {conversationChains.find(c => c.from_number === activeChain)?.display_name || 'Default Number'}
+                    </span>
                   </div>
                 </div>
               </>
             ) : (
               <div className="flex-1 flex items-center justify-center text-muted-foreground">
                 <div className="text-center">
-                  <InboxIcon className="h-16 w-16 mx-auto mb-4 opacity-50" />
-                  <p className="text-lg font-medium">Select a conversation</p>
-                  <p className="text-sm">Choose a conversation from the list to view messages</p>
+                  <InboxIcon className="h-16 w-16 mx-auto mb-4 opacity-30" />
+                  <p className="text-lg font-medium mb-2">Select a conversation</p>
+                  <p className="text-sm">Choose a client from the list to view messages</p>
                 </div>
               </div>
             )}
