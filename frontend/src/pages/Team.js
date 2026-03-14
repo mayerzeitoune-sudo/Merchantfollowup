@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import DashboardLayout from '../components/DashboardLayout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
 import { Button } from '../components/ui/button';
@@ -10,6 +11,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs';
 import { Textarea } from '../components/ui/textarea';
+import { Switch } from '../components/ui/switch';
 import { 
   Users, 
   UserPlus,
@@ -28,7 +30,11 @@ import {
   FileSpreadsheet,
   Download,
   Key,
-  RefreshCw
+  RefreshCw,
+  Archive,
+  RotateCcw,
+  History,
+  Eye
 } from 'lucide-react';
 import { teamApi } from '../lib/api';
 import { toast } from 'sonner';
