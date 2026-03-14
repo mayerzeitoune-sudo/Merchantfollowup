@@ -216,11 +216,19 @@ const NotificationBell = () => {
                       }`}
                       onClick={() => {
                         handleMarkNotificationRead(notification.id);
+                        // Navigate based on notification type or link
                         if (notification.link) {
                           navigate(notification.link);
                           setOpen(false);
+                        } else if (notification.client_id) {
+                          navigate(`/clients/${notification.client_id}`);
+                          setOpen(false);
+                        } else if (notification.type === 'message' && notification.data?.client_id) {
+                          navigate(`/clients/${notification.data.client_id}`);
+                          setOpen(false);
                         }
                       }}
+                      data-testid={`notification-${notification.id}`}
                     >
                       <div className={`w-2 h-2 rounded-full mt-2 ${getTypeColor(notification.type)}`} />
                       <div className="flex-1 min-w-0">
@@ -232,7 +240,7 @@ const NotificationBell = () => {
                           {new Date(notification.created_at).toLocaleString()}
                         </p>
                       </div>
-                      {notification.link && (
+                      {(notification.link || notification.client_id) && (
                         <ExternalLink className="h-4 w-4 text-muted-foreground" />
                       )}
                     </div>
