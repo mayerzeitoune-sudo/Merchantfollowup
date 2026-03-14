@@ -806,6 +806,60 @@ async def get_me(current_user: dict = Depends(get_current_user)):
         raise HTTPException(status_code=404, detail="User not found")
     return user
 
+# ============== PROFILE ROUTES ==============
+
+class ProfileUpdate(BaseModel):
+    name: Optional[str] = None
+    phone: Optional[str] = None
+
+class PasswordChange(BaseModel):
+    current_password: str
+    new_password: str
+
+@api_router.put("/profile")
+async def update_profile(data: ProfileUpdate, current_user: dict = Depends(get_current_user)):
+    """Update user's profile"""
+    update_data = {}
+    if data.name:
+        update_data["name"] = data.name
+    if data.phone:
+        update_data["phone"] = data.phone
+    
+    if not update_data:
+        return {"message": "No changes to update"}
+    
+    update_data["updated_at"] = datetime.now(timezone.utc).isoformat()
+    
+    await db.users.update_one(
+        {"id": current_user["user_id"]},
+        {"$set": update_data}
+    )
+    
+    return {"message": "Profile updated successfully"}
+
+@api_router.post("/profile/change-password")
+async def change_password(data: PasswordChange, current_user: dict = Depends(get_current_user)):
+    """Change user's own password"""
+    user = await db.users.find_one({"id": current_user["user_id"]})
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    if not verify_password(data.current_password, user["password"]):
+        raise HTTPException(status_code=400, detail="Current password is incorrect")
+    
+    if len(data.new_password) < 6:
+        raise HTTPException(status_code=400, detail="New password must be at least 6 characters")
+    
+    await db.users.update_one(
+        {"id": current_user["user_id"]},
+        {"$set": {
+            "password": hash_password(data.new_password),
+            "updated_at": datetime.now(timezone.utc).isoformat()
+        }}
+    )
+    
+    return {"message": "Password changed successfully"}
+
 # ============== CLIENT ROUTES ==============
 
 @api_router.post("/clients", response_model=ClientResponse)
