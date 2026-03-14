@@ -69,6 +69,12 @@ const Team = () => {
   const [deleteMemberOpen, setDeleteMemberOpen] = useState(false);
   const [memberToDelete, setMemberToDelete] = useState(null);
   
+  // Archive member state
+  const [archiveMemberOpen, setArchiveMemberOpen] = useState(false);
+  const [memberToArchive, setMemberToArchive] = useState(null);
+  const [showArchived, setShowArchived] = useState(false);
+  const [archivedMembers, setArchivedMembers] = useState([]);
+  
   // Team Leader assignment state
   const [assignAgentOpen, setAssignAgentOpen] = useState(false);
   const [selectedLeader, setSelectedLeader] = useState(null);
