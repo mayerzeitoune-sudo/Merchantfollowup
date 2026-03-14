@@ -36,6 +36,7 @@ import Organizations from "./pages/Organizations";
 import MyTeam from "./pages/MyTeam";
 import ActivityLog from "./pages/ActivityLog";
 import AgentClients from "./pages/AgentClients";
+import Profile from "./pages/Profile";
 
 // Protected Route Component
 const ProtectedRoute = ({ children }) => {
@@ -122,6 +123,7 @@ function AppRoutes() {
       <Route path="/my-team" element={<ProtectedRoute><MyTeam /></ProtectedRoute>} />
       <Route path="/team/agent/:agentId/clients" element={<ProtectedRoute><AgentClients /></ProtectedRoute>} />
       <Route path="/activity" element={<ProtectedRoute><ActivityLog /></ProtectedRoute>} />
+      <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
       
       {/* Default redirect */}
       <Route path="*" element={<Navigate to="/" replace />} />
