@@ -879,10 +879,26 @@ const Team = () => {
                             <Button 
                               variant="outline" 
                               size="sm"
+                              onClick={() => navigate(`/users/${member.id}/history`)}
+                              title="View History"
+                            >
+                              <History className="h-4 w-4" />
+                            </Button>
+                            <Button 
+                              variant="outline" 
+                              size="sm"
                               onClick={() => openResetPassword(member)}
                               title="Reset Password"
                             >
                               <Key className="h-4 w-4" />
+                            </Button>
+                            <Button 
+                              variant="outline" 
+                              size="sm"
+                              onClick={() => openArchiveMember(member)}
+                              title="Archive Member"
+                            >
+                              <Archive className="h-4 w-4" />
                             </Button>
                             <Button 
                               variant="ghost" 
