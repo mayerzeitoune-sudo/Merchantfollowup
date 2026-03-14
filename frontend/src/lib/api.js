@@ -315,7 +315,12 @@ export const organizationsApi = {
   getUsers: (token, orgId) => axios.get(`${API}/organizations/${orgId}/users`, { params: { authorization: `Bearer ${token}` } }),
   addUser: (token, orgId, data) => axios.post(`${API}/organizations/${orgId}/users`, data, { params: { authorization: `Bearer ${token}` } }),
   removeUser: (token, orgId, userId) => axios.delete(`${API}/organizations/${orgId}/users/${userId}`, { params: { authorization: `Bearer ${token}` } }),
-  getStats: (token) => axios.get(`${API}/organizations/stats/overview`, { params: { authorization: `Bearer ${token}` } })
+  getStats: (token) => axios.get(`${API}/organizations/stats/overview`, { params: { authorization: `Bearer ${token}` } }),
+  getUnassignedUsers: (token) => axios.get(`${API}/organizations/unassigned/users`, { params: { authorization: `Bearer ${token}` } }),
+  getUnassignedClients: (token) => axios.get(`${API}/organizations/unassigned/clients`, { params: { authorization: `Bearer ${token}` } }),
+  getAllUsers: (token) => axios.get(`${API}/organizations/all/users`, { params: { authorization: `Bearer ${token}` } }),
+  assignUser: (token, userId, orgId) => axios.post(`${API}/organizations/assign/user`, { user_id: userId, organization_id: orgId }, { params: { authorization: `Bearer ${token}` } }),
+  assignClient: (token, clientId, orgId) => axios.post(`${API}/organizations/assign/client`, { client_id: clientId, organization_id: orgId }, { params: { authorization: `Bearer ${token}` } })
 };
 
 // Global Search API
