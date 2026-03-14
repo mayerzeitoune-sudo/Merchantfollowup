@@ -157,6 +157,82 @@ const Organizations = () => {
     }
   };
 
+  // Fetch unassigned users
+  const fetchUnassignedUsers = async () => {
+    try {
+      const res = await organizationsApi.getUnassignedUsers(token);
+      setUnassignedUsers(res.data || []);
+    } catch (error) {
+      console.error('Failed to fetch unassigned users:', error);
+      toast.error('Failed to load unassigned users');
+    }
+  };
+
+  // Fetch unassigned clients
+  const fetchUnassignedClients = async () => {
+    try {
+      const res = await organizationsApi.getUnassignedClients(token);
+      setUnassignedClients(res.data || []);
+    } catch (error) {
+      console.error('Failed to fetch unassigned clients:', error);
+      toast.error('Failed to load unassigned clients');
+    }
+  };
+
+  // Fetch all users in orgs
+  const fetchAllOrgUsers = async () => {
+    try {
+      const res = await organizationsApi.getAllUsers(token);
+      setAllOrgUsers(res.data || []);
+    } catch (error) {
+      console.error('Failed to fetch org users:', error);
+    }
+  };
+
+  // Assign user to organization
+  const handleAssignUser = async (userId, orgId) => {
+    try {
+      await organizationsApi.assignUser(token, userId, orgId);
+      toast.success('User assigned to organization');
+      setAssigningUser(null);
+      fetchUnassignedUsers();
+      fetchData();
+    } catch (error) {
+      toast.error(error.response?.data?.detail || 'Failed to assign user');
+    }
+  };
+
+  // Assign client to organization
+  const handleAssignClient = async (clientId, orgId) => {
+    try {
+      await organizationsApi.assignClient(token, clientId, orgId);
+      toast.success('Client assigned to organization');
+      setAssigningClient(null);
+      fetchUnassignedClients();
+      fetchData();
+    } catch (error) {
+      toast.error(error.response?.data?.detail || 'Failed to assign client');
+    }
+  };
+
+  // Open unassigned users dialog
+  const openUnassignedUsersDialog = () => {
+    fetchUnassignedUsers();
+    setUnassignedUsersDialog(true);
+  };
+
+  // Open unassigned clients dialog
+  const openUnassignedClientsDialog = () => {
+    fetchUnassignedClients();
+    setUnassignedClientsDialog(true);
+  };
+
+  // Open all users dialog
+  const openAllUsersDialog = () => {
+    fetchAllOrgUsers();
+    setAllUsersDialog(true);
+  };
+
   // Only org_admin can access this page
   if (user?.role !== 'org_admin') {
     return (
