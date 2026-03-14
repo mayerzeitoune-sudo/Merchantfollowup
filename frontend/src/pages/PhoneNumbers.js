@@ -4,10 +4,12 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../co
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '../components/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '../components/ui/dialog';
 import { Badge } from '../components/ui/badge';
 import { Checkbox } from '../components/ui/checkbox';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '../components/ui/alert-dialog';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
+import { ScrollArea } from '../components/ui/scroll-area';
 import { 
   Plus, 
   Search, 
@@ -16,10 +18,66 @@ import {
   ShoppingCart,
   CheckCircle,
   AlertCircle,
-  Star
+  Star,
+  MapPin
 } from 'lucide-react';
 import { phoneNumbersApi } from '../lib/api';
 import { toast } from 'sonner';
+
+// US State to Area Codes mapping
+const STATE_AREA_CODES = {
+  'Alabama': ['205', '251', '256', '334', '938'],
+  'Alaska': ['907'],
+  'Arizona': ['480', '520', '602', '623', '928'],
+  'Arkansas': ['479', '501', '870'],
+  'California': ['209', '213', '310', '323', '408', '415', '424', '510', '530', '559', '562', '619', '626', '650', '657', '661', '669', '707', '714', '747', '760', '805', '818', '831', '858', '909', '916', '925', '949', '951'],
+  'Colorado': ['303', '719', '720', '970'],
+  'Connecticut': ['203', '475', '860', '959'],
+  'Delaware': ['302'],
+  'Florida': ['239', '305', '321', '352', '386', '407', '561', '727', '754', '772', '786', '813', '850', '863', '904', '941', '954'],
+  'Georgia': ['229', '404', '470', '478', '678', '706', '762', '770', '912'],
+  'Hawaii': ['808'],
+  'Idaho': ['208', '986'],
+  'Illinois': ['217', '224', '309', '312', '331', '618', '630', '708', '773', '779', '815', '847', '872'],
+  'Indiana': ['219', '260', '317', '463', '574', '765', '812', '930'],
+  'Iowa': ['319', '515', '563', '641', '712'],
+  'Kansas': ['316', '620', '785', '913'],
+  'Kentucky': ['270', '364', '502', '606', '859'],
+  'Louisiana': ['225', '318', '337', '504', '985'],
+  'Maine': ['207'],
+  'Maryland': ['240', '301', '410', '443', '667'],
+  'Massachusetts': ['339', '351', '413', '508', '617', '774', '781', '857', '978'],
+  'Michigan': ['231', '248', '269', '313', '517', '586', '616', '734', '810', '906', '947', '989'],
+  'Minnesota': ['218', '320', '507', '612', '651', '763', '952'],
+  'Mississippi': ['228', '601', '662', '769'],
+  'Missouri': ['314', '417', '573', '636', '660', '816'],
+  'Montana': ['406'],
+  'Nebraska': ['308', '402', '531'],
+  'Nevada': ['702', '725', '775'],
+  'New Hampshire': ['603'],
+  'New Jersey': ['201', '551', '609', '732', '848', '856', '862', '908', '973'],
+  'New Mexico': ['505', '575'],
+  'New York': ['212', '315', '332', '347', '516', '518', '585', '607', '631', '646', '680', '716', '718', '845', '914', '917', '929', '934'],
+  'North Carolina': ['252', '336', '704', '743', '828', '910', '919', '980', '984'],
+  'North Dakota': ['701'],
+  'Ohio': ['216', '220', '234', '330', '380', '419', '440', '513', '567', '614', '740', '937'],
+  'Oklahoma': ['405', '539', '580', '918'],
+  'Oregon': ['458', '503', '541', '971'],
+  'Pennsylvania': ['215', '223', '267', '272', '412', '484', '570', '610', '717', '724', '814', '878'],
+  'Rhode Island': ['401'],
+  'South Carolina': ['803', '843', '854', '864'],
+  'South Dakota': ['605'],
+  'Tennessee': ['423', '615', '629', '731', '865', '901', '931'],
+  'Texas': ['210', '214', '254', '281', '325', '346', '361', '409', '430', '432', '469', '512', '682', '713', '726', '737', '806', '817', '830', '832', '903', '915', '936', '940', '956', '972', '979'],
+  'Utah': ['385', '435', '801'],
+  'Vermont': ['802'],
+  'Virginia': ['276', '434', '540', '571', '703', '757', '804'],
+  'Washington': ['206', '253', '360', '425', '509', '564'],
+  'West Virginia': ['304', '681'],
+  'Wisconsin': ['262', '414', '534', '608', '715', '920'],
+  'Wyoming': ['307'],
+  'Washington DC': ['202']
+};
 
 const PhoneNumbers = () => {
   const [ownedNumbers, setOwnedNumbers] = useState([]);
@@ -27,6 +85,7 @@ const PhoneNumbers = () => {
   const [loading, setLoading] = useState(true);
   const [searching, setSearching] = useState(false);
   const [areaCode, setAreaCode] = useState('');
+  const [selectedState, setSelectedState] = useState('');
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [providerConfigured, setProviderConfigured] = useState(false);
   const [selectedNumbers, setSelectedNumbers] = useState([]);
@@ -39,11 +98,21 @@ const PhoneNumbers = () => {
     fetchOwnedNumbers();
   }, []);
 
+  // When state is selected, show the area codes for that state
+  const handleStateChange = (state) => {
+    setSelectedState(state);
+    const codes = STATE_AREA_CODES[state];
+    if (codes && codes.length === 1) {
+      setAreaCode(codes[0]);
+    } else {
+      setAreaCode('');
+    }
+  };
+
   const fetchOwnedNumbers = async () => {
     try {
       const response = await phoneNumbersApi.getOwned();
       setOwnedNumbers(response.data);
-      // Find and set default number
       const defaultNum = response.data.find(n => n.is_default);
       setDefaultNumber(defaultNum?.id || (response.data.length > 0 ? response.data[0].id : null));
     } catch (error) {
@@ -57,7 +126,6 @@ const PhoneNumbers = () => {
     try {
       await phoneNumbersApi.setDefault(numberId);
       setDefaultNumber(numberId);
-      // Update local state
       setOwnedNumbers(prev => prev.map(n => ({
         ...n,
         is_default: n.id === numberId
@@ -142,6 +210,9 @@ const PhoneNumbers = () => {
     }
   };
 
+  // Get area codes for selected state
+  const stateAreaCodes = selectedState ? STATE_AREA_CODES[selectedState] || [] : [];
+
   return (
     <DashboardLayout>
       <div className="space-y-6" data-testid="phone-numbers-page">
@@ -161,25 +232,80 @@ const PhoneNumbers = () => {
               Buy New Phone Numbers
             </CardTitle>
             <CardDescription>
-              Search for available phone numbers by area code
+              Search by state or enter an area code directly
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="flex gap-4 items-end">
-              <div className="flex-1 max-w-xs space-y-2">
-                <Label>Area Code</Label>
-                <Input
-                  placeholder="e.g., 415, 212, 310"
-                  value={areaCode}
-                  onChange={(e) => setAreaCode(e.target.value.replace(/\D/g, '').slice(0, 3))}
-                  maxLength={3}
-                  data-testid="area-code-input"
-                />
+            <div className="space-y-4">
+              {/* State Selection */}
+              <div className="flex flex-col sm:flex-row gap-4">
+                <div className="flex-1 space-y-2">
+                  <Label className="flex items-center gap-2">
+                    <MapPin className="h-4 w-4" />
+                    Search by State
+                  </Label>
+                  <Select value={selectedState} onValueChange={handleStateChange}>
+                    <SelectTrigger data-testid="state-select">
+                      <SelectValue placeholder="Select a state..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <ScrollArea className="h-64">
+                        {Object.keys(STATE_AREA_CODES).sort().map(state => (
+                          <SelectItem key={state} value={state}>
+                            {state}
+                          </SelectItem>
+                        ))}
+                      </ScrollArea>
+                    </SelectContent>
+                  </Select>
+                </div>
+                
+                {/* Area Code Selection (when state is selected) */}
+                {selectedState && stateAreaCodes.length > 1 && (
+                  <div className="flex-1 space-y-2">
+                    <Label>Select Area Code</Label>
+                    <Select value={areaCode} onValueChange={setAreaCode}>
+                      <SelectTrigger data-testid="area-code-select">
+                        <SelectValue placeholder="Select area code..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {stateAreaCodes.map(code => (
+                          <SelectItem key={code} value={code}>
+                            {code}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
               </div>
-              <Button onClick={handleSearch} disabled={searching} data-testid="search-numbers-btn">
-                <Search className="h-4 w-4 mr-2" />
-                {searching ? 'Searching...' : 'Search Available'}
-              </Button>
+
+              {/* Or enter manually */}
+              <div className="flex items-center gap-4">
+                <div className="flex-1 border-t border-muted" />
+                <span className="text-xs text-muted-foreground">or enter manually</span>
+                <div className="flex-1 border-t border-muted" />
+              </div>
+
+              <div className="flex gap-4 items-end">
+                <div className="flex-1 max-w-xs space-y-2">
+                  <Label>Area Code</Label>
+                  <Input
+                    placeholder="e.g., 415, 212, 310"
+                    value={areaCode}
+                    onChange={(e) => {
+                      setAreaCode(e.target.value.replace(/\D/g, '').slice(0, 3));
+                      setSelectedState('');
+                    }}
+                    maxLength={3}
+                    data-testid="area-code-input"
+                  />
+                </div>
+                <Button onClick={handleSearch} disabled={searching} data-testid="search-numbers-btn">
+                  <Search className="h-4 w-4 mr-2" />
+                  {searching ? 'Searching...' : 'Search Available'}
+                </Button>
+              </div>
             </div>
           </CardContent>
         </Card>
@@ -190,7 +316,8 @@ const PhoneNumbers = () => {
             <DialogHeader>
               <DialogTitle className="font-['Outfit']">Available Phone Numbers</DialogTitle>
               <DialogDescription>
-                Select a number to add to your account
+                {selectedState && `Numbers in ${selectedState} (${areaCode})`}
+                {!selectedState && `Numbers with area code ${areaCode}`}
               </DialogDescription>
             </DialogHeader>
             
