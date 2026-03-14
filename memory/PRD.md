@@ -4,63 +4,56 @@
 
 ### ✅ COMPLETED (This Session)
 
-1. **Notifications Now Clickable**
-   - Notifications navigate to related client when clicked
-   - Messages in notification bell navigate to client profile
-   - Added `data-testid` for testing
+#### Archive Users Feature
+- **Archive button** on each team member card
+- **Archived tab** on Team page shows all archived members
+- **Restore button** to bring back archived users
+- **Soft delete** - users are deactivated, not permanently deleted
+- Archived users cannot log in
+- Activity logged when archiving/restoring users
 
-2. **Team Delete Button Fixed**
-   - Replaced `confirm()` with proper AlertDialog component
-   - Delete confirmation shows member name
-   - Delete button now works reliably across all browsers
+#### User History Page (`/users/:userId/history`)
+- View complete activity history for any user
+- **User Info Card**: Name, email, role badge, join date
+- **Stats**: Clients count, messages count, deals count
+- **Activity Log Tab**: All actions performed by the user
+- **Login History Tab**: Login sessions with timestamps
+- History button added to team member cards
 
-3. **Phone Numbers - State Search Feature**
-   - New "Search by State" dropdown with all 50 US states + DC
-   - Automatically shows area codes for selected state
-   - Can select specific area code when state has multiple
-   - Manual area code entry still available
-
-4. **Phone Dialer Improvements**
-   - Added "Contacts" tab alongside "Dialpad"
-   - Shows all contacts with search functionality
-   - Phone number input is now editable
-   - Fixed +1 formatting to not cut off last digit
-   - Properly handles 10-digit and 11-digit numbers
-
-5. **Phone Number Standardization**
-   - Client phone input auto-formats to +1 (XXX) XXX-XXXX
-   - Saves in E.164 format (+1XXXXXXXXXX)
-   - Helper text shows "Phone numbers are automatically formatted to US format"
-
-### ✅ PREVIOUSLY COMPLETED (This Session)
-- User Profile Page
-- Pipeline Fix (org_admin can update any client)
-- Bulk Delete Clients
-- Global Search Fix (min 2 chars)
-- OTP Verification Restored
-
-### API Endpoints
+### API Endpoints Added
 ```
-DELETE /api/team/members/{id} - Remove team member (with AlertDialog)
-PUT /api/profile - Update user profile
-POST /api/profile/change-password - Change own password  
-POST /api/clients/bulk-delete - Delete multiple clients
-PUT /api/clients/{id}/pipeline - Respects admin roles
+POST /api/team/members/{id}/archive - Archive a user (soft delete)
+POST /api/team/members/{id}/restore - Restore an archived user
+GET  /api/team/members/archived - Get all archived users
+GET  /api/users/{id}/history - Get user activity and login history
 ```
+
+### Previous Session Completed
+- Clickable notifications → navigate to client
+- Team delete buttons fixed with AlertDialog
+- Phone Numbers state search (all 50 US states)
+- Phone dialer with Contacts tab
+- Phone number auto-formatting (+1)
+- OTP verification restored
+- Pipeline fix (admin permissions)
+- User Profile page
+- Bulk delete clients
+- Global search fix
+
+### Technical Stack
+- **Backend**: FastAPI + MongoDB
+- **Frontend**: React + Tailwind + Shadcn/UI
+- **AI**: OpenAI GPT-5.2 via Emergent LLM Key
 
 ### Test Credentials
 - **Org Admin**: admin@merchant.com / admin123
 
-### Known MOCKED Features
-1. **Twilio Voice** - Returns mock status without credentials
-2. **A2P 10DLC Registration** - UI only, no backend
-
-### Files Modified This Session
-- `/app/frontend/src/components/PhoneDialer.js` - Contacts tab, editable input, +1 fix
-- `/app/frontend/src/pages/PhoneNumbers.js` - State search with area codes
-- `/app/frontend/src/pages/Team.js` - AlertDialog for delete
-- `/app/frontend/src/pages/Clients.js` - Phone auto-formatting
-- `/app/frontend/src/components/NotificationBell.js` - Clickable notifications
+### Files Modified/Created
+- `/app/backend/server.py` - Archive/restore/history endpoints
+- `/app/frontend/src/pages/Team.js` - Archive UI, History button
+- `/app/frontend/src/pages/UserHistory.js` - NEW user history page
+- `/app/frontend/src/lib/api.js` - Archive and history API methods
+- `/app/frontend/src/App.js` - UserHistory route
 
 ### Prioritized Backlog
 
@@ -69,8 +62,9 @@ PUT /api/clients/{id}/pipeline - Respects admin roles
 
 **P1 - Important**
 - Twilio A2P 10DLC registration
-- Real-time Notifications via WebSocket
+- Real-time notifications (WebSocket)
 
 **P2 - Nice to Have**
 - Email Inbox View
 - Auto-import leads from email
+- Login history tracking (IP, user agent)
