@@ -2862,15 +2862,17 @@ async def get_conversation(
     current_user: dict = Depends(get_current_user)
 ):
     """Get SMS conversation history with a client, optionally filtered by from_number"""
+    # Use role-based access
+    accessible_ids = await get_accessible_user_ids(current_user)
     client = await db.clients.find_one(
-        {"id": client_id, "user_id": current_user["user_id"]},
+        {"id": client_id, "user_id": {"$in": accessible_ids}},
         {"_id": 0}
     )
     if not client:
         raise HTTPException(status_code=404, detail="Client not found")
     
     # Build query - filter by from_number if specified
-    query = {"user_id": current_user["user_id"], "client_id": client_id}
+    query = {"user_id": {"$in": accessible_ids}, "client_id": client_id}
     if from_number and from_number != "default":
         query["from_number"] = from_number
     elif from_number == "default":
