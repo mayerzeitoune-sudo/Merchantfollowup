@@ -768,6 +768,26 @@ const Team = () => {
                         
                         <Badge className={getRoleColor(member.role)}>{member.role}</Badge>
                         
+                        {/* Show Assign Agents button for Team Leaders */}
+                        {isAdmin && member.role === 'team_leader' && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => openAssignAgent(member)}
+                            title="Assign Agents"
+                          >
+                            <UserPlus className="h-4 w-4 mr-1" />
+                            Agents
+                          </Button>
+                        )}
+                        
+                        {/* Show team leader badge for agents */}
+                        {member.team_leader_id && (
+                          <Badge variant="outline" className="text-xs">
+                            Team: {members.find(m => m.id === member.team_leader_id)?.name || 'Leader'}
+                          </Badge>
+                        )}
+                        
                         {isAdmin && member.id !== user?.user_id && (
                           <div className="flex items-center gap-2">
                             <Select 
