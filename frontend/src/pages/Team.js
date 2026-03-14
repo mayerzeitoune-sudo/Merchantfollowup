@@ -880,6 +880,73 @@ const Team = () => {
             </div>
           </CardContent>
         </Card>
+
+        {/* Password Reset Dialog */}
+        <Dialog open={resetPasswordOpen} onOpenChange={setResetPasswordOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <Key className="h-5 w-5" />
+                Reset Password
+              </DialogTitle>
+              <DialogDescription>
+                Reset password for {selectedMember?.name} ({selectedMember?.email})
+              </DialogDescription>
+            </DialogHeader>
+            
+            <div className="space-y-4 mt-4">
+              <div className="space-y-2">
+                <Label>New Password</Label>
+                <Input
+                  type="password"
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  placeholder="Enter new password (min 6 characters)"
+                  data-testid="reset-password-input"
+                />
+              </div>
+              
+              <div className="p-3 bg-muted rounded-lg text-sm">
+                <p className="font-medium mb-1">Options:</p>
+                <ul className="text-muted-foreground space-y-1">
+                  <li>• Set a new password directly</li>
+                  <li>• Or send a reset link via email</li>
+                </ul>
+              </div>
+            </div>
+            
+            <DialogFooter className="flex-col sm:flex-row gap-2">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  handleSendResetLink(selectedMember);
+                  setResetPasswordOpen(false);
+                }}
+                disabled={resetLoading}
+              >
+                <Mail className="h-4 w-4 mr-2" />
+                Send Reset Link
+              </Button>
+              <Button 
+                onClick={handleResetPassword}
+                disabled={resetLoading || !newPassword}
+                data-testid="confirm-reset-password"
+              >
+                {resetLoading ? (
+                  <>
+                    <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                    Resetting...
+                  </>
+                ) : (
+                  <>
+                    <Key className="h-4 w-4 mr-2" />
+                    Reset Password
+                  </>
+                )}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     </DashboardLayout>
   );
