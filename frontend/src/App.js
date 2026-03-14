@@ -38,6 +38,7 @@ import ActivityLog from "./pages/ActivityLog";
 import AgentClients from "./pages/AgentClients";
 import Profile from "./pages/Profile";
 import UserHistory from "./pages/UserHistory";
+import Inbox from "./pages/Inbox";
 
 // Protected Route Component
 const ProtectedRoute = ({ children }) => {
@@ -105,6 +106,7 @@ function AppRoutes() {
       <Route path="/campaigns" element={<ProtectedRoute><Campaigns /></ProtectedRoute>} />
       <Route path="/phone-numbers" element={<ProtectedRoute><PhoneNumbers /></ProtectedRoute>} />
       <Route path="/contacts" element={<ProtectedRoute><Contacts /></ProtectedRoute>} />
+      <Route path="/inbox" element={<ProtectedRoute><Inbox /></ProtectedRoute>} />
       <Route path="/templates" element={<ProtectedRoute><Templates /></ProtectedRoute>} />
       <Route path="/gift-store" element={<ProtectedRoute><GiftStore /></ProtectedRoute>} />
       <Route path="/domains" element={<ProtectedRoute><Domains /></ProtectedRoute>} />
