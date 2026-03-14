@@ -58,6 +58,12 @@ const Team = () => {
   const [bulkUsers, setBulkUsers] = useState([]);
   const [bulkUploading, setBulkUploading] = useState(false);
   
+  // Password reset state
+  const [resetPasswordOpen, setResetPasswordOpen] = useState(false);
+  const [selectedMember, setSelectedMember] = useState(null);
+  const [newPassword, setNewPassword] = useState('');
+  const [resetLoading, setResetLoading] = useState(false);
+  
   const [newUser, setNewUser] = useState({
     email: '',
     role: 'agent',
