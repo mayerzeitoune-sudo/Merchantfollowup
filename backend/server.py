@@ -1727,15 +1727,20 @@ async def import_csv_leads(file: UploadFile, auto_tags: str = "", current_user: 
 # ============== TEAM ROUTES ==============
 
 @api_router.get("/team/members")
-async def get_team_members(current_user: dict = Depends(get_current_user)):
+async def get_team_members(current_user: dict = Depends(get_current_user), include_archived: bool = False):
     """Get all team members"""
     # Get the team_id from current user or create one
     user = await db.users.find_one({"id": current_user["user_id"]}, {"_id": 0})
     team_id = user.get("team_id") or current_user["user_id"]
     
+    # Build query - exclude archived by default
+    query = {"$or": [{"team_id": team_id}, {"id": team_id}]}
+    if not include_archived:
+        query["$and"] = [{"$or": [{"is_archived": {"$ne": True}}, {"is_archived": {"$exists": False}}]}]
+    
     # Get all members with same team_id
     members = await db.users.find(
-        {"$or": [{"team_id": team_id}, {"id": team_id}]},
+        query,
         {"_id": 0, "hashed_password": 0, "otp": 0}
     ).to_list(100)
     
