@@ -229,6 +229,13 @@ export const notificationsApi = {
   markAllRead: () => axios.post(`${API}/notifications/read-all`)
 };
 
+// Messages API
+export const messagesApi = {
+  getUnread: () => axios.get(`${API}/messages/unread`),
+  markRead: (messageId) => axios.put(`${API}/messages/${messageId}/read`),
+  markAllRead: () => axios.put(`${API}/messages/mark-all-read`)
+};
+
 // Segments/Tags API
 export const segmentsApi = {
   getAllTags: () => axios.get(`${API}/segments/tags`),
