@@ -318,6 +318,39 @@ const Team = () => {
     }
   };
 
+  // Team Leader assignment handlers
+  const openAssignAgent = (leader) => {
+    setSelectedLeader(leader);
+    setSelectedAgentId('');
+    setAssignAgentOpen(true);
+  };
+
+  const handleAssignAgent = async () => {
+    if (!selectedAgentId) {
+      toast.error('Please select an agent');
+      return;
+    }
+    
+    try {
+      await teamApi.assignAgentToLeader(selectedLeader.id, selectedAgentId);
+      toast.success('Agent assigned to team leader');
+      setAssignAgentOpen(false);
+      fetchTeamData();
+    } catch (error) {
+      toast.error(error.response?.data?.detail || 'Failed to assign agent');
+    }
+  };
+
+  const handleRemoveAgentFromLeader = async (leaderId, agentId) => {
+    try {
+      await teamApi.removeAgentFromLeader(leaderId, agentId);
+      toast.success('Agent removed from team leader');
+      fetchTeamData();
+    } catch (error) {
+      toast.error(error.response?.data?.detail || 'Failed to remove agent');
+    }
+  };
+
   const handleCancelInvite = async (inviteId) => {
     try {
       await teamApi.cancelInvite(inviteId);
