@@ -246,7 +246,10 @@ export const teamApi = {
   createMember: (data) => axios.post(`${API}/team/create-member`, data),
   updateMemberRole: (memberId, role) => axios.put(`${API}/team/members/${memberId}/role`, null, { params: { role } }),
   removeMember: (memberId) => axios.delete(`${API}/team/members/${memberId}`),
-  cancelInvite: (inviteId) => axios.delete(`${API}/team/invites/${inviteId}`)
+  cancelInvite: (inviteId) => axios.delete(`${API}/team/invites/${inviteId}`),
+  // Password reset for admins
+  resetPassword: (memberId, newPassword) => axios.post(`${API}/team/members/${memberId}/reset-password`, { new_password: newPassword }),
+  sendResetLink: (memberId) => axios.post(`${API}/team/members/${memberId}/send-reset-link`)
 };
 
 
