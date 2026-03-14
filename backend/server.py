@@ -1995,6 +1995,139 @@ async def remove_team_member(member_id: str, current_user: dict = Depends(get_cu
     
     return {"message": "Member removed from team"}
 
+@api_router.post("/team/members/{member_id}/archive")
+async def archive_team_member(member_id: str, current_user: dict = Depends(get_current_user)):
+    """Archive a team member (soft delete)"""
+    user = await db.users.find_one({"id": current_user["user_id"]}, {"_id": 0})
+    if not is_admin_or_above(user):
+        raise HTTPException(status_code=403, detail="Only admins can archive members")
+    
+    if member_id == current_user["user_id"]:
+        raise HTTPException(status_code=400, detail="Cannot archive yourself")
+    
+    member = await db.users.find_one({"id": member_id}, {"_id": 0})
+    if not member:
+        raise HTTPException(status_code=404, detail="Member not found")
+    
+    now = datetime.now(timezone.utc).isoformat()
+    await db.users.update_one(
+        {"id": member_id},
+        {"$set": {
+            "is_archived": True,
+            "archived_at": now,
+            "archived_by": current_user["user_id"],
+            "updated_at": now
+        }}
+    )
+    
+    # Log the activity
+    await log_activity(
+        current_user["user_id"],
+        f"Archived user: {member.get('name', member.get('email'))}",
+        {"member_id": member_id},
+        "user",
+        member_id
+    )
+    
+    return {"message": f"Member {member.get('name')} archived successfully"}
+
+@api_router.post("/team/members/{member_id}/restore")
+async def restore_team_member(member_id: str, current_user: dict = Depends(get_current_user)):
+    """Restore an archived team member"""
+    user = await db.users.find_one({"id": current_user["user_id"]}, {"_id": 0})
+    if not is_admin_or_above(user):
+        raise HTTPException(status_code=403, detail="Only admins can restore members")
+    
+    member = await db.users.find_one({"id": member_id}, {"_id": 0})
+    if not member:
+        raise HTTPException(status_code=404, detail="Member not found")
+    
+    now = datetime.now(timezone.utc).isoformat()
+    await db.users.update_one(
+        {"id": member_id},
+        {"$set": {
+            "is_archived": False,
+            "restored_at": now,
+            "restored_by": current_user["user_id"],
+            "updated_at": now
+        },
+        "$unset": {"archived_at": "", "archived_by": ""}}
+    )
+    
+    # Log the activity
+    await log_activity(
+        current_user["user_id"],
+        f"Restored user: {member.get('name', member.get('email'))}",
+        {"member_id": member_id},
+        "user",
+        member_id
+    )
+    
+    return {"message": f"Member {member.get('name')} restored successfully"}
+
+@api_router.get("/team/members/archived")
+async def get_archived_members(current_user: dict = Depends(get_current_user)):
+    """Get list of archived team members"""
+    user = await db.users.find_one({"id": current_user["user_id"]}, {"_id": 0})
+    if not is_admin_or_above(user):
+        raise HTTPException(status_code=403, detail="Only admins can view archived members")
+    
+    members = await db.users.find(
+        {"is_archived": True},
+        {"_id": 0, "password": 0, "otp": 0, "reset_otp": 0}
+    ).to_list(100)
+    
+    return members
+
+@api_router.get("/users/{user_id}/history")
+async def get_user_history(user_id: str, current_user: dict = Depends(get_current_user)):
+    """Get activity history for a specific user"""
+    admin_user = await db.users.find_one({"id": current_user["user_id"]}, {"_id": 0})
+    
+    # Allow admins to view any user's history, or users to view their own
+    if not is_admin_or_above(admin_user) and user_id != current_user["user_id"]:
+        raise HTTPException(status_code=403, detail="Not authorized to view this user's history")
+    
+    # Get user details
+    user = await db.users.find_one({"id": user_id}, {"_id": 0, "password": 0, "otp": 0})
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    # Get activity logs for this user
+    activities = await db.activity_logs.find(
+        {"user_id": user_id}
+    ).sort("created_at", -1).to_list(100)
+    
+    # Remove _id from activities
+    for activity in activities:
+        if "_id" in activity:
+            del activity["_id"]
+    
+    # Get login history (if tracked)
+    login_history = await db.login_history.find(
+        {"user_id": user_id}
+    ).sort("timestamp", -1).to_list(50)
+    
+    for login in login_history:
+        if "_id" in login:
+            del login["_id"]
+    
+    # Get user stats
+    clients_count = await db.clients.count_documents({"user_id": user_id})
+    messages_count = await db.conversations.count_documents({"user_id": user_id})
+    deals_count = await db.funded_deals.count_documents({"user_id": user_id})
+    
+    return {
+        "user": user,
+        "activities": activities,
+        "login_history": login_history,
+        "stats": {
+            "clients_count": clients_count,
+            "messages_count": messages_count,
+            "deals_count": deals_count
+        }
+    }
+
 @api_router.delete("/team/invites/{invite_id}")
 async def cancel_team_invite(invite_id: str, current_user: dict = Depends(get_current_user)):
     """Cancel a pending invitation"""
