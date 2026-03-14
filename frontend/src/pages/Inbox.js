@@ -242,7 +242,8 @@ const Inbox = () => {
   const filteredClients = clients.filter(client => {
     const matchesSearch = client.name?.toLowerCase().includes(search.toLowerCase()) ||
                          client.phone?.includes(search);
-    return matchesSearch;
+    const matchesStage = stageFilter === 'all' || client.pipeline_stage === stageFilter;
+    return matchesSearch && matchesStage;
   });
 
   // Sort by most recent activity (you could enhance this with actual last message time)
