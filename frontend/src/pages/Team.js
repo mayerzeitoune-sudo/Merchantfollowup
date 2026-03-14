@@ -64,6 +64,10 @@ const Team = () => {
   const [newPassword, setNewPassword] = useState('');
   const [resetLoading, setResetLoading] = useState(false);
   
+  // Delete member state
+  const [deleteMemberOpen, setDeleteMemberOpen] = useState(false);
+  const [memberToDelete, setMemberToDelete] = useState(null);
+  
   // Team Leader assignment state
   const [assignAgentOpen, setAssignAgentOpen] = useState(false);
   const [selectedLeader, setSelectedLeader] = useState(null);
