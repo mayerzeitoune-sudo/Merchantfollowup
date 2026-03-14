@@ -64,6 +64,11 @@ const Team = () => {
   const [newPassword, setNewPassword] = useState('');
   const [resetLoading, setResetLoading] = useState(false);
   
+  // Team Leader assignment state
+  const [assignAgentOpen, setAssignAgentOpen] = useState(false);
+  const [selectedLeader, setSelectedLeader] = useState(null);
+  const [selectedAgentId, setSelectedAgentId] = useState('');
+  
   const [newUser, setNewUser] = useState({
     email: '',
     role: 'agent',
