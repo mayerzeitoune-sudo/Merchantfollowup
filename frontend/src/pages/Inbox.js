@@ -168,7 +168,7 @@ const Inbox = () => {
     
     setSending(true);
     try {
-      const fromNumber = activeChain === 'default' ? null : activeChain;
+      const fromNumber = selectedFromNumber === 'default' ? null : selectedFromNumber;
       await contactsApi.sendSms(selectedClient.id, {
         message: replyText,
         from_number: fromNumber
@@ -200,12 +200,16 @@ const Inbox = () => {
         client_balance: selectedClient.balance?.toString() || '0'
       };
       
-      const fromNumber = activeChain === 'default' ? null : activeChain;
+      const fromNumber = selectedFromNumber === 'default' ? null : selectedFromNumber;
       await templatesApi.sendToContact(selectedClient.id, template.id, variables, fromNumber);
       toast.success('Template sent!');
       
       // Refresh messages
       await fetchMessages(selectedClient.id, activeChain);
+      
+      // Refresh chains
+      const chainsRes = await contactsApi.getChains(selectedClient.id);
+      setConversationChains(chainsRes.data.chains || []);
     } catch (error) {
       toast.error('Failed to send template');
     } finally {
