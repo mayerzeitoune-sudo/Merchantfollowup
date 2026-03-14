@@ -270,15 +270,20 @@ const Team = () => {
   };
 
   const handleRemoveMember = async (memberId) => {
-    if (!confirm('Are you sure you want to remove this team member?')) return;
-    
     try {
       await teamApi.removeMember(memberId);
       toast.success('Member removed');
+      setDeleteMemberOpen(false);
+      setMemberToDelete(null);
       fetchTeamData();
     } catch (error) {
       toast.error('Failed to remove member');
     }
+  };
+  
+  const openDeleteMember = (member) => {
+    setMemberToDelete(member);
+    setDeleteMemberOpen(true);
   };
 
   // Password Reset Handlers
