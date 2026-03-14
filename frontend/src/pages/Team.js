@@ -1082,6 +1082,28 @@ const Team = () => {
             </DialogFooter>
           </DialogContent>
         </Dialog>
+
+        {/* Delete Member Confirmation */}
+        <AlertDialog open={deleteMemberOpen} onOpenChange={setDeleteMemberOpen}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Remove Team Member</AlertDialogTitle>
+              <AlertDialogDescription>
+                Are you sure you want to remove <strong>{memberToDelete?.name}</strong> from the team? 
+                They will lose access to team resources.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel onClick={() => setMemberToDelete(null)}>Cancel</AlertDialogCancel>
+              <AlertDialogAction 
+                onClick={() => handleRemoveMember(memberToDelete?.id)}
+                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              >
+                Remove Member
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
     </DashboardLayout>
   );
