@@ -116,6 +116,16 @@ const Team = () => {
       setMembers(membersRes.data || []);
       setInvites(invitesRes.data || []);
       setTeamStats(statsRes.data || null);
+      
+      // Fetch archived members for admins
+      if (user?.role === 'admin' || user?.role === 'org_admin') {
+        try {
+          const archivedRes = await teamApi.getArchivedMembers();
+          setArchivedMembers(archivedRes.data || []);
+        } catch (e) {
+          console.error('Failed to fetch archived members');
+        }
+      }
     } catch (error) {
       console.error('Failed to fetch team data:', error);
     } finally {
