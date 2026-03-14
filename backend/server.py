@@ -584,7 +584,6 @@ async def register(user: UserCreate):
     
     # Create user
     user_id = str(uuid.uuid4())
-    otp = generate_otp()
     now = datetime.now(timezone.utc).isoformat()
     
     user_doc = {
@@ -593,22 +592,29 @@ async def register(user: UserCreate):
         "password": hash_password(user.password),
         "name": user.name,
         "phone": user.phone,
-        "is_verified": False,
-        "otp": otp,
-        "otp_expires": (datetime.now(timezone.utc) + timedelta(minutes=10)).isoformat(),
+        "is_verified": True,  # Auto-verify for easier onboarding
+        "role": "admin",  # First user gets admin role
         "created_at": now,
         "updated_at": now
     }
     
     await db.users.insert_one(user_doc)
     
-    # In production, send SMS with OTP here
-    logger.info(f"OTP for {user.email}: {otp}")
+    # Auto-login after registration
+    token = create_token(user_id, user.email)
+    
+    logger.info(f"New user registered: {user.email}")
     
     return {
-        "message": "Registration successful. Please verify your account.",
-        "user_id": user_id,
-        "otp": otp  # Remove in production - just for testing
+        "message": "Registration successful!",
+        "token": token,
+        "user": {
+            "id": user_id,
+            "email": user.email,
+            "name": user.name,
+            "is_verified": True,
+            "role": "admin"
+        }
     }
 
 @api_router.post("/auth/verify", response_model=dict)
