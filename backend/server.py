@@ -839,7 +839,8 @@ async def get_available_tags(current_user: dict = Depends(get_current_user)):
 
 @api_router.get("/clients", response_model=List[ClientResponse])
 async def get_clients(tag: Optional[str] = None, current_user: dict = Depends(get_current_user)):
-    query = {"user_id": current_user["user_id"]}
+    # Build query with role-based data scoping
+    query = await build_data_query(current_user)
     if tag:
         query["tags"] = tag
     
