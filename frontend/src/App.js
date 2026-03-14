@@ -125,6 +125,7 @@ function AppRoutes() {
       <Route path="/team/agent/:agentId/clients" element={<ProtectedRoute><AgentClients /></ProtectedRoute>} />
       <Route path="/activity" element={<ProtectedRoute><ActivityLog /></ProtectedRoute>} />
       <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
+      <Route path="/users/:userId/history" element={<ProtectedRoute><UserHistory /></ProtectedRoute>} />
       
       {/* Default redirect */}
       <Route path="*" element={<Navigate to="/" replace />} />
