@@ -196,7 +196,7 @@ const DashboardLayout = ({ children }) => {
 
           {/* User Section */}
           <div className="p-4 border-t border-border sticky bottom-0 bg-white">
-            <div className="flex items-center gap-3 mb-4">
+            <Link to="/profile" className="flex items-center gap-3 mb-4 p-2 -m-2 rounded-lg hover:bg-secondary/50 transition-colors" data-testid="profile-link">
               <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
                 <span className="text-primary font-semibold">
                   {user?.name?.charAt(0)?.toUpperCase() || 'U'}
@@ -206,7 +206,7 @@ const DashboardLayout = ({ children }) => {
                 <p className="text-sm font-medium truncate">{user?.name || 'User'}</p>
                 <p className="text-xs text-muted-foreground truncate">{user?.email}</p>
               </div>
-            </div>
+            </Link>
             <Button
               variant="ghost"
               className="w-full justify-start text-muted-foreground hover:text-destructive"
