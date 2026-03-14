@@ -85,6 +85,168 @@ def require_admin_or_above(user: dict):
 
 # ============== Organization Management (Org Admin Only) ==============
 
+# IMPORTANT: Static routes MUST be defined BEFORE dynamic routes like /{org_id}
+# Otherwise FastAPI will match "/stats/overview" as org_id="stats"
+
+@router.get("/stats/overview")
+async def get_org_overview_stats(authorization: str = Query(...)):
+    """Get overview stats across all organizations (Org Admin only)"""
+    user = await get_current_user(authorization)
+    require_org_admin(user)
+    
+    total_orgs = await db.organizations.count_documents({})
+    
+    # Count only users that belong to an organization (have org_id)
+    total_users_in_orgs = await db.users.count_documents({
+        "org_id": {"$exists": True, "$ne": None},
+        "role": {"$ne": "org_admin"}
+    })
+    
+    # Count admins in organizations
+    total_admins = await db.users.count_documents({
+        "org_id": {"$exists": True, "$ne": None},
+        "role": "admin"
+    })
+    
+    # Count clients that belong to organizations
+    total_clients_in_orgs = await db.clients.count_documents({
+        "org_id": {"$exists": True, "$ne": None}
+    })
+    
+    # Also get unassigned counts for reference
+    unassigned_users = await db.users.count_documents({
+        "$or": [{"org_id": {"$exists": False}}, {"org_id": None}],
+        "role": {"$ne": "org_admin"}
+    })
+    unassigned_clients = await db.clients.count_documents({
+        "$or": [{"org_id": {"$exists": False}}, {"org_id": None}]
+    })
+    
+    return {
+        "total_organizations": total_orgs,
+        "total_users": total_users_in_orgs,
+        "total_admins": total_admins,
+        "total_clients": total_clients_in_orgs,
+        "unassigned_users": unassigned_users,
+        "unassigned_clients": unassigned_clients
+    }
+
+@router.get("/unassigned/users")
+async def get_unassigned_users(authorization: str = Query(...)):
+    """Get all users not assigned to any organization (Org Admin only)"""
+    user = await get_current_user(authorization)
+    require_org_admin(user)
+    
+    users = await db.users.find({
+        "$or": [{"org_id": {"$exists": False}}, {"org_id": None}],
+        "role": {"$ne": "org_admin"}
+    }, {"_id": 0, "password": 0}).to_list(1000)
+    
+    return users
+
+@router.get("/unassigned/clients")
+async def get_unassigned_clients(authorization: str = Query(...)):
+    """Get all clients not assigned to any organization (Org Admin only)"""
+    user = await get_current_user(authorization)
+    require_org_admin(user)
+    
+    clients = await db.clients.find({
+        "$or": [{"org_id": {"$exists": False}}, {"org_id": None}]
+    }, {"_id": 0}).to_list(1000)
+    
+    return clients
+
+@router.get("/all/users")
+async def get_all_org_users(authorization: str = Query(...)):
+    """Get all users across all organizations (Org Admin only)"""
+    user = await get_current_user(authorization)
+    require_org_admin(user)
+    
+    # Get all users with org_id
+    users = await db.users.find({
+        "org_id": {"$exists": True, "$ne": None},
+        "role": {"$ne": "org_admin"}
+    }, {"_id": 0, "password": 0}).to_list(1000)
+    
+    # Get organization names
+    org_ids = list(set(u.get("org_id") for u in users if u.get("org_id")))
+    orgs = await db.organizations.find({"id": {"$in": org_ids}}, {"_id": 0}).to_list(1000)
+    org_map = {o["id"]: o["name"] for o in orgs}
+    
+    # Add org names to users
+    for u in users:
+        u["organization_name"] = org_map.get(u.get("org_id"), "Unknown")
+    
+    return users
+
+class AssignUserRequest(BaseModel):
+    user_id: str
+    organization_id: str
+
+class AssignClientRequest(BaseModel):
+    client_id: str
+    organization_id: str
+
+@router.post("/assign/user")
+async def assign_user_to_org(data: AssignUserRequest, authorization: str = Query(...)):
+    """Assign a user to an organization (Org Admin only)"""
+    user = await get_current_user(authorization)
+    require_org_admin(user)
+    
+    # Verify organization exists
+    org = await db.organizations.find_one({"id": data.organization_id})
+    if not org:
+        raise HTTPException(status_code=404, detail="Organization not found")
+    
+    # Verify user exists
+    target_user = await db.users.find_one({"user_id": data.user_id})
+    if not target_user:
+        # Try with "id" field
+        target_user = await db.users.find_one({"id": data.user_id})
+        if not target_user:
+            raise HTTPException(status_code=404, detail="User not found")
+    
+    # Update user's org_id
+    user_id_field = "user_id" if await db.users.find_one({"user_id": data.user_id}) else "id"
+    result = await db.users.update_one(
+        {user_id_field: data.user_id},
+        {"$set": {"org_id": data.organization_id}}
+    )
+    
+    if result.modified_count == 0:
+        raise HTTPException(status_code=400, detail="Failed to assign user")
+    
+    return {"message": "User assigned to organization successfully"}
+
+@router.post("/assign/client")
+async def assign_client_to_org(data: AssignClientRequest, authorization: str = Query(...)):
+    """Assign a client to an organization (Org Admin only)"""
+    user = await get_current_user(authorization)
+    require_org_admin(user)
+    
+    # Verify organization exists
+    org = await db.organizations.find_one({"id": data.organization_id})
+    if not org:
+        raise HTTPException(status_code=404, detail="Organization not found")
+    
+    # Verify client exists
+    client = await db.clients.find_one({"id": data.client_id})
+    if not client:
+        raise HTTPException(status_code=404, detail="Client not found")
+    
+    # Update client's org_id
+    result = await db.clients.update_one(
+        {"id": data.client_id},
+        {"$set": {"org_id": data.organization_id}}
+    )
+    
+    if result.modified_count == 0:
+        raise HTTPException(status_code=400, detail="Failed to assign client")
+    
+    return {"message": "Client assigned to organization successfully"}
+
+# Now define dynamic routes AFTER static routes
+
 @router.get("")
 async def list_organizations(authorization: str = Query(...)):
     """List all organizations (Org Admin only)"""
