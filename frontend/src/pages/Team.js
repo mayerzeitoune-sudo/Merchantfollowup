@@ -1005,6 +1005,72 @@ const Team = () => {
             </DialogFooter>
           </DialogContent>
         </Dialog>
+
+        {/* Assign Agent to Team Leader Dialog */}
+        <Dialog open={assignAgentOpen} onOpenChange={setAssignAgentOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <UserPlus className="h-5 w-5" />
+                Assign Agent to {selectedLeader?.name}
+              </DialogTitle>
+              <DialogDescription>
+                Select an agent to add to this team leader's team
+              </DialogDescription>
+            </DialogHeader>
+            
+            <div className="space-y-4 mt-4">
+              <div className="space-y-2">
+                <Label>Select Agent</Label>
+                <Select value={selectedAgentId} onValueChange={setSelectedAgentId}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Choose an agent..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {members
+                      .filter(m => m.role === 'agent' && !m.team_leader_id && m.id !== selectedLeader?.id)
+                      .map((agent) => (
+                        <SelectItem key={agent.id} value={agent.id}>
+                          {agent.name} ({agent.email})
+                        </SelectItem>
+                      ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              
+              {/* Show currently assigned agents */}
+              {selectedLeader && members.filter(m => m.team_leader_id === selectedLeader.id).length > 0 && (
+                <div className="space-y-2">
+                  <Label>Currently Assigned Agents</Label>
+                  <div className="space-y-2 max-h-40 overflow-y-auto">
+                    {members
+                      .filter(m => m.team_leader_id === selectedLeader.id)
+                      .map((agent) => (
+                        <div key={agent.id} className="flex items-center justify-between p-2 rounded border">
+                          <span className="text-sm">{agent.name}</span>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleRemoveAgentFromLeader(selectedLeader.id, agent.id)}
+                          >
+                            <X className="h-4 w-4 text-destructive" />
+                          </Button>
+                        </div>
+                      ))}
+                  </div>
+                </div>
+              )}
+            </div>
+            
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setAssignAgentOpen(false)}>Cancel</Button>
+              <Button onClick={handleAssignAgent} disabled={!selectedAgentId}>
+                <UserPlus className="h-4 w-4 mr-2" />
+                Assign Agent
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     </DashboardLayout>
   );
