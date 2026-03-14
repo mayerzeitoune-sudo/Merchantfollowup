@@ -17,16 +17,24 @@ import {
   Clock,
   Send,
   FileText,
-  Activity
+  Activity,
+  Sparkles,
+  RefreshCw,
+  PhoneCall
 } from 'lucide-react';
 import { clientProfileApi } from '../lib/api';
 import { toast } from 'sonner';
+import axios from 'axios';
+
+const API = process.env.REACT_APP_BACKEND_URL;
 
 const ClientProfile = () => {
   const { clientId } = useParams();
   const navigate = useNavigate();
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [aiSummary, setAiSummary] = useState(null);
+  const [aiLoading, setAiLoading] = useState(false);
 
   useEffect(() => {
     fetchProfile();
@@ -41,6 +49,35 @@ const ClientProfile = () => {
       console.error(error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchAiSummary = async () => {
+    setAiLoading(true);
+    try {
+      const res = await clientProfileApi.getAiSummary(clientId);
+      setAiSummary(res.data);
+    } catch (error) {
+      toast.error('Failed to generate AI summary');
+      console.error(error);
+    } finally {
+      setAiLoading(false);
+    }
+  };
+
+  const handleCall = async () => {
+    if (!profile?.client?.phone) {
+      toast.error('No phone number available');
+      return;
+    }
+    try {
+      await axios.post(`${API}/calls/initiate`, {
+        to: profile.client.phone,
+        from: '+1234567890' // Default number
+      });
+      toast.success(`Calling ${profile.client.name}...`);
+    } catch (error) {
+      toast.error('Failed to initiate call');
     }
   };
 
