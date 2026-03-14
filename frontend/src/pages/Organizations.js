@@ -9,6 +9,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs';
 import { Textarea } from '../components/ui/textarea';
+import { ScrollArea } from '../components/ui/scroll-area';
 import { 
   Building2, 
   Users, 
@@ -19,7 +20,12 @@ import {
   Trash2,
   Eye,
   ChevronRight,
-  BarChart3
+  BarChart3,
+  UserX,
+  UserCheck,
+  Phone,
+  Mail,
+  Search
 } from 'lucide-react';
 import { organizationsApi } from '../lib/api';
 import { toast } from 'sonner';
