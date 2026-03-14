@@ -832,6 +832,16 @@ async def create_client(data: ClientCreate, current_user: dict = Depends(get_cur
     await db.clients.insert_one(client_doc)
     if "_id" in client_doc:
         del client_doc["_id"]
+    
+    # Log activity
+    await log_activity(
+        current_user["user_id"],
+        f"Created client: {data.name}",
+        {"phone": data.phone, "company": data.company},
+        "client",
+        client_id
+    )
+    
     return client_doc
 
 @api_router.get("/clients/tags")
