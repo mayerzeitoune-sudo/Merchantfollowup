@@ -374,13 +374,14 @@ const Clients = () => {
                       <Input
                         id="phone"
                         value={formData.phone}
-                        onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                        onChange={(e) => setFormData({ ...formData, phone: formatPhoneInput(e.target.value) })}
                         placeholder="+1 (555) 000-0000"
                         className="pl-10"
                         required
                         data-testid="client-phone-input"
                       />
                     </div>
+                    <p className="text-xs text-muted-foreground">Phone numbers are automatically formatted to US format (+1)</p>
                   </div>
                   
                   <div className="space-y-2">
