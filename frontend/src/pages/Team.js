@@ -55,6 +55,7 @@ const getRoleColor = (role) => {
 
 const Team = () => {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [members, setMembers] = useState([]);
   const [invites, setInvites] = useState([]);
   const [loading, setLoading] = useState(true);
