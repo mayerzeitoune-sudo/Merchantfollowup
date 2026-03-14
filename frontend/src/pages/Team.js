@@ -929,6 +929,69 @@ const Team = () => {
             )}
           </TabsContent>
 
+          {/* Archived Members Tab */}
+          {isAdmin && (
+            <TabsContent value="archived">
+              {archivedMembers.length === 0 ? (
+                <Card>
+                  <CardContent className="text-center py-12">
+                    <Archive className="h-12 w-12 mx-auto mb-4 text-muted-foreground/50" />
+                    <p className="text-muted-foreground">No archived members</p>
+                  </CardContent>
+                </Card>
+              ) : (
+                <div className="space-y-4">
+                  {archivedMembers.map((member) => (
+                    <Card key={member.id} className="border-dashed opacity-75">
+                      <CardContent className="py-4">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-4">
+                            <div className="h-12 w-12 rounded-full bg-gray-200 flex items-center justify-center">
+                              <span className="text-gray-500 font-semibold">
+                                {member.name?.charAt(0).toUpperCase() || 'U'}
+                              </span>
+                            </div>
+                            <div>
+                              <div className="flex items-center gap-2">
+                                <h3 className="font-semibold text-muted-foreground">{member.name}</h3>
+                                <Badge variant="destructive" className="text-xs">Archived</Badge>
+                              </div>
+                              <p className="text-sm text-muted-foreground">{member.email}</p>
+                              {member.archived_at && (
+                                <p className="text-xs text-muted-foreground mt-1">
+                                  Archived on {new Date(member.archived_at).toLocaleDateString()}
+                                </p>
+                              )}
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Button 
+                              variant="outline" 
+                              size="sm"
+                              onClick={() => navigate(`/users/${member.id}/history`)}
+                              title="View History"
+                            >
+                              <History className="h-4 w-4 mr-2" />
+                              History
+                            </Button>
+                            <Button 
+                              variant="default" 
+                              size="sm"
+                              onClick={() => handleRestoreMember(member.id)}
+                            >
+                              <RotateCcw className="h-4 w-4 mr-2" />
+                              Restore
+                            </Button>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              )}
+            </TabsContent>
+          )}
+
           {/* Pending Invites Tab */}
           {isAdmin && (
             <TabsContent value="invites">
