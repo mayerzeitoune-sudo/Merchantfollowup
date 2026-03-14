@@ -1032,6 +1032,8 @@ async def bulk_delete_clients(data: BulkDeleteRequest, current_user: dict = Depe
 @api_router.put("/clients/{client_id}/pipeline")
 async def update_client_pipeline(client_id: str, stage: str, current_user: dict = Depends(get_current_user)):
     """Update client's pipeline stage"""
+    logger.info(f"Pipeline update request: client_id={client_id}, stage={stage}, user_role={current_user.get('role')}")
+    
     valid_stages = ['new_lead', 'interested', 'application_sent', 'docs_submitted', 'approved', 'funded', 'dead', 'future']
     if stage not in valid_stages:
         raise HTTPException(status_code=400, detail=f"Invalid stage. Must be one of: {valid_stages}")
@@ -1054,8 +1056,12 @@ async def update_client_pipeline(client_id: str, stage: str, current_user: dict 
     else:
         query = {"id": client_id, "user_id": current_user["user_id"]}
     
+    logger.info(f"Pipeline query: {query}")
+    
     # Get current client to update tags
     client = await db.clients.find_one(query, {"_id": 0})
+    logger.info(f"Pipeline client found: {client is not None}")
+    
     if not client:
         raise HTTPException(status_code=404, detail="Client not found")
     
