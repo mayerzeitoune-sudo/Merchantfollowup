@@ -292,6 +292,54 @@ const Team = () => {
     setMemberToDelete(member);
     setDeleteMemberOpen(true);
   };
+  
+  // Archive handlers
+  const handleArchiveMember = async (memberId) => {
+    try {
+      await teamApi.archiveMember(memberId);
+      toast.success('Member archived successfully');
+      setArchiveMemberOpen(false);
+      setMemberToArchive(null);
+      fetchTeamData();
+      if (showArchived) {
+        fetchArchivedMembers();
+      }
+    } catch (error) {
+      toast.error('Failed to archive member');
+    }
+  };
+  
+  const handleRestoreMember = async (memberId) => {
+    try {
+      await teamApi.restoreMember(memberId);
+      toast.success('Member restored successfully');
+      fetchTeamData();
+      fetchArchivedMembers();
+    } catch (error) {
+      toast.error('Failed to restore member');
+    }
+  };
+  
+  const fetchArchivedMembers = async () => {
+    try {
+      const res = await teamApi.getArchivedMembers();
+      setArchivedMembers(res.data);
+    } catch (error) {
+      console.error('Failed to fetch archived members');
+    }
+  };
+  
+  const openArchiveMember = (member) => {
+    setMemberToArchive(member);
+    setArchiveMemberOpen(true);
+  };
+  
+  // Toggle archived view
+  useEffect(() => {
+    if (showArchived) {
+      fetchArchivedMembers();
+    }
+  }, [showArchived]);
 
   // Password Reset Handlers
   const openResetPassword = (member) => {
