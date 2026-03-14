@@ -144,7 +144,15 @@ const DashboardLayout = ({ children }) => {
 
           {/* Navigation */}
           <nav className="flex-1 p-4 space-y-1">
-            {navItems.filter(item => !item.orgAdminOnly || user?.role === 'org_admin').map((item, index) => {
+            {navItems.filter(item => {
+              // Filter org admin only items
+              if (item.orgAdminOnly && user?.role !== 'org_admin') return false;
+              // Filter admin only items
+              if (item.adminOnly && !['admin', 'org_admin'].includes(user?.role)) return false;
+              // Filter team leader only items
+              if (item.teamLeaderOnly && !['team_leader', 'admin', 'org_admin'].includes(user?.role)) return false;
+              return true;
+            }).map((item, index) => {
               if (item.divider) {
                 return (
                   <div key={index} className="pt-4 pb-2">
