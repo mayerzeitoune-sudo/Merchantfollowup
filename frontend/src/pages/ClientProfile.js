@@ -16,17 +16,15 @@ import {
   DollarSign,
   Clock,
   Send,
-  FileText,
   Activity,
   Sparkles,
   RefreshCw,
-  PhoneCall
+  PhoneCall,
+  TrendingUp,
+  AlertCircle
 } from 'lucide-react';
-import { clientProfileApi } from '../lib/api';
+import { clientsApi, clientProfileApi } from '../lib/api';
 import { toast } from 'sonner';
-import axios from 'axios';
-
-const API = process.env.REACT_APP_BACKEND_URL;
 
 const ClientProfile = () => {
   const { clientId } = useParams();
@@ -57,6 +55,7 @@ const ClientProfile = () => {
     try {
       const res = await clientProfileApi.getAiSummary(clientId);
       setAiSummary(res.data);
+      toast.success('AI summary generated');
     } catch (error) {
       toast.error('Failed to generate AI summary');
       console.error(error);
@@ -65,19 +64,16 @@ const ClientProfile = () => {
     }
   };
 
-  const handleCall = async () => {
-    if (!profile?.client?.phone) {
-      toast.error('No phone number available');
-      return;
-    }
-    try {
-      await axios.post(`${API}/calls/initiate`, {
-        to: profile.client.phone,
-        from: '+1234567890' // Default number
-      });
-      toast.success(`Calling ${profile.client.name}...`);
-    } catch (error) {
-      toast.error('Failed to initiate call');
+  const getSentimentColor = (sentiment) => {
+    switch(sentiment?.toLowerCase()) {
+      case 'positive':
+      case 'interested':
+        return 'bg-green-100 text-green-700';
+      case 'negative':
+      case 'frustrated':
+        return 'bg-red-100 text-red-700';
+      default:
+        return 'bg-gray-100 text-gray-700';
     }
   };
 
@@ -118,8 +114,9 @@ const ClientProfile = () => {
             <h1 className="text-2xl font-bold font-['Outfit']">{client.name}</h1>
             <p className="text-muted-foreground">{client.company || 'No company'}</p>
           </div>
-          <Button onClick={() => navigate(`/clients/${clientId}/edit`)}>
-            Edit Client
+          <Button variant="outline" onClick={() => navigate(`/contacts?client=${clientId}`)}>
+            <MessageSquare className="h-4 w-4 mr-2" />
+            Message
           </Button>
         </div>
 
@@ -166,6 +163,99 @@ const ClientProfile = () => {
             </CardContent>
           </Card>
         </div>
+
+        {/* AI Summary Card */}
+        <Card className="border-2 border-purple-200 bg-gradient-to-r from-purple-50 to-white">
+          <CardHeader className="pb-3">
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-lg flex items-center gap-2">
+                <Sparkles className="h-5 w-5 text-purple-600" />
+                AI Conversation Summary
+              </CardTitle>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={fetchAiSummary}
+                disabled={aiLoading}
+                className="border-purple-300"
+              >
+                {aiLoading ? (
+                  <>
+                    <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                    Analyzing...
+                  </>
+                ) : (
+                  <>
+                    <Sparkles className="h-4 w-4 mr-2" />
+                    {aiSummary ? 'Refresh' : 'Generate'}
+                  </>
+                )}
+              </Button>
+            </div>
+          </CardHeader>
+          <CardContent>
+            {!aiSummary ? (
+              <div className="text-center py-4 text-muted-foreground">
+                <Sparkles className="h-8 w-8 mx-auto mb-2 text-purple-300" />
+                <p>Click "Generate" to create an AI-powered analysis of your conversations</p>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {/* Summary */}
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground mb-1">Summary</p>
+                  <p className="text-sm">{aiSummary.summary}</p>
+                </div>
+                
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  {/* Sentiment */}
+                  <div>
+                    <p className="text-xs font-medium text-muted-foreground mb-1">Sentiment</p>
+                    <Badge className={getSentimentColor(aiSummary.sentiment)}>
+                      {aiSummary.sentiment || 'Unknown'}
+                    </Badge>
+                  </div>
+                  
+                  {/* Deal Likelihood */}
+                  {aiSummary.deal_likelihood !== undefined && (
+                    <div>
+                      <p className="text-xs font-medium text-muted-foreground mb-1">Deal Likelihood</p>
+                      <div className="flex items-center gap-2">
+                        <TrendingUp className="h-4 w-4 text-green-600" />
+                        <span className="font-semibold">{aiSummary.deal_likelihood}%</span>
+                      </div>
+                    </div>
+                  )}
+                </div>
+                
+                {/* Key Topics */}
+                {aiSummary.key_topics?.length > 0 && (
+                  <div>
+                    <p className="text-xs font-medium text-muted-foreground mb-2">Key Topics</p>
+                    <div className="flex flex-wrap gap-1">
+                      {aiSummary.key_topics.map((topic, i) => (
+                        <Badge key={i} variant="outline" className="text-xs">
+                          {topic}
+                        </Badge>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                
+                {/* Suggested Action */}
+                {aiSummary.suggested_action && (
+                  <div className="p-3 bg-orange-50 border border-orange-200 rounded-lg">
+                    <p className="text-xs font-medium text-orange-700 mb-1 flex items-center gap-1">
+                      <AlertCircle className="h-3 w-3" />
+                      Suggested Action
+                    </p>
+                    <p className="text-sm text-orange-800">{aiSummary.suggested_action}</p>
+                  </div>
+                )}
+              </div>
+            )}
+          </CardContent>
+        </Card>
 
         {/* Main Content */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -327,7 +417,7 @@ const ClientProfile = () => {
                               <span>{reminder.message}</span>
                             </div>
                             <p className="text-sm text-muted-foreground mt-1">
-                              {new Date(reminder.scheduled_date).toLocaleString()}
+                              {new Date(reminder.scheduled_date || reminder.start_date).toLocaleString()}
                             </p>
                           </div>
                         ))}
