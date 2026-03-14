@@ -1,39 +1,49 @@
 import React, { useState, useEffect } from 'react';
-import { Phone, X, Delete, User, Search, ChevronDown } from 'lucide-react';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from './ui/dialog';
+import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { Badge } from './ui/badge';
-import { clientsApi } from '../lib/api';
+import { ScrollArea } from './ui/scroll-area';
+import { 
+  Phone, 
+  PhoneCall, 
+  PhoneOff, 
+  X, 
+  Delete,
+  Search,
+  User,
+  Clock
+} from 'lucide-react';
+import { phoneNumbersApi, clientsApi, callsApi } from '../lib/api';
 import { toast } from 'sonner';
-import axios from 'axios';
-
-const API = process.env.REACT_APP_BACKEND_URL;
 
 const PhoneDialer = () => {
-  const [open, setOpen] = useState(false);
-  const [dialNumber, setDialNumber] = useState('');
+  const [isOpen, setIsOpen] = useState(false);
+  const [phoneNumber, setPhoneNumber] = useState('');
   const [selectedFromNumber, setSelectedFromNumber] = useState('');
-  const [phoneNumbers, setPhoneNumbers] = useState([]);
+  const [ownedNumbers, setOwnedNumbers] = useState([]);
   const [clients, setClients] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
-  const [calling, setCalling] = useState(false);
-  const [activeCall, setActiveCall] = useState(null);
+  const [callStatus, setCallStatus] = useState(null); // null, 'calling', 'connected', 'ended'
+  const [activeCallId, setActiveCallId] = useState(null);
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    if (open) {
-      fetchPhoneNumbers();
+    if (isOpen) {
+      fetchOwnedNumbers();
       fetchClients();
     }
-  }, [open]);
+  }, [isOpen]);
 
-  const fetchPhoneNumbers = async () => {
+  const fetchOwnedNumbers = async () => {
     try {
-      const res = await axios.get(`${API}/phone-numbers`);
-      setPhoneNumbers(res.data || []);
-      if (res.data?.length > 0) {
-        setSelectedFromNumber(res.data[0].phone_number);
+      const response = await phoneNumbersApi.getOwned();
+      setOwnedNumbers(response.data || []);
+      // Set default number
+      const defaultNum = response.data?.find(n => n.is_default) || response.data?.[0];
+      if (defaultNum) {
+        setSelectedFromNumber(defaultNum.phone_number);
       }
     } catch (error) {
       console.error('Failed to fetch phone numbers:', error);
@@ -42,242 +52,285 @@ const PhoneDialer = () => {
 
   const fetchClients = async () => {
     try {
-      const res = await clientsApi.getAll();
-      setClients(res.data || []);
+      const response = await clientsApi.getAll();
+      setClients(response.data || []);
     } catch (error) {
       console.error('Failed to fetch clients:', error);
     }
   };
 
-  const handleDigit = (digit) => {
-    setDialNumber(prev => prev + digit);
+  const handleDialPadClick = (digit) => {
+    if (phoneNumber.length < 15) {
+      setPhoneNumber(prev => prev + digit);
+    }
   };
 
   const handleBackspace = () => {
-    setDialNumber(prev => prev.slice(0, -1));
+    setPhoneNumber(prev => prev.slice(0, -1));
+  };
+
+  const handleClear = () => {
+    setPhoneNumber('');
   };
 
   const handleCall = async () => {
-    if (!dialNumber) {
-      toast.error('Please enter a number to call');
-      return;
-    }
-    if (!selectedFromNumber) {
-      toast.error('Please select a number to call from');
+    if (!phoneNumber) {
+      toast.error('Please enter a phone number');
       return;
     }
 
-    setCalling(true);
+    if (!selectedFromNumber) {
+      toast.error('Please select a "Calling From" number');
+      return;
+    }
+
+    setLoading(true);
+    setCallStatus('calling');
+
     try {
-      const res = await axios.post(`${API}/calls/initiate`, {
-        to: dialNumber,
-        from: selectedFromNumber
-      });
+      const response = await callsApi.initiate(phoneNumber, selectedFromNumber);
+      setActiveCallId(response.data.call_id);
       
-      setActiveCall({
-        to: dialNumber,
-        from: selectedFromNumber,
-        status: 'calling',
-        id: res.data?.call_id
-      });
-      
-      toast.success(`Calling ${dialNumber}...`);
+      if (response.data.status === 'mock_initiated') {
+        toast.info('Call simulated (Twilio not configured)');
+        setCallStatus('connected');
+      } else {
+        toast.success('Call initiated');
+        setCallStatus('connected');
+      }
     } catch (error) {
       toast.error(error.response?.data?.detail || 'Failed to initiate call');
+      setCallStatus(null);
     } finally {
-      setCalling(false);
+      setLoading(false);
     }
   };
 
   const handleEndCall = async () => {
-    if (activeCall?.id) {
+    if (activeCallId) {
       try {
-        await axios.post(`${API}/calls/${activeCall.id}/end`);
+        await callsApi.end(activeCallId);
+        toast.info('Call ended');
       } catch (error) {
         console.error('Failed to end call:', error);
       }
     }
-    setActiveCall(null);
-    toast.info('Call ended');
+    setCallStatus(null);
+    setActiveCallId(null);
   };
 
-  const handleQuickCall = (client) => {
-    if (client.phone) {
-      setDialNumber(client.phone);
-    }
+  const handleSelectContact = (client) => {
+    setPhoneNumber(client.phone.replace(/\D/g, ''));
+    setSearchQuery('');
   };
 
-  const filteredClients = clients.filter(client => {
-    const query = searchQuery.toLowerCase();
-    return (
-      client.name?.toLowerCase().includes(query) ||
-      client.phone?.includes(query)
-    );
-  }).slice(0, 5);
+  const filteredClients = clients.filter(client => 
+    searchQuery && (
+      client.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      client.phone.includes(searchQuery)
+    )
+  ).slice(0, 5);
 
-  const dialPad = [
-    ['1', '2', '3'],
-    ['4', '5', '6'],
-    ['7', '8', '9'],
-    ['*', '0', '#']
+  const formatPhoneDisplay = (number) => {
+    const cleaned = number.replace(/\D/g, '');
+    if (cleaned.length <= 3) return cleaned;
+    if (cleaned.length <= 6) return `(${cleaned.slice(0, 3)}) ${cleaned.slice(3)}`;
+    return `(${cleaned.slice(0, 3)}) ${cleaned.slice(3, 6)}-${cleaned.slice(6, 10)}`;
+  };
+
+  const dialPadButtons = [
+    { digit: '1', letters: '' },
+    { digit: '2', letters: 'ABC' },
+    { digit: '3', letters: 'DEF' },
+    { digit: '4', letters: 'GHI' },
+    { digit: '5', letters: 'JKL' },
+    { digit: '6', letters: 'MNO' },
+    { digit: '7', letters: 'PQRS' },
+    { digit: '8', letters: 'TUV' },
+    { digit: '9', letters: 'WXYZ' },
+    { digit: '*', letters: '' },
+    { digit: '0', letters: '+' },
+    { digit: '#', letters: '' },
   ];
 
   return (
     <>
       {/* Floating Phone Button */}
-      <button
-        onClick={() => setOpen(true)}
-        className="fixed bottom-6 right-6 h-14 w-14 rounded-full bg-green-500 hover:bg-green-600 text-white shadow-lg flex items-center justify-center z-50 transition-transform hover:scale-110"
+      <Button
+        onClick={() => setIsOpen(true)}
+        className="fixed bottom-6 right-6 h-14 w-14 rounded-full shadow-lg bg-green-600 hover:bg-green-700 z-40"
         data-testid="phone-dialer-btn"
       >
         <Phone className="h-6 w-6" />
-      </button>
+      </Button>
 
-      {/* Dialer Dialog */}
-      <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Phone className="h-5 w-5 text-green-500" />
-              Phone Dialer
-            </DialogTitle>
-          </DialogHeader>
-
-          <div className="space-y-4">
-            {/* Active Call Display */}
-            {activeCall && (
-              <div className="p-4 bg-green-50 rounded-lg border border-green-200">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="font-semibold text-green-700">Active Call</p>
-                    <p className="text-sm text-green-600">To: {activeCall.to}</p>
-                    <p className="text-xs text-green-500">From: {activeCall.from}</p>
-                  </div>
-                  <Button
-                    variant="destructive"
-                    size="sm"
-                    onClick={handleEndCall}
-                  >
-                    End Call
-                  </Button>
-                </div>
-              </div>
-            )}
-
-            {/* From Number Selector */}
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Calling From:</label>
-              <Select value={selectedFromNumber} onValueChange={setSelectedFromNumber}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select phone number" />
-                </SelectTrigger>
-                <SelectContent>
-                  {phoneNumbers.length === 0 ? (
-                    <SelectItem value="none" disabled>No numbers available</SelectItem>
-                  ) : (
-                    phoneNumbers.map((num) => (
-                      <SelectItem key={num.id || num.phone_number} value={num.phone_number}>
-                        {num.phone_number} {num.label && `(${num.label})`}
+      {/* Dialer Modal */}
+      {isOpen && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <Card className="w-full max-w-sm">
+            <CardHeader className="pb-2 flex flex-row items-center justify-between">
+              <CardTitle className="text-lg font-['Outfit'] flex items-center gap-2">
+                <PhoneCall className="h-5 w-5 text-green-600" />
+                Phone Dialer
+              </CardTitle>
+              <Button variant="ghost" size="icon" onClick={() => setIsOpen(false)}>
+                <X className="h-4 w-4" />
+              </Button>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {/* Calling From Selection */}
+              <div className="space-y-2">
+                <label className="text-xs font-medium text-muted-foreground">Calling From</label>
+                <Select value={selectedFromNumber} onValueChange={setSelectedFromNumber}>
+                  <SelectTrigger data-testid="from-number-select">
+                    <SelectValue placeholder="Select your number" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {ownedNumbers.length === 0 ? (
+                      <SelectItem value="none" disabled>
+                        No phone numbers configured
                       </SelectItem>
-                    ))
-                  )}
-                </SelectContent>
-              </Select>
-              {selectedFromNumber && (
-                <Badge variant="outline" className="text-xs">
-                  Using: {selectedFromNumber}
-                </Badge>
-              )}
-            </div>
-
-            {/* Number Display */}
-            <div className="relative">
-              <Input
-                value={dialNumber}
-                onChange={(e) => setDialNumber(e.target.value)}
-                placeholder="Enter number..."
-                className="text-2xl text-center font-mono h-14 pr-10"
-              />
-              {dialNumber && (
-                <button
-                  onClick={handleBackspace}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                >
-                  <Delete className="h-5 w-5" />
-                </button>
-              )}
-            </div>
-
-            {/* Dial Pad */}
-            <div className="grid grid-cols-3 gap-2">
-              {dialPad.map((row, rowIndex) => (
-                row.map((digit) => (
-                  <button
-                    key={digit}
-                    onClick={() => handleDigit(digit)}
-                    className="h-14 text-xl font-semibold rounded-lg bg-muted hover:bg-muted/80 transition-colors"
-                  >
-                    {digit}
-                  </button>
-                ))
-              ))}
-            </div>
-
-            {/* Call Button */}
-            <Button
-              onClick={handleCall}
-              disabled={!dialNumber || calling || activeCall}
-              className="w-full h-12 bg-green-500 hover:bg-green-600 text-white"
-            >
-              <Phone className="h-5 w-5 mr-2" />
-              {calling ? 'Connecting...' : 'Call'}
-            </Button>
-
-            {/* Quick Contacts */}
-            <div className="border-t pt-4">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-sm font-medium">Quick Contacts</span>
-              </div>
-              
-              <div className="relative mb-2">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder="Search clients..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-9 h-9"
-                />
-              </div>
-
-              <div className="space-y-1 max-h-40 overflow-y-auto">
-                {filteredClients.map((client) => (
-                  <button
-                    key={client.id}
-                    onClick={() => handleQuickCall(client)}
-                    className="w-full flex items-center gap-3 p-2 rounded-lg hover:bg-muted text-left"
-                  >
-                    <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center">
-                      <User className="h-4 w-4 text-primary" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium truncate">{client.name}</p>
-                      <p className="text-xs text-muted-foreground">{client.phone || 'No phone'}</p>
-                    </div>
-                    {client.phone && (
-                      <Phone className="h-4 w-4 text-green-500" />
+                    ) : (
+                      ownedNumbers.map((num) => (
+                        <SelectItem key={num.id} value={num.phone_number}>
+                          {num.phone_number} {num.is_default && '(Default)'}
+                        </SelectItem>
+                      ))
                     )}
-                  </button>
-                ))}
-                {filteredClients.length === 0 && (
-                  <p className="text-center text-sm text-muted-foreground py-2">
-                    No clients found
+                  </SelectContent>
+                </Select>
+                {ownedNumbers.length === 0 && (
+                  <p className="text-xs text-muted-foreground">
+                    Go to Settings → Phone Numbers to add a number
                   </p>
                 )}
               </div>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
+
+              {/* Phone Number Display */}
+              <div className="bg-muted/50 rounded-lg p-4 text-center">
+                {callStatus === 'calling' ? (
+                  <div className="space-y-2">
+                    <p className="text-sm text-muted-foreground">Calling...</p>
+                    <p className="text-2xl font-mono">{formatPhoneDisplay(phoneNumber)}</p>
+                    <div className="flex justify-center">
+                      <div className="h-2 w-2 bg-yellow-500 rounded-full animate-pulse" />
+                    </div>
+                  </div>
+                ) : callStatus === 'connected' ? (
+                  <div className="space-y-2">
+                    <Badge className="bg-green-100 text-green-700">Connected</Badge>
+                    <p className="text-2xl font-mono">{formatPhoneDisplay(phoneNumber)}</p>
+                    <div className="flex items-center justify-center gap-1 text-sm text-muted-foreground">
+                      <Clock className="h-3 w-3" />
+                      <span>00:00</span>
+                    </div>
+                  </div>
+                ) : (
+                  <p className="text-3xl font-mono tracking-wider min-h-[2.5rem]">
+                    {formatPhoneDisplay(phoneNumber) || (
+                      <span className="text-muted-foreground text-lg">Enter number</span>
+                    )}
+                  </p>
+                )}
+              </div>
+
+              {/* Quick Contacts Search */}
+              {!callStatus && (
+                <div className="space-y-2">
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      placeholder="Search contacts..."
+                      className="pl-10 text-sm"
+                      data-testid="contact-search-input"
+                    />
+                  </div>
+                  
+                  {filteredClients.length > 0 && (
+                    <ScrollArea className="max-h-32 border rounded-lg">
+                      {filteredClients.map((client) => (
+                        <button
+                          key={client.id}
+                          onClick={() => handleSelectContact(client)}
+                          className="w-full px-3 py-2 text-left hover:bg-muted/50 flex items-center gap-2 text-sm"
+                          data-testid={`quick-contact-${client.id}`}
+                        >
+                          <div className="h-6 w-6 rounded-full bg-primary/10 flex items-center justify-center">
+                            <User className="h-3 w-3 text-primary" />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="font-medium truncate">{client.name}</p>
+                            <p className="text-xs text-muted-foreground">{client.phone}</p>
+                          </div>
+                        </button>
+                      ))}
+                    </ScrollArea>
+                  )}
+                </div>
+              )}
+
+              {/* Dial Pad */}
+              {!callStatus && (
+                <div className="grid grid-cols-3 gap-2">
+                  {dialPadButtons.map(({ digit, letters }) => (
+                    <Button
+                      key={digit}
+                      variant="outline"
+                      className="h-14 flex flex-col items-center justify-center"
+                      onClick={() => handleDialPadClick(digit)}
+                      data-testid={`dial-${digit}`}
+                    >
+                      <span className="text-xl font-semibold">{digit}</span>
+                      {letters && <span className="text-[10px] text-muted-foreground">{letters}</span>}
+                    </Button>
+                  ))}
+                </div>
+              )}
+
+              {/* Action Buttons */}
+              <div className="flex gap-2">
+                {callStatus ? (
+                  <Button
+                    onClick={handleEndCall}
+                    className="flex-1 bg-red-600 hover:bg-red-700"
+                    data-testid="end-call-btn"
+                  >
+                    <PhoneOff className="h-4 w-4 mr-2" />
+                    End Call
+                  </Button>
+                ) : (
+                  <>
+                    <Button
+                      variant="outline"
+                      className="flex-1"
+                      onClick={handleBackspace}
+                      disabled={!phoneNumber}
+                      data-testid="backspace-btn"
+                    >
+                      <Delete className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      className="flex-[2] bg-green-600 hover:bg-green-700"
+                      onClick={handleCall}
+                      disabled={!phoneNumber || !selectedFromNumber || loading}
+                      data-testid="call-btn"
+                    >
+                      {loading ? (
+                        <div className="h-4 w-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2" />
+                      ) : (
+                        <Phone className="h-4 w-4 mr-2" />
+                      )}
+                      Call
+                    </Button>
+                  </>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
     </>
   );
 };
