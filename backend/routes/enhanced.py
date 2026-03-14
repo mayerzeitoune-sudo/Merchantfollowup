@@ -1410,12 +1410,42 @@ async def update_client_pipeline(
     if stage not in PIPELINE_STAGES:
         raise HTTPException(status_code=400, detail="Invalid pipeline stage")
     
-    result = await db.clients.update_one(
-        {"id": client_id, "user_id": current_user["user_id"]},
-        {"$set": {"pipeline_stage": stage, "updated_at": datetime.now(timezone.utc).isoformat()}}
-    )
+    # Build query based on user role (org_admin/admin can update any client)
+    if current_user.get("role") in ["org_admin", "admin"]:
+        query = {"id": client_id}
+    else:
+        query = {"id": client_id, "user_id": current_user["user_id"]}
     
-    if result.matched_count == 0:
+    # Map stages to tags for syncing
+    STAGE_TO_TAG = {
+        'new_lead': 'New Lead',
+        'interested': 'Interested',
+        'application_sent': 'Application Sent',
+        'docs_submitted': 'Docs Submitted',
+        'approved': 'Approved',
+        'funded': 'Funded',
+        'dead': 'Dead',
+        'future': 'Future',
+    }
+    
+    # Get current client to update tags
+    client = await db.clients.find_one(query, {"_id": 0})
+    if not client:
         raise HTTPException(status_code=404, detail="Client not found")
+    
+    # Update tags - remove old stage tags and add new one
+    current_tags = client.get("tags", [])
+    stage_tag_values = list(STAGE_TO_TAG.values())
+    updated_tags = [t for t in current_tags if t not in stage_tag_values]
+    updated_tags.append(STAGE_TO_TAG.get(stage, stage))
+    
+    result = await db.clients.update_one(
+        query,
+        {"$set": {
+            "pipeline_stage": stage,
+            "tags": updated_tags,
+            "updated_at": datetime.now(timezone.utc).isoformat()
+        }}
+    )
     
     return {"message": "Pipeline stage updated"}
