@@ -4269,6 +4269,100 @@ async def mark_all_messages_read(current_user: dict = Depends(get_current_user))
     return {"success": True}
 
 
+@api_router.get("/clients/{client_id}/ai-summary")
+async def get_ai_conversation_summary(client_id: str, current_user: dict = Depends(get_current_user)):
+    """Get AI-generated summary of conversation with a client"""
+    accessible_ids = await get_accessible_user_ids(current_user)
+    
+    # Get client
+    client = await db.clients.find_one(
+        {"id": client_id, "user_id": {"$in": accessible_ids}},
+        {"_id": 0}
+    )
+    if not client:
+        raise HTTPException(status_code=404, detail="Client not found")
+    
+    # Get recent conversations
+    conversations = await db.conversations.find(
+        {"client_id": client_id},
+        {"_id": 0, "message": 1, "direction": 1, "created_at": 1}
+    ).sort("created_at", -1).to_list(20)
+    
+    if not conversations:
+        return {
+            "summary": "No conversation history with this client yet.",
+            "sentiment": "neutral",
+            "key_topics": [],
+            "suggested_action": "Start a conversation to build rapport."
+        }
+    
+    # Format conversation for AI
+    conv_text = "\n".join([
+        f"{'Agent' if c['direction'] == 'outbound' else 'Client'}: {c['message']}"
+        for c in reversed(conversations)
+    ])
+    
+    api_key = os.environ.get('EMERGENT_LLM_KEY')
+    if not api_key:
+        return {
+            "summary": f"Recent conversation with {client.get('name', 'client')} containing {len(conversations)} messages.",
+            "sentiment": "unknown",
+            "key_topics": [],
+            "suggested_action": "Review conversation manually.",
+            "ai_unavailable": True
+        }
+    
+    try:
+        from emergentintegrations.llm.chat import Chat
+        
+        prompt = f"""Analyze this conversation between an agent and a client named {client.get('name', 'the client')}.
+        
+Conversation:
+{conv_text}
+
+Provide a JSON response with:
+1. "summary": A brief 2-3 sentence summary of the conversation
+2. "sentiment": The client's sentiment (positive, neutral, negative, interested, frustrated)
+3. "key_topics": List of 3-5 main topics discussed
+4. "suggested_action": One actionable next step for the agent
+5. "deal_likelihood": Percentage likelihood this leads to a deal (0-100)
+
+Respond with valid JSON only."""
+
+        chat = Chat(api_key=api_key)
+        response = await chat.message(prompt).with_model("openai", "gpt-5.2").send_async()
+        
+        # Parse JSON from response
+        import json
+        try:
+            result = json.loads(response)
+        except:
+            # Try to extract JSON from response
+            import re
+            json_match = re.search(r'\{.*\}', response, re.DOTALL)
+            if json_match:
+                result = json.loads(json_match.group())
+            else:
+                result = {
+                    "summary": response[:500],
+                    "sentiment": "unknown",
+                    "key_topics": [],
+                    "suggested_action": "Review the conversation."
+                }
+        
+        return result
+        
+    except Exception as e:
+        logger.error(f"AI summary error: {e}")
+        return {
+            "summary": f"Conversation with {client.get('name', 'client')} has {len(conversations)} messages.",
+            "sentiment": "unknown",
+            "key_topics": [],
+            "suggested_action": "Review conversation manually.",
+            "error": str(e)
+        }
+
+
 @api_router.post("/calls/initiate")
 async def initiate_call(data: dict, current_user: dict = Depends(get_current_user)):
     """Initiate an outbound call"""
