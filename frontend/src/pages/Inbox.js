@@ -9,6 +9,7 @@ import { Textarea } from '../components/ui/textarea';
 import { ScrollArea } from '../components/ui/scroll-area';
 import { Tabs, TabsList, TabsTrigger } from '../components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
+import { Label } from '../components/ui/label';
 import { 
   Search, 
   Inbox as InboxIcon,
@@ -27,7 +28,8 @@ import {
   Filter,
   MoreVertical,
   ExternalLink,
-  Sparkles
+  Sparkles,
+  Plus
 } from 'lucide-react';
 import { clientsApi, contactsApi, phoneNumbersApi, templatesApi } from '../lib/api';
 import { toast } from 'sonner';
