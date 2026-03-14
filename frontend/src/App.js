@@ -120,6 +120,7 @@ function AppRoutes() {
       <Route path="/onboarding" element={<ProtectedRoute><OnboardingPage /></ProtectedRoute>} />
       <Route path="/organizations" element={<ProtectedRoute><Organizations /></ProtectedRoute>} />
       <Route path="/my-team" element={<ProtectedRoute><MyTeam /></ProtectedRoute>} />
+      <Route path="/team/agent/:agentId/clients" element={<ProtectedRoute><AgentClients /></ProtectedRoute>} />
       <Route path="/activity" element={<ProtectedRoute><ActivityLog /></ProtectedRoute>} />
       
       {/* Default redirect */}
