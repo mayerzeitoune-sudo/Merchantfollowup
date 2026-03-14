@@ -6,6 +6,7 @@ import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
 import { Textarea } from '../components/ui/textarea';
+import { Checkbox } from '../components/ui/checkbox';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '../components/ui/dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../components/ui/table';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from '../components/ui/dropdown-menu';
@@ -27,9 +28,10 @@ import {
   X,
   Calendar,
   MapPin,
-  Eye
+  Eye,
+  CheckSquare
 } from 'lucide-react';
-import { clientsApi } from '../lib/api';
+import { clientsApi, bulkApi } from '../lib/api';
 import { toast } from 'sonner';
 
 const AVAILABLE_TAGS = [
@@ -43,7 +45,6 @@ const AVAILABLE_TAGS = [
   { value: "Future", color: "bg-gray-100 text-gray-700", stage: "future" },
 ];
 
-// Map pipeline stages to tag values
 const STAGE_TO_TAG = {
   'new_lead': 'New Lead',
   'interested': 'Interested',
@@ -73,6 +74,8 @@ const Clients = () => {
   const [editingClient, setEditingClient] = useState(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [clientToDelete, setClientToDelete] = useState(null);
+  const [selectedClients, setSelectedClients] = useState([]);
+  const [bulkDeleteDialogOpen, setBulkDeleteDialogOpen] = useState(false);
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -98,6 +101,7 @@ const Clients = () => {
     try {
       const response = await clientsApi.getAll(tagFilter === 'all' ? null : tagFilter);
       setClients(response.data);
+      setSelectedClients([]); // Reset selection on fetch
     } catch (error) {
       toast.error('Failed to fetch clients');
     } finally {
@@ -165,21 +169,46 @@ const Clients = () => {
     }
   };
 
+  const handleSelectClient = (clientId, checked) => {
+    if (checked) {
+      setSelectedClients([...selectedClients, clientId]);
+    } else {
+      setSelectedClients(selectedClients.filter(id => id !== clientId));
+    }
+  };
+
+  const handleSelectAll = (checked) => {
+    if (checked) {
+      setSelectedClients(filteredClients.map(c => c.id));
+    } else {
+      setSelectedClients([]);
+    }
+  };
+
+  const handleBulkDelete = async () => {
+    try {
+      const result = await bulkApi.deleteClients(selectedClients);
+      toast.success(result.data.message);
+      fetchClients();
+    } catch (error) {
+      toast.error('Failed to delete clients');
+    } finally {
+      setBulkDeleteDialogOpen(false);
+      setSelectedClients([]);
+    }
+  };
+
   const handleQuickTagUpdate = async (clientId, newTag) => {
     const client = clients.find(c => c.id === clientId);
     if (!client) return;
     
-    // Check if this tag maps to a pipeline stage
     const newStage = TAG_TO_STAGE[newTag];
     
     let updatedTags;
     if (client.tags?.includes(newTag)) {
-      // Removing the tag - just remove it, don't change stage
       updatedTags = client.tags.filter(t => t !== newTag);
     } else {
-      // Adding a stage tag - remove other stage tags and add this one
       if (newStage) {
-        // Remove any existing stage tags
         const stageTags = Object.values(STAGE_TO_TAG);
         updatedTags = (client.tags || []).filter(t => !stageTags.includes(t));
         updatedTags.push(newTag);
@@ -190,7 +219,6 @@ const Clients = () => {
     
     try {
       const updateData = { tags: updatedTags };
-      // If adding a stage tag, also update pipeline_stage
       if (newStage && !client.tags?.includes(newTag)) {
         updateData.pipeline_stage = newStage;
       }
@@ -237,11 +265,12 @@ const Clients = () => {
     (client.email && client.email.toLowerCase().includes(search.toLowerCase()))
   );
 
-  // Count clients by tag for filter badges
   const tagCounts = AVAILABLE_TAGS.reduce((acc, tag) => {
     acc[tag.value] = clients.filter(c => c.tags?.includes(tag.value)).length;
     return acc;
   }, {});
+
+  const isAllSelected = filteredClients.length > 0 && selectedClients.length === filteredClients.length;
 
   return (
     <DashboardLayout>
@@ -252,218 +281,230 @@ const Clients = () => {
             <h1 className="text-3xl font-bold font-['Outfit']">Clients</h1>
             <p className="text-muted-foreground mt-1">Manage your customer database with tags</p>
           </div>
-          <Dialog open={isDialogOpen} onOpenChange={(open) => { setIsDialogOpen(open); if (!open) resetForm(); }}>
-            <DialogTrigger asChild>
-              <Button className="bg-primary hover:bg-primary/90" data-testid="add-client-btn">
-                <Plus className="h-4 w-4 mr-2" />
-                Add Client
+          <div className="flex items-center gap-2">
+            {selectedClients.length > 0 && (
+              <Button 
+                variant="destructive" 
+                onClick={() => setBulkDeleteDialogOpen(true)}
+                data-testid="bulk-delete-btn"
+              >
+                <Trash2 className="h-4 w-4 mr-2" />
+                Delete ({selectedClients.length})
               </Button>
-            </DialogTrigger>
-            <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
-              <DialogHeader>
-                <DialogTitle className="font-['Outfit']">
-                  {editingClient ? 'Edit Client' : 'Add New Client'}
-                </DialogTitle>
-                <DialogDescription>
-                  {editingClient ? 'Update client information' : 'Add a new customer to your database'}
-                </DialogDescription>
-              </DialogHeader>
-              <form onSubmit={handleSubmit} className="space-y-4 mt-4">
-                <div className="space-y-2">
-                  <Label htmlFor="name">Full Name *</Label>
-                  <div className="relative">
-                    <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                    <Input
-                      id="name"
-                      value={formData.name}
-                      onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                      placeholder="John Doe"
-                      className="pl-10"
-                      required
-                      data-testid="client-name-input"
-                    />
-                  </div>
-                </div>
-                
-                <div className="space-y-2">
-                  <Label htmlFor="phone">Phone Number *</Label>
-                  <div className="relative">
-                    <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                    <Input
-                      id="phone"
-                      value={formData.phone}
-                      onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                      placeholder="+1 (555) 000-0000"
-                      className="pl-10"
-                      required
-                      data-testid="client-phone-input"
-                    />
-                  </div>
-                </div>
-                
-                <div className="space-y-2">
-                  <Label htmlFor="email">Email</Label>
-                  <div className="relative">
-                    <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                    <Input
-                      id="email"
-                      type="email"
-                      value={formData.email}
-                      onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                      placeholder="john@example.com"
-                      className="pl-10"
-                      data-testid="client-email-input"
-                    />
-                  </div>
-                </div>
-                
-                <div className="grid grid-cols-2 gap-4">
+            )}
+            <Dialog open={isDialogOpen} onOpenChange={(open) => { setIsDialogOpen(open); if (!open) resetForm(); }}>
+              <DialogTrigger asChild>
+                <Button className="bg-primary hover:bg-primary/90" data-testid="add-client-btn">
+                  <Plus className="h-4 w-4 mr-2" />
+                  Add Client
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
+                <DialogHeader>
+                  <DialogTitle className="font-['Outfit']">
+                    {editingClient ? 'Edit Client' : 'Add New Client'}
+                  </DialogTitle>
+                  <DialogDescription>
+                    {editingClient ? 'Update client information' : 'Add a new customer to your database'}
+                  </DialogDescription>
+                </DialogHeader>
+                <form onSubmit={handleSubmit} className="space-y-4 mt-4">
                   <div className="space-y-2">
-                    <Label htmlFor="company">Company</Label>
+                    <Label htmlFor="name">Full Name *</Label>
                     <div className="relative">
-                      <Building className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                      <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                       <Input
-                        id="company"
-                        value={formData.company}
-                        onChange={(e) => setFormData({ ...formData, company: e.target.value })}
-                        placeholder="Acme Inc."
+                        id="name"
+                        value={formData.name}
+                        onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                        placeholder="John Doe"
                         className="pl-10"
-                        data-testid="client-company-input"
+                        required
+                        data-testid="client-name-input"
                       />
                     </div>
                   </div>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="birthday">Birthday</Label>
-                  <div className="relative">
-                    <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                    <Input
-                      id="birthday"
-                      type="date"
-                      value={formData.birthday}
-                      onChange={(e) => setFormData({ ...formData, birthday: e.target.value })}
-                      className="pl-10"
-                      data-testid="client-birthday-input"
-                    />
-                  </div>
-                </div>
-
-                {/* Address Section */}
-                <div className="space-y-3 pt-2 border-t">
-                  <Label className="flex items-center gap-2 text-muted-foreground">
-                    <MapPin className="h-4 w-4" />
-                    Address (optional - needed for gift delivery)
-                  </Label>
                   
                   <div className="space-y-2">
-                    <Input
-                      value={formData.address_line1}
-                      onChange={(e) => setFormData({ ...formData, address_line1: e.target.value })}
-                      placeholder="Street Address"
-                      data-testid="client-address1-input"
-                    />
+                    <Label htmlFor="phone">Phone Number *</Label>
+                    <div className="relative">
+                      <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                      <Input
+                        id="phone"
+                        value={formData.phone}
+                        onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                        placeholder="+1 (555) 000-0000"
+                        className="pl-10"
+                        required
+                        data-testid="client-phone-input"
+                      />
+                    </div>
                   </div>
                   
                   <div className="space-y-2">
-                    <Input
-                      value={formData.address_line2}
-                      onChange={(e) => setFormData({ ...formData, address_line2: e.target.value })}
-                      placeholder="Apt, Suite, Unit (optional)"
-                      data-testid="client-address2-input"
-                    />
+                    <Label htmlFor="email">Email</Label>
+                    <div className="relative">
+                      <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                      <Input
+                        id="email"
+                        type="email"
+                        value={formData.email}
+                        onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                        placeholder="john@example.com"
+                        className="pl-10"
+                        data-testid="client-email-input"
+                      />
+                    </div>
                   </div>
                   
-                  <div className="grid grid-cols-2 gap-2">
-                    <Input
-                      value={formData.city}
-                      onChange={(e) => setFormData({ ...formData, city: e.target.value })}
-                      placeholder="City"
-                      data-testid="client-city-input"
-                    />
-                    <Input
-                      value={formData.state}
-                      onChange={(e) => setFormData({ ...formData, state: e.target.value })}
-                      placeholder="State"
-                      data-testid="client-state-input"
-                    />
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="company">Company</Label>
+                      <div className="relative">
+                        <Building className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                        <Input
+                          id="company"
+                          value={formData.company}
+                          onChange={(e) => setFormData({ ...formData, company: e.target.value })}
+                          placeholder="Acme Inc."
+                          className="pl-10"
+                          data-testid="client-company-input"
+                        />
+                      </div>
+                    </div>
                   </div>
-                  
-                  <div className="grid grid-cols-2 gap-2">
-                    <Input
-                      value={formData.zip_code}
-                      onChange={(e) => setFormData({ ...formData, zip_code: e.target.value })}
-                      placeholder="ZIP Code"
-                      data-testid="client-zip-input"
-                    />
-                    <Select 
-                      value={formData.country} 
-                      onValueChange={(value) => setFormData({ ...formData, country: value })}
-                    >
-                      <SelectTrigger data-testid="client-country-select">
-                        <SelectValue placeholder="Country" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="US">United States</SelectItem>
-                        <SelectItem value="CA">Canada</SelectItem>
-                        <SelectItem value="UK">United Kingdom</SelectItem>
-                        <SelectItem value="AU">Australia</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
 
-                {/* Tags Selection */}
-                <div className="space-y-2">
-                  <Label className="flex items-center gap-2">
-                    <Tag className="h-4 w-4" />
-                    Tags
-                  </Label>
-                  <div className="flex flex-wrap gap-2">
-                    {AVAILABLE_TAGS.map((tag) => (
-                      <Badge
-                        key={tag.value}
-                        variant="outline"
-                        className={`cursor-pointer transition-all ${
-                          formData.tags.includes(tag.value) 
-                            ? tag.color + ' border-transparent' 
-                            : 'hover:bg-secondary'
-                        }`}
-                        onClick={() => toggleTag(tag.value)}
-                        data-testid={`tag-${tag.value.toLowerCase().replace(/\s/g, '-')}`}
+                  <div className="space-y-2">
+                    <Label htmlFor="birthday">Birthday</Label>
+                    <div className="relative">
+                      <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                      <Input
+                        id="birthday"
+                        type="date"
+                        value={formData.birthday}
+                        onChange={(e) => setFormData({ ...formData, birthday: e.target.value })}
+                        className="pl-10"
+                        data-testid="client-birthday-input"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Address Section */}
+                  <div className="space-y-3 pt-2 border-t">
+                    <Label className="flex items-center gap-2 text-muted-foreground">
+                      <MapPin className="h-4 w-4" />
+                      Address (optional - needed for gift delivery)
+                    </Label>
+                    
+                    <div className="space-y-2">
+                      <Input
+                        value={formData.address_line1}
+                        onChange={(e) => setFormData({ ...formData, address_line1: e.target.value })}
+                        placeholder="Street Address"
+                        data-testid="client-address1-input"
+                      />
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <Input
+                        value={formData.address_line2}
+                        onChange={(e) => setFormData({ ...formData, address_line2: e.target.value })}
+                        placeholder="Apt, Suite, Unit (optional)"
+                        data-testid="client-address2-input"
+                      />
+                    </div>
+                    
+                    <div className="grid grid-cols-2 gap-2">
+                      <Input
+                        value={formData.city}
+                        onChange={(e) => setFormData({ ...formData, city: e.target.value })}
+                        placeholder="City"
+                        data-testid="client-city-input"
+                      />
+                      <Input
+                        value={formData.state}
+                        onChange={(e) => setFormData({ ...formData, state: e.target.value })}
+                        placeholder="State"
+                        data-testid="client-state-input"
+                      />
+                    </div>
+                    
+                    <div className="grid grid-cols-2 gap-2">
+                      <Input
+                        value={formData.zip_code}
+                        onChange={(e) => setFormData({ ...formData, zip_code: e.target.value })}
+                        placeholder="ZIP Code"
+                        data-testid="client-zip-input"
+                      />
+                      <Select 
+                        value={formData.country} 
+                        onValueChange={(value) => setFormData({ ...formData, country: value })}
                       >
-                        {formData.tags.includes(tag.value) && (
-                          <X className="h-3 w-3 mr-1" />
-                        )}
-                        {tag.value}
-                      </Badge>
-                    ))}
+                        <SelectTrigger data-testid="client-country-select">
+                          <SelectValue placeholder="Country" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="US">United States</SelectItem>
+                          <SelectItem value="CA">Canada</SelectItem>
+                          <SelectItem value="UK">United Kingdom</SelectItem>
+                          <SelectItem value="AU">Australia</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
                   </div>
-                </div>
-                
-                <div className="space-y-2">
-                  <Label htmlFor="notes">Notes</Label>
-                  <Textarea
-                    id="notes"
-                    value={formData.notes}
-                    onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-                    placeholder="Additional notes about this client..."
-                    rows={3}
-                    data-testid="client-notes-input"
-                  />
-                </div>
-                
-                <div className="flex gap-3 pt-4">
-                  <Button type="button" variant="outline" className="flex-1" onClick={() => setIsDialogOpen(false)}>
-                    Cancel
-                  </Button>
-                  <Button type="submit" className="flex-1 bg-primary hover:bg-primary/90" data-testid="save-client-btn">
-                    {editingClient ? 'Update' : 'Add Client'}
-                  </Button>
-                </div>
-              </form>
-            </DialogContent>
-          </Dialog>
+
+                  {/* Tags Selection */}
+                  <div className="space-y-2">
+                    <Label className="flex items-center gap-2">
+                      <Tag className="h-4 w-4" />
+                      Tags
+                    </Label>
+                    <div className="flex flex-wrap gap-2">
+                      {AVAILABLE_TAGS.map((tag) => (
+                        <Badge
+                          key={tag.value}
+                          variant="outline"
+                          className={`cursor-pointer transition-all ${
+                            formData.tags.includes(tag.value) 
+                              ? tag.color + ' border-transparent' 
+                              : 'hover:bg-secondary'
+                          }`}
+                          onClick={() => toggleTag(tag.value)}
+                          data-testid={`tag-${tag.value.toLowerCase().replace(/\s/g, '-')}`}
+                        >
+                          {formData.tags.includes(tag.value) && (
+                            <X className="h-3 w-3 mr-1" />
+                          )}
+                          {tag.value}
+                        </Badge>
+                      ))}
+                    </div>
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="notes">Notes</Label>
+                    <Textarea
+                      id="notes"
+                      value={formData.notes}
+                      onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+                      placeholder="Additional notes about this client..."
+                      rows={3}
+                      data-testid="client-notes-input"
+                    />
+                  </div>
+                  
+                  <div className="flex gap-3 pt-4">
+                    <Button type="button" variant="outline" className="flex-1" onClick={() => setIsDialogOpen(false)}>
+                      Cancel
+                    </Button>
+                    <Button type="submit" className="flex-1 bg-primary hover:bg-primary/90" data-testid="save-client-btn">
+                      {editingClient ? 'Update' : 'Add Client'}
+                    </Button>
+                  </div>
+                </form>
+              </DialogContent>
+            </Dialog>
+          </div>
         </div>
 
         {/* Filters */}
@@ -501,21 +542,32 @@ const Clients = () => {
             </Select>
           </div>
 
-          {/* Active filter indicator */}
-          {tagFilter !== 'all' && (
-            <div className="flex items-center gap-2">
-              <span className="text-sm text-muted-foreground">Filtered by:</span>
-              <Badge className={getTagColor(tagFilter)}>
-                {tagFilter}
-                <button 
-                  onClick={() => setTagFilter('all')}
-                  className="ml-1 hover:bg-black/10 rounded-full p-0.5"
-                >
-                  <X className="h-3 w-3" />
-                </button>
-              </Badge>
-            </div>
-          )}
+          {/* Active filter and selection indicator */}
+          <div className="flex items-center gap-4">
+            {tagFilter !== 'all' && (
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-muted-foreground">Filtered by:</span>
+                <Badge className={getTagColor(tagFilter)}>
+                  {tagFilter}
+                  <button 
+                    onClick={() => setTagFilter('all')}
+                    className="ml-1 hover:bg-black/10 rounded-full p-0.5"
+                  >
+                    <X className="h-3 w-3" />
+                  </button>
+                </Badge>
+              </div>
+            )}
+            {selectedClients.length > 0 && (
+              <div className="flex items-center gap-2">
+                <CheckSquare className="h-4 w-4 text-primary" />
+                <span className="text-sm text-muted-foreground">{selectedClients.length} selected</span>
+                <Button variant="ghost" size="sm" onClick={() => setSelectedClients([])}>
+                  Clear
+                </Button>
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Table */}
@@ -525,6 +577,14 @@ const Clients = () => {
               <Table>
                 <TableHeader>
                   <TableRow className="bg-muted/50">
+                    <TableHead className="w-12">
+                      <Checkbox 
+                        checked={isAllSelected}
+                        onCheckedChange={handleSelectAll}
+                        aria-label="Select all"
+                        data-testid="select-all-checkbox"
+                      />
+                    </TableHead>
                     <TableHead className="font-semibold">Name</TableHead>
                     <TableHead className="font-semibold">Phone</TableHead>
                     <TableHead className="font-semibold">Tags</TableHead>
@@ -535,19 +595,27 @@ const Clients = () => {
                 <TableBody>
                   {loading ? (
                     <TableRow>
-                      <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
+                      <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
                         Loading...
                       </TableCell>
                     </TableRow>
                   ) : filteredClients.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
+                      <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
                         {search || tagFilter !== 'all' ? 'No clients found' : 'No clients yet. Add your first client!'}
                       </TableCell>
                     </TableRow>
                   ) : (
                     filteredClients.map((client) => (
                       <TableRow key={client.id} className="hover:bg-muted/50">
+                        <TableCell>
+                          <Checkbox 
+                            checked={selectedClients.includes(client.id)}
+                            onCheckedChange={(checked) => handleSelectClient(client.id, checked)}
+                            aria-label={`Select ${client.name}`}
+                            data-testid={`select-client-${client.id}`}
+                          />
+                        </TableCell>
                         <TableCell>
                           <Link to={`/clients/${client.id}`} className="flex items-center gap-3 hover:opacity-80">
                             <div className="h-9 w-9 rounded-full bg-primary/10 flex items-center justify-center">
@@ -658,6 +726,26 @@ const Clients = () => {
             </Button>
             <Button variant="destructive" onClick={confirmDelete} data-testid="confirm-delete-btn">
               Delete
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Bulk Delete Confirmation Dialog */}
+      <Dialog open={bulkDeleteDialogOpen} onOpenChange={setBulkDeleteDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete {selectedClients.length} Clients</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete {selectedClients.length} clients? This action cannot be undone and will also delete all associated conversations, deals, and reminders.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setBulkDeleteDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button variant="destructive" onClick={handleBulkDelete} data-testid="confirm-bulk-delete-btn">
+              Delete {selectedClients.length} Clients
             </Button>
           </DialogFooter>
         </DialogContent>
