@@ -537,13 +537,34 @@ const Inbox = () => {
                     </Button>
                   </div>
                   
-                  {/* Current number indicator */}
-                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                    <Smartphone className="h-3 w-3" />
-                    <span>Sending from:</span>
-                    <span className="font-medium">
-                      {conversationChains.find(c => c.from_number === activeChain)?.display_name || 'Default Number'}
-                    </span>
+                  {/* Phone Number Selector */}
+                  <div className="flex items-center gap-3">
+                    <Label className="text-xs text-muted-foreground whitespace-nowrap">Send from:</Label>
+                    <Select value={selectedFromNumber} onValueChange={setSelectedFromNumber}>
+                      <SelectTrigger className="flex-1 h-9" data-testid="from-number-select">
+                        <Smartphone className="h-4 w-4 mr-2 text-muted-foreground" />
+                        <SelectValue placeholder="Select a number" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {ownedNumbers.length === 0 ? (
+                          <SelectItem value="default">Default Number</SelectItem>
+                        ) : (
+                          ownedNumbers.map((num) => (
+                            <SelectItem key={num.id || num.phone_number} value={num.phone_number}>
+                              <div className="flex items-center gap-2">
+                                <span className="font-mono">{num.phone_number}</span>
+                                {num.friendly_name && (
+                                  <span className="text-muted-foreground">({num.friendly_name})</span>
+                                )}
+                                {num.is_default && (
+                                  <Badge className="ml-1 h-4 px-1 text-[10px] bg-orange-100 text-orange-700">Default</Badge>
+                                )}
+                              </div>
+                            </SelectItem>
+                          ))
+                        )}
+                      </SelectContent>
+                    </Select>
                   </div>
                 </div>
               </>
