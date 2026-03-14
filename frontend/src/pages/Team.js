@@ -853,18 +853,18 @@ const Team = () => {
                         <li className="flex items-center gap-1"><Check className="h-3 w-3 text-green-500" /> Billing & settings</li>
                       </>
                     )}
-                    {role.value === 'agent' && (
+                    {role.value === 'team_leader' && (
                       <>
-                        <li className="flex items-center gap-1"><Check className="h-3 w-3 text-green-500" /> Manage assigned contacts</li>
-                        <li className="flex items-center gap-1"><Check className="h-3 w-3 text-green-500" /> Send messages</li>
-                        <li className="flex items-center gap-1"><X className="h-3 w-3 text-red-500" /> Team management</li>
+                        <li className="flex items-center gap-1"><Check className="h-3 w-3 text-green-500" /> Manage assigned agents</li>
+                        <li className="flex items-center gap-1"><Check className="h-3 w-3 text-green-500" /> View agents' contacts</li>
+                        <li className="flex items-center gap-1"><Check className="h-3 w-3 text-green-500" /> Message from agents</li>
                       </>
                     )}
-                    {role.value === 'user' && (
+                    {role.value === 'agent' && (
                       <>
-                        <li className="flex items-center gap-1"><Check className="h-3 w-3 text-green-500" /> Manage own data only</li>
+                        <li className="flex items-center gap-1"><Check className="h-3 w-3 text-green-500" /> Manage own contacts</li>
                         <li className="flex items-center gap-1"><Check className="h-3 w-3 text-green-500" /> Send messages</li>
-                        <li className="flex items-center gap-1"><X className="h-3 w-3 text-red-500" /> See other users' data</li>
+                        <li className="flex items-center gap-1"><X className="h-3 w-3 text-red-500" /> Team management</li>
                       </>
                     )}
                     {role.value === 'viewer' && (
