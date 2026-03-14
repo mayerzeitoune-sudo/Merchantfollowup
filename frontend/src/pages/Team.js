@@ -1250,6 +1250,29 @@ const Team = () => {
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
+
+        {/* Archive Member Confirmation */}
+        <AlertDialog open={archiveMemberOpen} onOpenChange={setArchiveMemberOpen}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Archive Team Member</AlertDialogTitle>
+              <AlertDialogDescription>
+                Are you sure you want to archive <strong>{memberToArchive?.name}</strong>? 
+                They will be deactivated and moved to the Archived tab. You can restore them later.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel onClick={() => setMemberToArchive(null)}>Cancel</AlertDialogCancel>
+              <AlertDialogAction 
+                onClick={() => handleArchiveMember(memberToArchive?.id)}
+                className="bg-orange-600 text-white hover:bg-orange-700"
+              >
+                <Archive className="h-4 w-4 mr-2" />
+                Archive Member
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
     </DashboardLayout>
   );
