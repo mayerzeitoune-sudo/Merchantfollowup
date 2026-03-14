@@ -249,7 +249,14 @@ export const teamApi = {
   cancelInvite: (inviteId) => axios.delete(`${API}/team/invites/${inviteId}`),
   // Password reset for admins
   resetPassword: (memberId, newPassword) => axios.post(`${API}/team/members/${memberId}/reset-password`, { new_password: newPassword }),
-  sendResetLink: (memberId) => axios.post(`${API}/team/members/${memberId}/send-reset-link`)
+  sendResetLink: (memberId) => axios.post(`${API}/team/members/${memberId}/send-reset-link`),
+  // Team Leader management
+  getLeaders: () => axios.get(`${API}/team/leaders`),
+  getLeaderAgents: (leaderId) => axios.get(`${API}/team/leaders/${leaderId}/agents`),
+  assignAgentToLeader: (leaderId, agentId) => axios.post(`${API}/team/leaders/${leaderId}/agents`, { agent_id: agentId }),
+  removeAgentFromLeader: (leaderId, agentId) => axios.delete(`${API}/team/leaders/${leaderId}/agents/${agentId}`),
+  getMyAgents: () => axios.get(`${API}/team/my-agents`),
+  getAgentClients: (agentId) => axios.get(`${API}/team/agent/${agentId}/clients`)
 };
 
 
