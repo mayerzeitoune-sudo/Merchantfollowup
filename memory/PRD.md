@@ -4,38 +4,40 @@
 
 ### ✅ COMPLETED (This Session)
 
-#### Archive Users Feature
-- **Archive button** on each team member card
-- **Archived tab** on Team page shows all archived members
-- **Restore button** to bring back archived users
-- **Soft delete** - users are deactivated, not permanently deleted
-- Archived users cannot log in
-- Activity logged when archiving/restoring users
+#### Inbox Page Redesign (`/inbox`)
+- **New dedicated Inbox page** with split-view design
+- **Left panel**: Contact list with search, stage filter
+- **Right panel**: Conversation view with message history
+- **Features**: Quick templates, conversation chains by phone number
+- **Backend fixes**: Updated 3 endpoints to use role-based access (`get_accessible_user_ids`)
 
-#### User History Page (`/users/:userId/history`)
-- View complete activity history for any user
-- **User Info Card**: Name, email, role badge, join date
-- **Stats**: Clients count, messages count, deals count
-- **Activity Log Tab**: All actions performed by the user
-- **Login History Tab**: Login sessions with timestamps
-- History button added to team member cards
+#### Calendar Page Redesign (`/calendar`)
+- **Improved stats cards** with colorful gradient backgrounds
+- **Better calendar grid** with modern styling
+- **Upcoming section** showing next 7 days of follow-ups
+- **Enhanced follow-up cards** with hover actions
 
-### API Endpoints Added
+### Backend Fixes Applied
 ```
-POST /api/team/members/{id}/archive - Archive a user (soft delete)
-POST /api/team/members/{id}/restore - Restore an archived user
-GET  /api/team/members/archived - Get all archived users
-GET  /api/users/{id}/history - Get user activity and login history
+Fixed endpoints to use get_accessible_user_ids() for role-based access:
+- POST /api/followups (create follow-up)
+- GET /api/contacts/{client_id}/chains (conversation chains)
+- POST /api/contacts/{client_id}/send-sms (send SMS)
 ```
+
+### Navigation Updates
+- Added `/inbox` route for new Inbox page
+- Renamed old "Inbox" to "Messaging" in sidebar
+- Both Inbox and Messaging (Contacts) pages available
 
 ### Previous Session Completed
-- Clickable notifications → navigate to client
-- Team delete buttons fixed with AlertDialog
-- Phone Numbers state search (all 50 US states)
+- Archive users and user history page
+- Clickable notifications
+- Team delete buttons with AlertDialog
+- Phone Numbers state search
 - Phone dialer with Contacts tab
-- Phone number auto-formatting (+1)
 - OTP verification restored
-- Pipeline fix (admin permissions)
+- Pipeline fix for admin permissions
 - User Profile page
 - Bulk delete clients
 - Global search fix
@@ -48,23 +50,31 @@ GET  /api/users/{id}/history - Get user activity and login history
 ### Test Credentials
 - **Org Admin**: admin@merchant.com / admin123
 
-### Files Modified/Created
-- `/app/backend/server.py` - Archive/restore/history endpoints
-- `/app/frontend/src/pages/Team.js` - Archive UI, History button
-- `/app/frontend/src/pages/UserHistory.js` - NEW user history page
-- `/app/frontend/src/lib/api.js` - Archive and history API methods
-- `/app/frontend/src/App.js` - UserHistory route
+### Files Modified/Created This Session
+- `/app/frontend/src/pages/Inbox.js` - NEW inbox page
+- `/app/frontend/src/pages/CalendarPage.js` - Redesigned calendar
+- `/app/frontend/src/components/DashboardLayout.js` - Navigation updates
+- `/app/frontend/src/App.js` - Added /inbox route
+- `/app/backend/server.py` - Fixed 3 endpoints for role-based access
 
 ### Prioritized Backlog
 
 **P0 - Critical**
 - Add Twilio credentials for real Voice calls
+- Refactor `server.py` monolith into resource-specific route files
 
 **P1 - Important**
-- Twilio A2P 10DLC registration
+- Twilio A2P 10DLC registration backend
+- Implement Bulk User Upload backend (UI exists)
 - Real-time notifications (WebSocket)
 
 **P2 - Nice to Have**
 - Email Inbox View
 - Auto-import leads from email
-- Login history tracking (IP, user agent)
+- Background automation for drip campaigns
+- N+1 Query Optimizations
+
+### Known Issues
+- **Monolithic server.py**: Backend file is too large, needs refactoring
+- **Twilio Voice**: Placeholder credentials, not fully integrated
+- **Bulk User Upload**: Backend endpoint is placeholder
