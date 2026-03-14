@@ -584,6 +584,247 @@ const Organizations = () => {
             </div>
           </DialogContent>
         </Dialog>
+
+        {/* Unassigned Users Dialog */}
+        <Dialog open={unassignedUsersDialog} onOpenChange={setUnassignedUsersDialog}>
+          <DialogContent className="max-w-2xl">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <UserX className="h-5 w-5 text-orange-600" />
+                Unassigned Users ({unassignedUsers.length})
+              </DialogTitle>
+              <DialogDescription>
+                Users not assigned to any organization. Assign them to manage their access.
+              </DialogDescription>
+            </DialogHeader>
+            
+            <div className="relative mb-4">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Search users..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-10"
+              />
+            </div>
+            
+            <ScrollArea className="h-[400px]">
+              {unassignedUsers.length === 0 ? (
+                <div className="text-center py-12">
+                  <UserCheck className="h-12 w-12 mx-auto mb-4 text-green-500 opacity-50" />
+                  <p className="text-muted-foreground">All users are assigned to organizations</p>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {unassignedUsers
+                    .filter(u => 
+                      u.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                      u.email?.toLowerCase().includes(searchTerm.toLowerCase())
+                    )
+                    .map((u) => (
+                    <div key={u.id} className="flex items-center justify-between p-4 rounded-lg border hover:bg-muted/50" data-testid={`unassigned-user-${u.id}`}>
+                      <div className="flex items-center gap-3">
+                        <div className="h-10 w-10 rounded-full bg-orange-100 flex items-center justify-center">
+                          <span className="text-sm font-semibold text-orange-600">{u.name?.charAt(0).toUpperCase()}</span>
+                        </div>
+                        <div>
+                          <p className="font-medium">{u.name}</p>
+                          <div className="flex items-center gap-3 text-sm text-muted-foreground">
+                            <span className="flex items-center gap-1">
+                              <Mail className="h-3 w-3" />
+                              {u.email}
+                            </span>
+                            <Badge variant="outline" className="text-xs">{u.role}</Badge>
+                          </div>
+                        </div>
+                      </div>
+                      
+                      {assigningUser === u.id ? (
+                        <Select onValueChange={(orgId) => handleAssignUser(u.id, orgId)}>
+                          <SelectTrigger className="w-48">
+                            <SelectValue placeholder="Select organization" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {organizations.map((org) => (
+                              <SelectItem key={org.id} value={org.id}>
+                                {org.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      ) : (
+                        <Button 
+                          variant="outline" 
+                          size="sm"
+                          onClick={() => setAssigningUser(u.id)}
+                          data-testid={`assign-user-${u.id}`}
+                        >
+                          <Building2 className="h-4 w-4 mr-1" />
+                          Assign
+                        </Button>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </ScrollArea>
+          </DialogContent>
+        </Dialog>
+
+        {/* Unassigned Clients Dialog */}
+        <Dialog open={unassignedClientsDialog} onOpenChange={setUnassignedClientsDialog}>
+          <DialogContent className="max-w-2xl">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <BarChart3 className="h-5 w-5 text-orange-600" />
+                Unassigned Clients ({unassignedClients.length})
+              </DialogTitle>
+              <DialogDescription>
+                Clients not assigned to any organization. Assign them to enable user access.
+              </DialogDescription>
+            </DialogHeader>
+            
+            <div className="relative mb-4">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Search clients..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-10"
+              />
+            </div>
+            
+            <ScrollArea className="h-[400px]">
+              {unassignedClients.length === 0 ? (
+                <div className="text-center py-12">
+                  <UserCheck className="h-12 w-12 mx-auto mb-4 text-green-500 opacity-50" />
+                  <p className="text-muted-foreground">All clients are assigned to organizations</p>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {unassignedClients
+                    .filter(c => 
+                      c.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                      c.phone?.includes(searchTerm)
+                    )
+                    .map((c) => (
+                    <div key={c.id} className="flex items-center justify-between p-4 rounded-lg border hover:bg-muted/50" data-testid={`unassigned-client-${c.id}`}>
+                      <div className="flex items-center gap-3">
+                        <div className="h-10 w-10 rounded-full bg-orange-100 flex items-center justify-center">
+                          <span className="text-sm font-semibold text-orange-600">{c.name?.charAt(0).toUpperCase()}</span>
+                        </div>
+                        <div>
+                          <p className="font-medium">{c.name}</p>
+                          <div className="flex items-center gap-3 text-sm text-muted-foreground">
+                            <span className="flex items-center gap-1">
+                              <Phone className="h-3 w-3" />
+                              {c.phone}
+                            </span>
+                            {c.pipeline_stage && (
+                              <Badge variant="outline" className="text-xs">{c.pipeline_stage}</Badge>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                      
+                      {assigningClient === c.id ? (
+                        <Select onValueChange={(orgId) => handleAssignClient(c.id, orgId)}>
+                          <SelectTrigger className="w-48">
+                            <SelectValue placeholder="Select organization" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {organizations.map((org) => (
+                              <SelectItem key={org.id} value={org.id}>
+                                {org.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      ) : (
+                        <Button 
+                          variant="outline" 
+                          size="sm"
+                          onClick={() => setAssigningClient(c.id)}
+                          data-testid={`assign-client-${c.id}`}
+                        >
+                          <Building2 className="h-4 w-4 mr-1" />
+                          Assign
+                        </Button>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </ScrollArea>
+          </DialogContent>
+        </Dialog>
+
+        {/* All Users in Organizations Dialog */}
+        <Dialog open={allUsersDialog} onOpenChange={setAllUsersDialog}>
+          <DialogContent className="max-w-2xl">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <Users className="h-5 w-5 text-blue-600" />
+                All Users in Organizations ({allOrgUsers.length})
+              </DialogTitle>
+              <DialogDescription>
+                View all users across all organizations
+              </DialogDescription>
+            </DialogHeader>
+            
+            <div className="relative mb-4">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Search users..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-10"
+              />
+            </div>
+            
+            <ScrollArea className="h-[400px]">
+              {allOrgUsers.length === 0 ? (
+                <div className="text-center py-12">
+                  <Users className="h-12 w-12 mx-auto mb-4 text-muted-foreground opacity-50" />
+                  <p className="text-muted-foreground">No users in organizations yet</p>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {allOrgUsers
+                    .filter(u => 
+                      u.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                      u.email?.toLowerCase().includes(searchTerm.toLowerCase())
+                    )
+                    .map((u) => (
+                    <div key={u.id} className="flex items-center justify-between p-4 rounded-lg border hover:bg-muted/50">
+                      <div className="flex items-center gap-3">
+                        <div className="h-10 w-10 rounded-full bg-blue-100 flex items-center justify-center">
+                          <span className="text-sm font-semibold text-blue-600">{u.name?.charAt(0).toUpperCase()}</span>
+                        </div>
+                        <div>
+                          <p className="font-medium">{u.name}</p>
+                          <div className="flex items-center gap-3 text-sm text-muted-foreground">
+                            <span className="flex items-center gap-1">
+                              <Mail className="h-3 w-3" />
+                              {u.email}
+                            </span>
+                            <Badge variant="outline" className="text-xs">{u.role}</Badge>
+                          </div>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Badge className="bg-purple-100 text-purple-700">
+                          <Building2 className="h-3 w-3 mr-1" />
+                          {u.organization_name || 'Unknown'}
+                        </Badge>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </ScrollArea>
+          </DialogContent>
+        </Dialog>
       </div>
     </DashboardLayout>
   );
