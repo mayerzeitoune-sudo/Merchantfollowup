@@ -4315,7 +4315,7 @@ async def get_ai_conversation_summary(client_id: str, current_user: dict = Depen
         }
     
     try:
-        from emergentintegrations.llm.chat import Chat
+        from emergentintegrations.llm.chat import LlmChat, UserMessage
         
         prompt = f"""Analyze this conversation between an agent and a client named {client.get('name', 'the client')}.
         
@@ -4331,8 +4331,13 @@ Provide a JSON response with:
 
 Respond with valid JSON only."""
 
-        chat = Chat(api_key=api_key)
-        response = await chat.message(prompt).with_model("openai", "gpt-5.2").send_async()
+        chat = LlmChat(
+            api_key=api_key,
+            session_id=f"ai-summary-{client_id}",
+            system_message="You are a conversation analyst. Respond with valid JSON only."
+        ).with_model("openai", "gpt-5.2")
+        
+        response = await chat.send_message(UserMessage(text=prompt))
         
         # Parse JSON from response
         import json
