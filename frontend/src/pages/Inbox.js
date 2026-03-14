@@ -74,9 +74,15 @@ const Inbox = () => {
   const [sending, setSending] = useState(false);
   const [ownedNumbers, setOwnedNumbers] = useState([]);
   const [templates, setTemplates] = useState([]);
+  const [selectedFromNumber, setSelectedFromNumber] = useState('default');
 
   useEffect(() => {
     fetchData();
+  }, []);
+
+  // Filter clients when stageFilter changes
+  useEffect(() => {
+    // Re-filter is handled in filteredClients computed value
   }, [stageFilter]);
 
   useEffect(() => {
