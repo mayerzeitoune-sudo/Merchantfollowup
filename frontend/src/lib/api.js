@@ -307,13 +307,6 @@ export const searchApi = {
   search: (query) => axios.get(`${API}/search`, { params: { q: query } })
 };
 
-// Notifications API
-export const notificationsApi = {
-  getAll: (unreadOnly = false) => axios.get(`${API}/notifications`, { params: { unread_only: unreadOnly } }),
-  markRead: (notificationId) => axios.put(`${API}/notifications/${notificationId}/read`),
-  markAllRead: () => axios.put(`${API}/notifications/read-all`)
-};
-
 // Activity Log API
 export const activityApi = {
   getLog: (limit = 50, entityType = null) => axios.get(`${API}/activity`, { params: { limit, entity_type: entityType } })
