@@ -153,12 +153,19 @@ const Clients = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    
+    // Standardize phone number to E.164 format before saving
+    const dataToSave = {
+      ...formData,
+      phone: getE164Phone(formData.phone)
+    };
+    
     try {
       if (editingClient) {
-        await clientsApi.update(editingClient.id, formData);
+        await clientsApi.update(editingClient.id, dataToSave);
         toast.success('Client updated successfully');
       } else {
-        await clientsApi.create(formData);
+        await clientsApi.create(dataToSave);
         toast.success('Client created successfully');
       }
       setIsDialogOpen(false);
