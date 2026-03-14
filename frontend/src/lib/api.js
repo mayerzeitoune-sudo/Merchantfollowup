@@ -321,7 +321,8 @@ export const activityApi = {
 
 // Client Profile API
 export const clientProfileApi = {
-  getProfile: (clientId) => axios.get(`${API}/clients/${clientId}/profile`)
+  getProfile: (clientId) => axios.get(`${API}/clients/${clientId}/profile`),
+  getAiSummary: (clientId) => axios.get(`${API}/clients/${clientId}/ai-summary`)
 };
 
 // Team Leader Dashboard API
