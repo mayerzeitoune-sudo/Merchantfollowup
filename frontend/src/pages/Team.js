@@ -790,10 +790,16 @@ const Team = () => {
               Members ({members.length})
             </TabsTrigger>
             {isAdmin && (
-              <TabsTrigger value="invites">
-                <Mail className="h-4 w-4 mr-2" />
-                Pending Invites ({invites.length})
-              </TabsTrigger>
+              <>
+                <TabsTrigger value="archived">
+                  <Archive className="h-4 w-4 mr-2" />
+                  Archived ({archivedMembers.length})
+                </TabsTrigger>
+                <TabsTrigger value="invites">
+                  <Mail className="h-4 w-4 mr-2" />
+                  Pending Invites ({invites.length})
+                </TabsTrigger>
+              </>
             )}
           </TabsList>
 
