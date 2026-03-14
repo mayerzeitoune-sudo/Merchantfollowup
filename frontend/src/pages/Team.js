@@ -825,8 +825,9 @@ const Team = () => {
                             <Button 
                               variant="ghost" 
                               size="icon"
-                              onClick={() => handleRemoveMember(member.id)}
+                              onClick={() => openDeleteMember(member)}
                               title="Remove Member"
+                              data-testid={`delete-member-${member.id}`}
                             >
                               <X className="h-4 w-4 text-destructive" />
                             </Button>
