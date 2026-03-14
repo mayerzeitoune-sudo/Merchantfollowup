@@ -487,6 +487,85 @@ def require_admin_or_above(user: dict):
     if not is_admin_or_above(user):
         raise HTTPException(status_code=403, detail="Admin access required")
 
+
+async def get_accessible_user_ids(current_user: dict) -> List[str]:
+    """
+    Get list of user IDs whose data the current user can access.
+    - org_admin: all users
+    - admin: all users in their org/team
+    - team_leader: themselves + their assigned agents
+    - agent/viewer: only themselves
+    """
+    user = await db.users.find_one({"id": current_user["user_id"]}, {"_id": 0})
+    role = user.get("role", "agent")
+    
+    if role == "org_admin":
+        # Org admin sees all
+        all_users = await db.users.find({}, {"id": 1, "_id": 0}).to_list(10000)
+        return [u["id"] for u in all_users]
+    
+    elif role == "admin":
+        # Admin sees all users in their team/org
+        team_id = user.get("team_id") or current_user["user_id"]
+        team_users = await db.users.find(
+            {"$or": [{"team_id": team_id}, {"id": team_id}]},
+            {"id": 1, "_id": 0}
+        ).to_list(1000)
+        return [u["id"] for u in team_users]
+    
+    elif role == "team_leader":
+        # Team leader sees their own data + their agents' data
+        agents = await db.users.find(
+            {"team_leader_id": current_user["user_id"]},
+            {"id": 1, "_id": 0}
+        ).to_list(100)
+        return [current_user["user_id"]] + [a["id"] for a in agents]
+    
+    else:
+        # Agent/viewer only sees their own data
+        return [current_user["user_id"]]
+
+
+async def build_data_query(current_user: dict, base_query: dict = None) -> dict:
+    """Build a query that filters data based on user's role and access level."""
+    if base_query is None:
+        base_query = {}
+    
+    accessible_ids = await get_accessible_user_ids(current_user)
+    base_query["user_id"] = {"$in": accessible_ids}
+    return base_query
+
+
+async def log_activity(user_id: str, action: str, details: dict = None, entity_type: str = None, entity_id: str = None):
+    """Log user activity for audit trail"""
+    activity = {
+        "id": str(uuid.uuid4()),
+        "user_id": user_id,
+        "action": action,
+        "details": details or {},
+        "entity_type": entity_type,
+        "entity_id": entity_id,
+        "created_at": datetime.now(timezone.utc).isoformat()
+    }
+    await db.activity_logs.insert_one(activity)
+
+
+async def create_notification(user_id: str, title: str, message: str, type: str = "info", link: str = None):
+    """Create a notification for a user"""
+    notification = {
+        "id": str(uuid.uuid4()),
+        "user_id": user_id,
+        "title": title,
+        "message": message,
+        "type": type,  # info, success, warning, error
+        "link": link,
+        "read": False,
+        "created_at": datetime.now(timezone.utc).isoformat()
+    }
+    await db.notifications.insert_one(notification)
+    return notification
+
+
 async def ai_match_response(incoming_message: str, keywords: List[str]) -> dict:
     """Use AI to match incoming message to keywords with semantic understanding"""
     try:
