@@ -221,6 +221,17 @@ const DashboardLayout = ({ children }) => {
 
       {/* Main Content */}
       <main className="lg:ml-64 pt-16 lg:pt-0 min-h-screen">
+        {/* Desktop Top Bar */}
+        <div className="hidden lg:flex items-center justify-between h-16 px-8 bg-white border-b border-border">
+          <GlobalSearch />
+          <div className="flex items-center gap-4">
+            <NotificationBell />
+            <div className="text-sm text-right">
+              <p className="font-medium">{user?.name || user?.email}</p>
+              <p className="text-muted-foreground text-xs capitalize">{user?.role || 'User'}</p>
+            </div>
+          </div>
+        </div>
         <div className="p-6 lg:p-8">
           {children}
         </div>
