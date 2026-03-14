@@ -37,6 +37,7 @@ import MyTeam from "./pages/MyTeam";
 import ActivityLog from "./pages/ActivityLog";
 import AgentClients from "./pages/AgentClients";
 import Profile from "./pages/Profile";
+import UserHistory from "./pages/UserHistory";
 
 // Protected Route Component
 const ProtectedRoute = ({ children }) => {
