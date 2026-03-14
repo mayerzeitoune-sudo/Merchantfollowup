@@ -36,8 +36,8 @@ import { useAuth } from '../context/AuthContext';
 const ROLES = [
   { value: 'org_admin', label: 'Org Admin', description: 'Super admin with access to all organizations', color: 'bg-purple-100 text-purple-700' },
   { value: 'admin', label: 'Admin', description: 'Full access to their organization', color: 'bg-red-100 text-red-700' },
-  { value: 'agent', label: 'Agent', description: 'Can manage assigned contacts and send messages', color: 'bg-blue-100 text-blue-700' },
-  { value: 'user', label: 'User', description: 'Can only see and manage their own data', color: 'bg-green-100 text-green-700' },
+  { value: 'team_leader', label: 'Team Leader', description: 'Manages a team of agents, can access their data', color: 'bg-orange-100 text-orange-700' },
+  { value: 'agent', label: 'Agent', description: 'Can manage their own contacts and send messages', color: 'bg-blue-100 text-blue-700' },
   { value: 'viewer', label: 'Viewer', description: 'Read-only access to contacts and reports', color: 'bg-gray-100 text-gray-700' }
 ];
 
