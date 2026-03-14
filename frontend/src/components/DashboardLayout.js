@@ -26,8 +26,12 @@ import {
   RefreshCw,
   Kanban,
   DollarSign,
-  Building2
+  Building2,
+  Activity,
+  UsersRound
 } from 'lucide-react';
+import GlobalSearch from './GlobalSearch';
+import NotificationBell from './NotificationBell';
 
 const navItems = [
   { path: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
@@ -46,7 +50,9 @@ const navItems = [
   { path: '/analytics', label: 'Analytics', icon: BarChart3 },
   { divider: true, label: 'Team' },
   { path: '/team', label: 'Team Members', icon: Users },
+  { path: '/my-team', label: 'My Team', icon: UsersRound, teamLeaderOnly: true },
   { path: '/organizations', label: 'Organizations', icon: Building2, orgAdminOnly: true },
+  { path: '/activity', label: 'Activity Log', icon: Activity, adminOnly: true },
   { divider: true, label: 'Settings' },
   { path: '/compliance', label: 'SMS Compliance', icon: Shield },
   { path: '/phone-numbers', label: 'Phone Numbers', icon: Phone },
