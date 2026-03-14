@@ -329,3 +329,20 @@ export const clientProfileApi = {
 export const teamLeaderApi = {
   getDashboard: () => axios.get(`${API}/team-leader/dashboard`)
 };
+
+// Profile API
+export const profileApi = {
+  update: (data) => axios.put(`${API}/profile`, data),
+  changePassword: (data) => axios.post(`${API}/profile/change-password`, data)
+};
+
+// Bulk Operations API
+export const bulkApi = {
+  deleteClients: (clientIds) => axios.post(`${API}/clients/bulk-delete`, { client_ids: clientIds })
+};
+
+// Calling API
+export const callsApi = {
+  initiate: (toNumber, fromNumber) => axios.post(`${API}/calls/initiate`, { to_number: toNumber, from_number: fromNumber }),
+  end: (callId) => axios.post(`${API}/calls/${callId}/end`)
+};
