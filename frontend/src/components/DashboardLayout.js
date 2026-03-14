@@ -40,7 +40,6 @@ const navItems = [
   { path: '/funded', label: 'Projections', icon: DollarSign, badge: 'New' },
   { path: '/clients', label: 'Clients', icon: Users },
   { path: '/inbox', label: 'Inbox', icon: MessageSquare },
-  { path: '/contacts', label: 'Messaging', icon: Phone },
   { path: '/templates', label: 'Templates', icon: FileText },
   { path: '/reminders', label: 'Reminders', icon: Bell },
   { path: '/calendar', label: 'Calendar', icon: Calendar },
