@@ -6,8 +6,9 @@
 
 #### Inbox Page Redesign (`/inbox`)
 - **New dedicated Inbox page** with split-view design
-- **Left panel**: Contact list with search, stage filter
+- **Left panel**: Contact list with search, **working stage filter**
 - **Right panel**: Conversation view with message history
+- **Phone number selector**: Dropdown showing actual phone numbers to send from
 - **Features**: Quick templates, conversation chains by phone number
 - **Backend fixes**: Updated 3 endpoints to use role-based access (`get_accessible_user_ids`)
 
