@@ -35,6 +35,7 @@ import OnboardingPage from "./pages/OnboardingPage";
 import Organizations from "./pages/Organizations";
 import MyTeam from "./pages/MyTeam";
 import ActivityLog from "./pages/ActivityLog";
+import AgentClients from "./pages/AgentClients";
 
 // Protected Route Component
 const ProtectedRoute = ({ children }) => {
