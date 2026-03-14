@@ -33,6 +33,8 @@ import FundedDeals from "./pages/FundedDeals";
 import FundedDealProfile from "./pages/FundedDealProfile";
 import OnboardingPage from "./pages/OnboardingPage";
 import Organizations from "./pages/Organizations";
+import MyTeam from "./pages/MyTeam";
+import ActivityLog from "./pages/ActivityLog";
 
 // Protected Route Component
 const ProtectedRoute = ({ children }) => {
