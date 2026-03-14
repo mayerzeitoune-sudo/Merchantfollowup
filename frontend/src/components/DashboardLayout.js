@@ -32,6 +32,7 @@ import {
 } from 'lucide-react';
 import GlobalSearch from './GlobalSearch';
 import NotificationBell from './NotificationBell';
+import PhoneDialer from './PhoneDialer';
 
 const navItems = [
   { path: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
