@@ -4208,6 +4208,249 @@ try:
 except Exception as e:
     logger.warning(f"Could not load Organization routes: {e}")
 
+
+# ============== GLOBAL SEARCH ==============
+
+@api_router.get("/search")
+async def global_search(q: str, current_user: dict = Depends(get_current_user)):
+    """Search across clients, messages, and deals"""
+    if not q or len(q) < 2:
+        return {"clients": [], "messages": [], "deals": []}
+    
+    accessible_ids = await get_accessible_user_ids(current_user)
+    search_regex = {"$regex": q, "$options": "i"}
+    
+    # Search clients
+    clients = await db.clients.find(
+        {
+            "user_id": {"$in": accessible_ids},
+            "$or": [
+                {"name": search_regex},
+                {"email": search_regex},
+                {"phone": search_regex},
+                {"company": search_regex},
+                {"notes": search_regex}
+            ]
+        },
+        {"_id": 0}
+    ).to_list(20)
+    
+    # Search conversations/messages
+    messages = await db.conversations.find(
+        {
+            "user_id": {"$in": accessible_ids},
+            "message": search_regex
+        },
+        {"_id": 0}
+    ).to_list(20)
+    
+    # Search deals
+    deals = await db.deals.find(
+        {
+            "user_id": {"$in": accessible_ids},
+            "$or": [
+                {"business_name": search_regex},
+                {"notes": search_regex}
+            ]
+        },
+        {"_id": 0}
+    ).to_list(20)
+    
+    return {"clients": clients, "messages": messages, "deals": deals}
+
+
+# ============== CLIENT PROFILE (Full History) ==============
+
+@api_router.get("/clients/{client_id}/profile")
+async def get_client_profile(client_id: str, current_user: dict = Depends(get_current_user)):
+    """Get full client profile with all history"""
+    accessible_ids = await get_accessible_user_ids(current_user)
+    
+    # Get client
+    client = await db.clients.find_one(
+        {"id": client_id, "user_id": {"$in": accessible_ids}},
+        {"_id": 0}
+    )
+    if not client:
+        raise HTTPException(status_code=404, detail="Client not found")
+    
+    # Get all messages with this client
+    messages = await db.conversations.find(
+        {"client_id": client_id, "user_id": {"$in": accessible_ids}},
+        {"_id": 0}
+    ).sort("created_at", -1).to_list(100)
+    
+    # Get deals for this client
+    deals = await db.deals.find(
+        {"client_id": client_id, "user_id": {"$in": accessible_ids}},
+        {"_id": 0}
+    ).to_list(50)
+    
+    # Get reminders for this client
+    reminders = await db.reminders.find(
+        {"client_id": client_id, "user_id": {"$in": accessible_ids}},
+        {"_id": 0}
+    ).to_list(50)
+    
+    # Get activity logs for this client
+    activities = await db.activity_logs.find(
+        {"entity_type": "client", "entity_id": client_id},
+        {"_id": 0}
+    ).sort("created_at", -1).to_list(50)
+    
+    # Get owner info
+    owner = await db.users.find_one({"id": client["user_id"]}, {"_id": 0, "password": 0})
+    
+    return {
+        "client": client,
+        "messages": messages,
+        "deals": deals,
+        "reminders": reminders,
+        "activities": activities,
+        "owner": {"id": owner["id"], "name": owner.get("name"), "email": owner.get("email")} if owner else None,
+        "stats": {
+            "total_messages": len(messages),
+            "total_deals": len(deals),
+            "last_contact": messages[0]["created_at"] if messages else None
+        }
+    }
+
+
+# ============== ACTIVITY LOG ==============
+
+@api_router.get("/activity")
+async def get_activity_log(
+    limit: int = 50,
+    entity_type: Optional[str] = None,
+    current_user: dict = Depends(get_current_user)
+):
+    """Get activity log for audit trail"""
+    accessible_ids = await get_accessible_user_ids(current_user)
+    
+    query = {"user_id": {"$in": accessible_ids}}
+    if entity_type:
+        query["entity_type"] = entity_type
+    
+    activities = await db.activity_logs.find(
+        query,
+        {"_id": 0}
+    ).sort("created_at", -1).to_list(limit)
+    
+    # Enrich with user names
+    for activity in activities:
+        user = await db.users.find_one({"id": activity["user_id"]}, {"name": 1, "_id": 0})
+        activity["user_name"] = user.get("name") if user else "Unknown"
+    
+    return activities
+
+
+# ============== NOTIFICATIONS ==============
+
+@api_router.get("/notifications")
+async def get_notifications(unread_only: bool = False, current_user: dict = Depends(get_current_user)):
+    """Get user notifications"""
+    query = {"user_id": current_user["user_id"]}
+    if unread_only:
+        query["read"] = False
+    
+    notifications = await db.notifications.find(
+        query,
+        {"_id": 0}
+    ).sort("created_at", -1).to_list(50)
+    
+    unread_count = await db.notifications.count_documents(
+        {"user_id": current_user["user_id"], "read": False}
+    )
+    
+    return {"notifications": notifications, "unread_count": unread_count}
+
+
+@api_router.put("/notifications/{notification_id}/read")
+async def mark_notification_read(notification_id: str, current_user: dict = Depends(get_current_user)):
+    """Mark a notification as read"""
+    await db.notifications.update_one(
+        {"id": notification_id, "user_id": current_user["user_id"]},
+        {"$set": {"read": True}}
+    )
+    return {"message": "Notification marked as read"}
+
+
+@api_router.put("/notifications/read-all")
+async def mark_all_notifications_read(current_user: dict = Depends(get_current_user)):
+    """Mark all notifications as read"""
+    await db.notifications.update_many(
+        {"user_id": current_user["user_id"], "read": False},
+        {"$set": {"read": True}}
+    )
+    return {"message": "All notifications marked as read"}
+
+
+# ============== TEAM LEADER DASHBOARD ==============
+
+@api_router.get("/team-leader/dashboard")
+async def get_team_leader_dashboard(current_user: dict = Depends(get_current_user)):
+    """Get dashboard data for team leaders"""
+    user = await db.users.find_one({"id": current_user["user_id"]}, {"_id": 0})
+    
+    if user.get("role") not in ["team_leader", "admin", "org_admin"]:
+        raise HTTPException(status_code=403, detail="Access denied")
+    
+    # Get agents based on role
+    if user.get("role") == "team_leader":
+        agents = await db.users.find(
+            {"team_leader_id": current_user["user_id"]},
+            {"_id": 0, "password": 0}
+        ).to_list(100)
+    else:
+        # Admin/org_admin can see all agents
+        team_id = user.get("team_id") or current_user["user_id"]
+        agents = await db.users.find(
+            {"$or": [{"team_id": team_id}, {"team_leader_id": {"$exists": True}}], "role": "agent"},
+            {"_id": 0, "password": 0}
+        ).to_list(100)
+    
+    # Get stats for each agent
+    agent_stats = []
+    for agent in agents:
+        clients_count = await db.clients.count_documents({"user_id": agent["id"]})
+        messages_sent = await db.conversations.count_documents({"user_id": agent["id"], "direction": "outbound"})
+        messages_received = await db.conversations.count_documents({"user_id": agent["id"], "direction": "inbound"})
+        deals_count = await db.deals.count_documents({"user_id": agent["id"]})
+        
+        # Recent activity
+        last_activity = await db.activity_logs.find_one(
+            {"user_id": agent["id"]},
+            {"_id": 0}
+        )
+        
+        agent_stats.append({
+            "id": agent["id"],
+            "name": agent.get("name"),
+            "email": agent.get("email"),
+            "role": agent.get("role"),
+            "clients_count": clients_count,
+            "messages_sent": messages_sent,
+            "messages_received": messages_received,
+            "deals_count": deals_count,
+            "last_activity": last_activity.get("created_at") if last_activity else None
+        })
+    
+    # Team totals
+    total_clients = sum(a["clients_count"] for a in agent_stats)
+    total_messages = sum(a["messages_sent"] for a in agent_stats)
+    total_deals = sum(a["deals_count"] for a in agent_stats)
+    
+    return {
+        "agents": agent_stats,
+        "totals": {
+            "agents_count": len(agent_stats),
+            "total_clients": total_clients,
+            "total_messages": total_messages,
+            "total_deals": total_deals
+        }
+    }
+
+
 # Include the main router AFTER enhanced routes
 app.include_router(api_router)
 
