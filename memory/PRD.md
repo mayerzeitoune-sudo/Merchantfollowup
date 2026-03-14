@@ -1,70 +1,52 @@
 # Merchant Follow Up - Product Requirements Document
 
-## Original Problem Statement
-Build a comprehensive SMS platform "Merchant Follow Up" for automated payment reminders and lead follow-up with multi-organization and role-based access control.
-
 ## Implementation Status - March 14, 2026
 
 ### ✅ COMPLETED (This Session)
 
-1. **OTP Verification Restored**
-   - Registration now requires OTP verification
-   - Simplified OTP input using 6 individual input fields (replaced buggy library)
-   - First user → admin role, subsequent users → agent role
+1. **Notifications Now Clickable**
+   - Notifications navigate to related client when clicked
+   - Messages in notification bell navigate to client profile
+   - Added `data-testid` for testing
 
-2. **Pipeline Fix**
-   - Fixed route in `/app/backend/routes/enhanced.py` to respect org_admin/admin permissions
-   - Org admins and admins can now update ANY client's pipeline stage
-   - Pipeline drag-and-drop fully working
+2. **Team Delete Button Fixed**
+   - Replaced `confirm()` with proper AlertDialog component
+   - Delete confirmation shows member name
+   - Delete button now works reliably across all browsers
 
-3. **User Profile Page**
-   - New `/profile` route with user avatar, name, email, role
-   - Change Password functionality
-   - Account Information form (name, phone)
-   - Security section showing verified status
+3. **Phone Numbers - State Search Feature**
+   - New "Search by State" dropdown with all 50 US states + DC
+   - Automatically shows area codes for selected state
+   - Can select specific area code when state has multiple
+   - Manual area code entry still available
 
-4. **Bulk Delete Clients**
-   - Checkbox selection on Clients table
-   - "Delete (n)" button appears when clients selected
-   - Backend endpoint: `POST /api/clients/bulk-delete`
-   - Deletes associated conversations, deals, reminders
+4. **Phone Dialer Improvements**
+   - Added "Contacts" tab alongside "Dialpad"
+   - Shows all contacts with search functionality
+   - Phone number input is now editable
+   - Fixed +1 formatting to not cut off last digit
+   - Properly handles 10-digit and 11-digit numbers
 
-5. **Global Search Fixed**
-   - Minimum 2 characters required before search triggers
-   - Proper click-outside closing
-   - Clear button to reset search
-   - No longer shows all clients by default
+5. **Phone Number Standardization**
+   - Client phone input auto-formats to +1 (XXX) XXX-XXXX
+   - Saves in E.164 format (+1XXXXXXXXXX)
+   - Helper text shows "Phone numbers are automatically formatted to US format"
 
-6. **Phone Dialer Updated**
-   - "Calling From" dropdown loads from owned phone numbers API
-   - Quick Contacts search
-   - Full dial pad functionality
-   - Twilio Voice integration (MOCKED without credentials)
+### ✅ PREVIOUSLY COMPLETED (This Session)
+- User Profile Page
+- Pipeline Fix (org_admin can update any client)
+- Bulk Delete Clients
+- Global Search Fix (min 2 chars)
+- OTP Verification Restored
 
-### ✅ PREVIOUSLY COMPLETED
-
-- Multi-Organization Architecture (Org Admin > Admin > Team Leader > Agent > Viewer)
-- Team Leader Role Assignment & Dashboard
-- Agent Assignment to Team Leaders
-- AI Conversation Summary on Client Profile
-- Gmail Integration
-- Funded Deals & Projections
-
-### API Endpoints Added This Session
-
+### API Endpoints
 ```
-PUT  /api/profile - Update user profile (name, phone)
-POST /api/profile/change-password - Change own password
+DELETE /api/team/members/{id} - Remove team member (with AlertDialog)
+PUT /api/profile - Update user profile
+POST /api/profile/change-password - Change own password  
 POST /api/clients/bulk-delete - Delete multiple clients
-PUT  /api/clients/{id}/pipeline - Now respects admin roles
+PUT /api/clients/{id}/pipeline - Respects admin roles
 ```
-
-### Technical Stack
-- **Backend**: FastAPI + MongoDB + Motor
-- **Frontend**: React + Tailwind + Shadcn/UI
-- **AI**: OpenAI GPT-5.2 via Emergent LLM Key
-- **Auth**: JWT + OTP verification
-- **SMS/Voice**: Twilio (SMS working, Voice mocked)
 
 ### Test Credentials
 - **Org Admin**: admin@merchant.com / admin123
@@ -73,32 +55,22 @@ PUT  /api/clients/{id}/pipeline - Now respects admin roles
 1. **Twilio Voice** - Returns mock status without credentials
 2. **A2P 10DLC Registration** - UI only, no backend
 
+### Files Modified This Session
+- `/app/frontend/src/components/PhoneDialer.js` - Contacts tab, editable input, +1 fix
+- `/app/frontend/src/pages/PhoneNumbers.js` - State search with area codes
+- `/app/frontend/src/pages/Team.js` - AlertDialog for delete
+- `/app/frontend/src/pages/Clients.js` - Phone auto-formatting
+- `/app/frontend/src/components/NotificationBell.js` - Clickable notifications
+
 ### Prioritized Backlog
 
 **P0 - Critical**
 - Add Twilio credentials for real Voice calls
-- Implement SMS delivery webhooks
 
 **P1 - Important**
-- Data scoping by org_id across ALL endpoints
-- Twilio A2P 10DLC registration API
+- Twilio A2P 10DLC registration
 - Real-time Notifications via WebSocket
 
 **P2 - Nice to Have**
 - Email Inbox View
 - Auto-import leads from email
-- Background job scheduler
-
-### Files Modified This Session
-- `/app/backend/server.py` - Profile routes, bulk delete, logging cleanup
-- `/app/backend/routes/enhanced.py` - Fixed pipeline permissions
-- `/app/frontend/src/pages/Profile.js` - NEW
-- `/app/frontend/src/pages/Clients.js` - Bulk delete checkboxes
-- `/app/frontend/src/pages/VerifyOTP.js` - Simplified OTP input
-- `/app/frontend/src/components/GlobalSearch.js` - Min 2 chars, proper close
-- `/app/frontend/src/components/PhoneDialer.js` - Phone number selection
-- `/app/frontend/src/components/DashboardLayout.js` - Profile link
-- `/app/frontend/src/App.js` - Profile route
-
-### Test Reports
-- `/app/test_reports/iteration_9.json`
