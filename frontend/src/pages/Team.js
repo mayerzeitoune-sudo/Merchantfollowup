@@ -25,7 +25,9 @@ import {
   Send,
   Upload,
   FileSpreadsheet,
-  Download
+  Download,
+  Key,
+  RefreshCw
 } from 'lucide-react';
 import { teamApi } from '../lib/api';
 import { toast } from 'sonner';
