@@ -301,3 +301,30 @@ export const organizationsApi = {
   removeUser: (token, orgId, userId) => axios.delete(`${API}/organizations/${orgId}/users/${userId}`, { params: { authorization: `Bearer ${token}` } }),
   getStats: (token) => axios.get(`${API}/organizations/stats/overview`, { params: { authorization: `Bearer ${token}` } })
 };
+
+// Global Search API
+export const searchApi = {
+  search: (query) => axios.get(`${API}/search`, { params: { q: query } })
+};
+
+// Notifications API
+export const notificationsApi = {
+  getAll: (unreadOnly = false) => axios.get(`${API}/notifications`, { params: { unread_only: unreadOnly } }),
+  markRead: (notificationId) => axios.put(`${API}/notifications/${notificationId}/read`),
+  markAllRead: () => axios.put(`${API}/notifications/read-all`)
+};
+
+// Activity Log API
+export const activityApi = {
+  getLog: (limit = 50, entityType = null) => axios.get(`${API}/activity`, { params: { limit, entity_type: entityType } })
+};
+
+// Client Profile API
+export const clientProfileApi = {
+  getProfile: (clientId) => axios.get(`${API}/clients/${clientId}/profile`)
+};
+
+// Team Leader Dashboard API
+export const teamLeaderApi = {
+  getDashboard: () => axios.get(`${API}/team-leader/dashboard`)
+};
