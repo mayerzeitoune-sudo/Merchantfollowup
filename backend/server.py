@@ -1849,7 +1849,7 @@ async def update_member_role(member_id: str, role: str, current_user: dict = Dep
     if not is_admin_or_above(user):
         raise HTTPException(status_code=403, detail="Only admins can update roles")
     
-    valid_roles = ["admin", "agent", "viewer", "user"]
+    valid_roles = ["admin", "team_leader", "agent", "viewer"]
     if role not in valid_roles:
         raise HTTPException(status_code=400, detail=f"Invalid role. Must be one of: {valid_roles}")
     
