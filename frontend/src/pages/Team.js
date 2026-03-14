@@ -748,9 +748,18 @@ const Team = () => {
                               </SelectContent>
                             </Select>
                             <Button 
+                              variant="outline" 
+                              size="sm"
+                              onClick={() => openResetPassword(member)}
+                              title="Reset Password"
+                            >
+                              <Key className="h-4 w-4" />
+                            </Button>
+                            <Button 
                               variant="ghost" 
                               size="icon"
                               onClick={() => handleRemoveMember(member.id)}
+                              title="Remove Member"
                             >
                               <X className="h-4 w-4 text-destructive" />
                             </Button>
