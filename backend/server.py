@@ -956,11 +956,14 @@ async def update_client_pipeline(client_id: str, stage: str, current_user: dict 
         'future': 'Future',
     }
     
+    # Build query based on user role (org_admin/admin can update any client)
+    if current_user.get("role") in ["org_admin", "admin"]:
+        query = {"id": client_id}
+    else:
+        query = {"id": client_id, "user_id": current_user["user_id"]}
+    
     # Get current client to update tags
-    client = await db.clients.find_one(
-        {"id": client_id, "user_id": current_user["user_id"]},
-        {"_id": 0}
-    )
+    client = await db.clients.find_one(query, {"_id": 0})
     if not client:
         raise HTTPException(status_code=404, detail="Client not found")
     
@@ -971,7 +974,7 @@ async def update_client_pipeline(client_id: str, stage: str, current_user: dict 
     updated_tags.append(STAGE_TO_TAG.get(stage, stage))
     
     result = await db.clients.update_one(
-        {"id": client_id, "user_id": current_user["user_id"]},
+        query,
         {"$set": {
             "pipeline_stage": stage, 
             "tags": updated_tags,
