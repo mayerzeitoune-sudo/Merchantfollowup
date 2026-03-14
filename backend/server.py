@@ -849,8 +849,11 @@ async def get_clients(tag: Optional[str] = None, current_user: dict = Depends(ge
 
 @api_router.get("/clients/{client_id}", response_model=ClientResponse)
 async def get_client(client_id: str, current_user: dict = Depends(get_current_user)):
+    # Get accessible user IDs for this user
+    accessible_ids = await get_accessible_user_ids(current_user)
+    
     client = await db.clients.find_one(
-        {"id": client_id, "user_id": current_user["user_id"]},
+        {"id": client_id, "user_id": {"$in": accessible_ids}},
         {"_id": 0}
     )
     if not client:
