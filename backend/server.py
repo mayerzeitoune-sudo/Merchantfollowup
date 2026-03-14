@@ -4208,6 +4208,14 @@ try:
 except Exception as e:
     logger.warning(f"Could not load Organization routes: {e}")
 
+# Load SMS routes
+try:
+    from routes.sms import router as sms_router
+    app.include_router(sms_router, prefix="/api")
+    logger.info("SMS routes loaded successfully")
+except Exception as e:
+    logger.warning(f"Could not load SMS routes: {e}")
+
 
 # ============== GLOBAL SEARCH ==============
 
