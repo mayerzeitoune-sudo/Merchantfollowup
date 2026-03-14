@@ -272,6 +272,47 @@ const Team = () => {
     }
   };
 
+  // Password Reset Handlers
+  const openResetPassword = (member) => {
+    setSelectedMember(member);
+    setNewPassword('');
+    setResetPasswordOpen(true);
+  };
+
+  const handleResetPassword = async () => {
+    if (!newPassword || newPassword.length < 6) {
+      toast.error('Password must be at least 6 characters');
+      return;
+    }
+    
+    setResetLoading(true);
+    try {
+      await teamApi.resetPassword(selectedMember.id, newPassword);
+      toast.success(`Password reset successfully for ${selectedMember.email}`);
+      setResetPasswordOpen(false);
+      setNewPassword('');
+      setSelectedMember(null);
+    } catch (error) {
+      toast.error(error.response?.data?.detail || 'Failed to reset password');
+    } finally {
+      setResetLoading(false);
+    }
+  };
+
+  const handleSendResetLink = async (member) => {
+    try {
+      const response = await teamApi.sendResetLink(member.id);
+      if (response.data.email_sent) {
+        toast.success(`Password reset link sent to ${member.email}`);
+      } else {
+        // If email failed, show the token
+        toast.info(`Reset link generated. Token: ${response.data.reset_token}`);
+      }
+    } catch (error) {
+      toast.error(error.response?.data?.detail || 'Failed to send reset link');
+    }
+  };
+
   const handleCancelInvite = async (inviteId) => {
     try {
       await teamApi.cancelInvite(inviteId);
