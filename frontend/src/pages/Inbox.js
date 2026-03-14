@@ -106,13 +106,21 @@ const Inbox = () => {
   const fetchData = async () => {
     try {
       const [clientsRes, numbersRes, templatesRes] = await Promise.all([
-        clientsApi.getAll(stageFilter === 'all' ? null : stageFilter),
+        clientsApi.getAll(), // Get all clients, filter on frontend
         phoneNumbersApi.getOwned(),
         templatesApi.getAll()
       ]);
       
       setClients(clientsRes.data || []);
-      setOwnedNumbers(numbersRes.data || []);
+      const numbers = numbersRes.data || [];
+      setOwnedNumbers(numbers);
+      // Set default from number
+      const defaultNum = numbers.find(n => n.is_default);
+      if (defaultNum) {
+        setSelectedFromNumber(defaultNum.phone_number);
+      } else if (numbers.length > 0) {
+        setSelectedFromNumber(numbers[0].phone_number);
+      }
       setTemplates(templatesRes.data || []);
     } catch (error) {
       toast.error('Failed to fetch data');
