@@ -43,6 +43,17 @@ const Organizations = () => {
   const [addUserDialogOpen, setAddUserDialogOpen] = useState(false);
   const [viewOrgDialogOpen, setViewOrgDialogOpen] = useState(false);
   
+  // New state for clickable cards
+  const [unassignedUsersDialog, setUnassignedUsersDialog] = useState(false);
+  const [unassignedClientsDialog, setUnassignedClientsDialog] = useState(false);
+  const [allUsersDialog, setAllUsersDialog] = useState(false);
+  const [unassignedUsers, setUnassignedUsers] = useState([]);
+  const [unassignedClients, setUnassignedClients] = useState([]);
+  const [allOrgUsers, setAllOrgUsers] = useState([]);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [assigningUser, setAssigningUser] = useState(null);
+  const [assigningClient, setAssigningClient] = useState(null);
+  
   const [newOrg, setNewOrg] = useState({ name: '', description: '' });
   const [newUser, setNewUser] = useState({ name: '', email: '', password: '', role: 'user' });
 
