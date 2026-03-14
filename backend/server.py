@@ -928,6 +928,7 @@ async def get_client(client_id: str, current_user: dict = Depends(get_current_us
 
 @api_router.put("/clients/{client_id}", response_model=ClientResponse)
 async def update_client(client_id: str, data: ClientUpdate, current_user: dict = Depends(get_current_user)):
+    logger.info(f"update_client called with client_id={client_id}")
     update_data = {k: v for k, v in data.model_dump().items() if v is not None}
     update_data["updated_at"] = datetime.now(timezone.utc).isoformat()
     
