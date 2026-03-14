@@ -991,6 +991,44 @@ async def delete_client(client_id: str, current_user: dict = Depends(get_current
         raise HTTPException(status_code=404, detail="Client not found")
     return {"message": "Client and all associated data deleted"}
 
+class BulkDeleteRequest(BaseModel):
+    client_ids: List[str]
+
+@api_router.post("/clients/bulk-delete")
+async def bulk_delete_clients(data: BulkDeleteRequest, current_user: dict = Depends(get_current_user)):
+    """Delete multiple clients at once"""
+    if not data.client_ids:
+        raise HTTPException(status_code=400, detail="No client IDs provided")
+    
+    if len(data.client_ids) > 100:
+        raise HTTPException(status_code=400, detail="Cannot delete more than 100 clients at once")
+    
+    # Build query based on user role
+    if current_user.get("role") in ["org_admin", "admin"]:
+        query = {"id": {"$in": data.client_ids}}
+    else:
+        query = {"id": {"$in": data.client_ids}, "user_id": current_user["user_id"]}
+    
+    # Delete associated data first
+    await db.funded_deals.delete_many({"client_id": {"$in": data.client_ids}})
+    await db.deal_payments.delete_many({"client_id": {"$in": data.client_ids}})
+    await db.conversations.delete_many({"client_id": {"$in": data.client_ids}})
+    await db.reminders.delete_many({"client_id": {"$in": data.client_ids}})
+    
+    # Delete the clients
+    result = await db.clients.delete_many(query)
+    
+    # Log activity
+    await log_activity(
+        current_user["user_id"],
+        f"Bulk deleted {result.deleted_count} clients",
+        {"client_ids": data.client_ids[:10]},  # Log first 10 IDs only
+        "client",
+        None
+    )
+    
+    return {"message": f"Deleted {result.deleted_count} clients", "deleted_count": result.deleted_count}
+
 @api_router.put("/clients/{client_id}/pipeline")
 async def update_client_pipeline(client_id: str, stage: str, current_user: dict = Depends(get_current_user)):
     """Update client's pipeline stage"""
