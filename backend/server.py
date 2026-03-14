@@ -661,9 +661,17 @@ async def register(user: UserCreate):
     if existing:
         raise HTTPException(status_code=400, detail="Email already registered")
     
+    # Check if this is the first user (will be admin)
+    user_count = await db.users.count_documents({})
+    is_first_user = user_count == 0
+    
     # Create user
     user_id = str(uuid.uuid4())
     now = datetime.now(timezone.utc).isoformat()
+    
+    # Generate OTP for verification
+    otp = generate_otp()
+    otp_expires = (datetime.now(timezone.utc) + timedelta(minutes=10)).isoformat()
     
     user_doc = {
         "id": user_id,
@@ -671,29 +679,23 @@ async def register(user: UserCreate):
         "password": hash_password(user.password),
         "name": user.name,
         "phone": user.phone,
-        "is_verified": True,  # Auto-verify for easier onboarding
-        "role": "admin",  # First user gets admin role
+        "is_verified": False,  # Requires OTP verification
+        "role": "admin" if is_first_user else "agent",  # First user gets admin role
+        "otp": otp,
+        "otp_expires": otp_expires,
         "created_at": now,
         "updated_at": now
     }
     
     await db.users.insert_one(user_doc)
     
-    # Auto-login after registration
-    token = create_token(user_id, user.email)
-    
-    logger.info(f"New user registered: {user.email}")
+    logger.info(f"New user registered: {user.email}, OTP: {otp}")
     
     return {
-        "message": "Registration successful!",
-        "token": token,
-        "user": {
-            "id": user_id,
-            "email": user.email,
-            "name": user.name,
-            "is_verified": True,
-            "role": "admin"
-        }
+        "message": "Registration successful! Please verify your account.",
+        "otp": otp,  # Remove in production - here for testing
+        "requires_verification": True,
+        "email": user.email
     }
 
 @api_router.post("/auth/verify", response_model=dict)
