@@ -52,6 +52,14 @@ export const AuthProvider = ({ children }) => {
 
   const register = async (name, email, password, phone) => {
     const response = await axios.post(`${API}/auth/register`, { name, email, password, phone });
+    // If registration returns a token, auto-login
+    if (response.data.token) {
+      const { token: newToken, user: userData } = response.data;
+      localStorage.setItem('token', newToken);
+      axios.defaults.headers.common['Authorization'] = `Bearer ${newToken}`;
+      setToken(newToken);
+      setUser(userData);
+    }
     return response.data;
   };
 
