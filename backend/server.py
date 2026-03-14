@@ -4217,6 +4217,117 @@ except Exception as e:
     logger.warning(f"Could not load SMS routes: {e}")
 
 
+# ============== CALLING FEATURE ==============
+
+@api_router.post("/calls/initiate")
+async def initiate_call(data: dict, current_user: dict = Depends(get_current_user)):
+    """Initiate an outbound call"""
+    to_number = data.get("to")
+    from_number = data.get("from")
+    
+    if not to_number or not from_number:
+        raise HTTPException(status_code=400, detail="Both 'to' and 'from' numbers are required")
+    
+    call_id = str(uuid.uuid4())
+    now = datetime.now(timezone.utc).isoformat()
+    
+    # Check if Twilio is configured for actual calls
+    twilio_account_sid = os.environ.get("TWILIO_ACCOUNT_SID")
+    twilio_auth_token = os.environ.get("TWILIO_AUTH_TOKEN")
+    
+    call_doc = {
+        "id": call_id,
+        "user_id": current_user["user_id"],
+        "to": to_number,
+        "from": from_number,
+        "status": "initiated",
+        "direction": "outbound",
+        "created_at": now
+    }
+    
+    if twilio_account_sid and twilio_auth_token:
+        try:
+            from twilio.rest import Client
+            twilio_client = Client(twilio_account_sid, twilio_auth_token)
+            
+            # Initiate the call via Twilio
+            call = twilio_client.calls.create(
+                to=to_number,
+                from_=from_number,
+                url="http://demo.twilio.com/docs/voice.xml"  # TwiML for basic call
+            )
+            
+            call_doc["twilio_sid"] = call.sid
+            call_doc["status"] = call.status
+            
+        except Exception as e:
+            logger.error(f"Twilio call failed: {e}")
+            call_doc["status"] = "failed"
+            call_doc["error"] = str(e)
+    else:
+        call_doc["status"] = "mock_initiated"
+        call_doc["mock"] = True
+        logger.info(f"Mock call initiated from {from_number} to {to_number}")
+    
+    await db.calls.insert_one(call_doc)
+    
+    # Log activity
+    await log_activity(
+        current_user["user_id"],
+        "call_initiated",
+        {"to": to_number, "from": from_number},
+        "call",
+        call_id
+    )
+    
+    return {
+        "success": True,
+        "call_id": call_id,
+        "status": call_doc["status"],
+        "mock": call_doc.get("mock", False)
+    }
+
+
+@api_router.post("/calls/{call_id}/end")
+async def end_call(call_id: str, current_user: dict = Depends(get_current_user)):
+    """End an active call"""
+    call = await db.calls.find_one({"id": call_id, "user_id": current_user["user_id"]})
+    if not call:
+        raise HTTPException(status_code=404, detail="Call not found")
+    
+    # If real Twilio call, end it
+    if call.get("twilio_sid"):
+        try:
+            twilio_account_sid = os.environ.get("TWILIO_ACCOUNT_SID")
+            twilio_auth_token = os.environ.get("TWILIO_AUTH_TOKEN")
+            if twilio_account_sid and twilio_auth_token:
+                from twilio.rest import Client
+                twilio_client = Client(twilio_account_sid, twilio_auth_token)
+                twilio_client.calls(call["twilio_sid"]).update(status="completed")
+        except Exception as e:
+            logger.error(f"Failed to end Twilio call: {e}")
+    
+    await db.calls.update_one(
+        {"id": call_id},
+        {"$set": {"status": "completed", "ended_at": datetime.now(timezone.utc).isoformat()}}
+    )
+    
+    return {"success": True, "status": "completed"}
+
+
+@api_router.get("/calls/history")
+async def get_call_history(current_user: dict = Depends(get_current_user), limit: int = 50):
+    """Get call history"""
+    accessible_ids = await get_accessible_user_ids(current_user)
+    
+    calls = await db.calls.find(
+        {"user_id": {"$in": accessible_ids}},
+        {"_id": 0}
+    ).sort("created_at", -1).to_list(limit)
+    
+    return calls
+
+
 # ============== GLOBAL SEARCH ==============
 
 @api_router.get("/search")
