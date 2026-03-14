@@ -412,10 +412,10 @@ const Inbox = () => {
                     </div>
                   </div>
 
-                  {/* Conversation Chains */}
+                  {/* Conversation Chains - Show existing conversations */}
                   {conversationChains.length > 0 && (
                     <div className="flex items-center gap-2 mt-4 pt-4 border-t overflow-x-auto">
-                      <span className="text-xs text-muted-foreground whitespace-nowrap">From:</span>
+                      <span className="text-xs text-muted-foreground whitespace-nowrap">History:</span>
                       {conversationChains.map((chain) => (
                         <Button
                           key={chain.from_number}
@@ -426,7 +426,7 @@ const Inbox = () => {
                           data-testid={`chain-${chain.from_number}`}
                         >
                           <Smartphone className="h-3 w-3 mr-1" />
-                          {chain.display_name}
+                          {chain.from_number !== 'default' ? chain.from_number : 'Default'}
                           {chain.message_count > 0 && (
                             <Badge variant="secondary" className="ml-2 h-5 px-1.5 text-xs">
                               {chain.message_count}
