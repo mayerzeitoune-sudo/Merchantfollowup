@@ -100,7 +100,7 @@ const DashboardLayout = ({ children }) => {
             <span className="text-xs font-semibold text-orange-500">FOLLOWUP</span>
           </div>
         </div>
-        <div className="w-10" />
+        <NotificationBell />
       </header>
 
       {/* Mobile Sidebar Overlay */}
