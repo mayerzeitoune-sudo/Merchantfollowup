@@ -37,8 +37,14 @@ const Register = () => {
     setLoading(true);
     try {
       const response = await register(name, email, password, phone);
-      toast.success('Account created! Please verify your phone.');
-      navigate('/verify-otp', { state: { email, otp: response.otp } });
+      // Auto-login - response now includes token
+      if (response.token) {
+        toast.success('Account created successfully!');
+        navigate('/dashboard');
+      } else {
+        toast.success('Account created! Please verify your phone.');
+        navigate('/verify-otp', { state: { email, otp: response.otp } });
+      }
     } catch (error) {
       toast.error(error.response?.data?.detail || 'Registration failed');
     } finally {
