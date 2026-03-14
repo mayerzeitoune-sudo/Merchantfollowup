@@ -308,7 +308,7 @@ const Organizations = () => {
         {/* Stats Cards */}
         {stats && (
           <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-4">
-            <Card>
+            <Card className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => {}} data-testid="stat-organizations">
               <CardContent className="pt-6">
                 <div className="flex items-center gap-3">
                   <div className="h-10 w-10 rounded-lg bg-purple-100 flex items-center justify-center">
@@ -321,7 +321,7 @@ const Organizations = () => {
                 </div>
               </CardContent>
             </Card>
-            <Card>
+            <Card className="cursor-pointer hover:shadow-md transition-shadow" onClick={openAllUsersDialog} data-testid="stat-users-in-orgs">
               <CardContent className="pt-6">
                 <div className="flex items-center gap-3">
                   <div className="h-10 w-10 rounded-lg bg-blue-100 flex items-center justify-center">
@@ -334,7 +334,7 @@ const Organizations = () => {
                 </div>
               </CardContent>
             </Card>
-            <Card>
+            <Card className="cursor-pointer hover:shadow-md transition-shadow" data-testid="stat-org-admins">
               <CardContent className="pt-6">
                 <div className="flex items-center gap-3">
                   <div className="h-10 w-10 rounded-lg bg-red-100 flex items-center justify-center">
@@ -347,7 +347,7 @@ const Organizations = () => {
                 </div>
               </CardContent>
             </Card>
-            <Card>
+            <Card className="cursor-pointer hover:shadow-md transition-shadow" data-testid="stat-clients-in-orgs">
               <CardContent className="pt-6">
                 <div className="flex items-center gap-3">
                   <div className="h-10 w-10 rounded-lg bg-green-100 flex items-center justify-center">
@@ -360,11 +360,11 @@ const Organizations = () => {
                 </div>
               </CardContent>
             </Card>
-            <Card className="border-dashed border-orange-300 bg-orange-50/50">
+            <Card className="border-dashed border-orange-300 bg-orange-50/50 cursor-pointer hover:shadow-md transition-shadow" onClick={openUnassignedUsersDialog} data-testid="stat-unassigned-users">
               <CardContent className="pt-6">
                 <div className="flex items-center gap-3">
                   <div className="h-10 w-10 rounded-lg bg-orange-100 flex items-center justify-center">
-                    <Users className="h-5 w-5 text-orange-600" />
+                    <UserX className="h-5 w-5 text-orange-600" />
                   </div>
                   <div>
                     <p className="text-2xl font-bold text-orange-600">{stats.unassigned_users || 0}</p>
@@ -373,7 +373,7 @@ const Organizations = () => {
                 </div>
               </CardContent>
             </Card>
-            <Card className="border-dashed border-orange-300 bg-orange-50/50">
+            <Card className="border-dashed border-orange-300 bg-orange-50/50 cursor-pointer hover:shadow-md transition-shadow" onClick={openUnassignedClientsDialog} data-testid="stat-unassigned-clients">
               <CardContent className="pt-6">
                 <div className="flex items-center gap-3">
                   <div className="h-10 w-10 rounded-lg bg-orange-100 flex items-center justify-center">
