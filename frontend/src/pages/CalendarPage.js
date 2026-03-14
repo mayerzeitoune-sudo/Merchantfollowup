@@ -10,7 +10,6 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
 import { Badge } from '../components/ui/badge';
 import { ScrollArea } from '../components/ui/scroll-area';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs';
 import { 
   Plus, 
   Phone,
@@ -25,8 +24,6 @@ import {
   User,
   Bell,
   Filter,
-  List,
-  LayoutGrid,
   AlertCircle,
   Edit,
   MoreHorizontal
@@ -36,10 +33,10 @@ import { toast } from 'sonner';
 import { format, isSameDay, parseISO, startOfMonth, endOfMonth, eachDayOfInterval, addMonths, subMonths, isToday, isBefore, startOfWeek, endOfWeek, addDays } from 'date-fns';
 
 const REMINDER_TYPES = [
-  { value: 'call', label: 'Phone Call', icon: Phone, color: 'bg-blue-100 text-blue-700' },
-  { value: 'sms', label: 'SMS', icon: MessageSquare, color: 'bg-green-100 text-green-700' },
-  { value: 'email', label: 'Email', icon: Mail, color: 'bg-purple-100 text-purple-700' },
-  { value: 'reminder', label: 'Reminder', icon: Bell, color: 'bg-orange-100 text-orange-700' }
+  { value: 'call', label: 'Call', icon: Phone, color: 'bg-blue-500' },
+  { value: 'sms', label: 'SMS', icon: MessageSquare, color: 'bg-green-500' },
+  { value: 'email', label: 'Email', icon: Mail, color: 'bg-purple-500' },
+  { value: 'reminder', label: 'Reminder', icon: Bell, color: 'bg-orange-500' }
 ];
 
 const CalendarPage = () => {
@@ -52,7 +49,6 @@ const CalendarPage = () => {
   const [editingFollowup, setEditingFollowup] = useState(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [followupToDelete, setFollowupToDelete] = useState(null);
-  const [viewMode, setViewMode] = useState('month'); // month, week, list
   const [filterType, setFilterType] = useState('all');
   const [formData, setFormData] = useState({
     client_id: '',
@@ -178,10 +174,6 @@ const CalendarPage = () => {
   const calendarEnd = endOfWeek(monthEnd);
   const calendarDays = eachDayOfInterval({ start: calendarStart, end: calendarEnd });
 
-  // Get week days for week view
-  const weekStart = startOfWeek(selectedDate);
-  const weekDays = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
-
   // Filter followups
   const filteredFollowups = followups.filter(f => {
     if (filterType === 'all') return true;
@@ -190,117 +182,87 @@ const CalendarPage = () => {
     return f.reminder_type === filterType;
   });
 
-  // Upcoming followups (next 7 days)
+  // Stats
+  const overdueFollowups = filteredFollowups.filter(f => {
+    try {
+      const date = parseISO(f.scheduled_date);
+      return isBefore(date, new Date()) && f.status !== 'completed';
+    } catch { return false; }
+  });
+
+  const todayFollowups = getFollowupsForDate(new Date());
+  
   const upcomingFollowups = filteredFollowups.filter(f => {
     try {
       const date = parseISO(f.scheduled_date);
       const now = new Date();
       const weekFromNow = addDays(now, 7);
       return date >= now && date <= weekFromNow && f.status !== 'completed';
-    } catch {
-      return false;
-    }
+    } catch { return false; }
   }).sort((a, b) => new Date(a.scheduled_date) - new Date(b.scheduled_date));
 
-  // Overdue followups
-  const overdueFollowups = filteredFollowups.filter(f => {
-    try {
-      const date = parseISO(f.scheduled_date);
-      return isBefore(date, new Date()) && f.status !== 'completed';
-    } catch {
-      return false;
-    }
-  });
-
+  const completedCount = followups.filter(f => f.status === 'completed').length;
   const selectedDateFollowups = getFollowupsForDate(selectedDate);
 
   const getTypeInfo = (type) => REMINDER_TYPES.find(t => t.value === type) || REMINDER_TYPES[0];
 
-  const FollowupCard = ({ followup, compact = false }) => {
+  const FollowupItem = ({ followup, showDate = false }) => {
     const typeInfo = getTypeInfo(followup.reminder_type);
     const TypeIcon = typeInfo.icon;
     const isOverdue = isBefore(parseISO(followup.scheduled_date), new Date()) && followup.status !== 'completed';
+    const isCompleted = followup.status === 'completed';
     
     return (
-      <div className={`p-3 rounded-lg border ${
-        followup.status === 'completed' 
-          ? 'bg-green-50/50 border-green-200' 
-          : isOverdue
-            ? 'bg-red-50/50 border-red-200'
-            : 'bg-white border-border hover:border-primary/50'
-      } transition-colors`}>
-        <div className="flex items-start justify-between gap-2">
-          <div className="flex items-start gap-3 flex-1 min-w-0">
-            <div className={`h-8 w-8 rounded-lg ${typeInfo.color} flex items-center justify-center shrink-0`}>
-              <TypeIcon className="h-4 w-4" />
-            </div>
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-2 mb-1">
-                <span className="font-medium text-sm truncate">{followup.title}</span>
-                {followup.status === 'completed' && (
-                  <Badge className="bg-green-100 text-green-700 text-xs">Done</Badge>
-                )}
-                {isOverdue && (
-                  <Badge variant="destructive" className="text-xs">Overdue</Badge>
-                )}
-              </div>
-              <p className="text-xs text-muted-foreground truncate">{followup.client_name}</p>
-              {!compact && (
-                <div className="flex items-center gap-3 mt-2 text-xs text-muted-foreground">
-                  <span className="flex items-center gap-1">
-                    <CalendarIcon className="h-3 w-3" />
-                    {format(parseISO(followup.scheduled_date), 'MMM d, yyyy')}
-                  </span>
-                  {followup.scheduled_time && (
-                    <span className="flex items-center gap-1">
-                      <Clock className="h-3 w-3" />
-                      {followup.scheduled_time}
-                    </span>
-                  )}
-                </div>
-              )}
-            </div>
+      <div className={`group flex items-center gap-3 p-3 rounded-xl border transition-all hover:shadow-sm ${
+        isCompleted ? 'bg-green-50/50 border-green-200' : 
+        isOverdue ? 'bg-red-50/50 border-red-200' : 
+        'bg-white border-border hover:border-primary/30'
+      }`}>
+        <div className={`h-10 w-10 rounded-xl ${typeInfo.color} flex items-center justify-center shrink-0`}>
+          <TypeIcon className="h-5 w-5 text-white" />
+        </div>
+        
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2">
+            <span className={`font-medium text-sm truncate ${isCompleted ? 'line-through text-muted-foreground' : ''}`}>
+              {followup.title}
+            </span>
+            {isOverdue && <Badge variant="destructive" className="text-xs px-1.5 py-0">Overdue</Badge>}
+            {isCompleted && <Badge className="bg-green-100 text-green-700 text-xs px-1.5 py-0">Done</Badge>}
           </div>
-          <div className="flex items-center gap-1 shrink-0">
-            {followup.status !== 'completed' && (
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-7 w-7 text-green-600 hover:text-green-700 hover:bg-green-50"
-                onClick={() => handleComplete(followup.id)}
-                title="Mark as complete"
-              >
-                <CheckCircle className="h-4 w-4" />
-              </Button>
+          <div className="flex items-center gap-2 text-xs text-muted-foreground mt-0.5">
+            <User className="h-3 w-3" />
+            <span className="truncate">{followup.client_name}</span>
+            {showDate && (
+              <>
+                <span>•</span>
+                <CalendarIcon className="h-3 w-3" />
+                <span>{format(parseISO(followup.scheduled_date), 'MMM d')}</span>
+              </>
             )}
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-7 w-7"
-              onClick={() => handleEdit(followup)}
-              title="Edit"
-            >
-              <Edit className="h-4 w-4" />
-            </Button>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-7 w-7 text-destructive hover:text-destructive hover:bg-destructive/10"
-              onClick={() => {
-                setFollowupToDelete(followup);
-                setDeleteDialogOpen(true);
-              }}
-              title="Delete"
-            >
-              <Trash2 className="h-4 w-4" />
-            </Button>
+            {followup.scheduled_time && (
+              <>
+                <span>•</span>
+                <Clock className="h-3 w-3" />
+                <span>{followup.scheduled_time}</span>
+              </>
+            )}
           </div>
         </div>
-        {!compact && followup.description && (
-          <p className="text-xs text-muted-foreground mt-2 border-t pt-2 line-clamp-2">
-            {followup.description}
-          </p>
-        )}
+        
+        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+          {!isCompleted && (
+            <Button variant="ghost" size="icon" className="h-8 w-8 text-green-600 hover:bg-green-50" onClick={() => handleComplete(followup.id)}>
+              <CheckCircle className="h-4 w-4" />
+            </Button>
+          )}
+          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleEdit(followup)}>
+            <Edit className="h-4 w-4" />
+          </Button>
+          <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:bg-destructive/10" onClick={() => { setFollowupToDelete(followup); setDeleteDialogOpen(true); }}>
+            <Trash2 className="h-4 w-4" />
+          </Button>
+        </div>
       </div>
     );
   };
@@ -316,7 +278,7 @@ const CalendarPage = () => {
           </div>
           <div className="flex items-center gap-2">
             <Select value={filterType} onValueChange={setFilterType}>
-              <SelectTrigger className="w-32">
+              <SelectTrigger className="w-32" data-testid="calendar-filter">
                 <Filter className="h-4 w-4 mr-2" />
                 <SelectValue />
               </SelectTrigger>
@@ -348,10 +310,7 @@ const CalendarPage = () => {
                 <form onSubmit={handleSubmit} className="space-y-4 mt-4">
                   <div className="space-y-2">
                     <Label htmlFor="client">Client *</Label>
-                    <Select
-                      value={formData.client_id}
-                      onValueChange={(value) => setFormData({ ...formData, client_id: value })}
-                    >
+                    <Select value={formData.client_id} onValueChange={(value) => setFormData({ ...formData, client_id: value })}>
                       <SelectTrigger data-testid="followup-client-select">
                         <SelectValue placeholder="Select a client" />
                       </SelectTrigger>
@@ -372,14 +331,7 @@ const CalendarPage = () => {
                   
                   <div className="space-y-2">
                     <Label htmlFor="title">Title *</Label>
-                    <Input
-                      id="title"
-                      value={formData.title}
-                      onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                      placeholder="e.g., Payment follow-up call"
-                      required
-                      data-testid="followup-title-input"
-                    />
+                    <Input id="title" value={formData.title} onChange={(e) => setFormData({ ...formData, title: e.target.value })} placeholder="e.g., Payment follow-up call" required data-testid="followup-title-input" />
                   </div>
                   
                   <div className="space-y-2">
@@ -388,13 +340,7 @@ const CalendarPage = () => {
                       {REMINDER_TYPES.map((type) => {
                         const Icon = type.icon;
                         return (
-                          <Button
-                            key={type.value}
-                            type="button"
-                            variant={formData.reminder_type === type.value ? "default" : "outline"}
-                            className="h-auto py-2 px-3 flex flex-col items-center gap-1"
-                            onClick={() => setFormData({ ...formData, reminder_type: type.value })}
-                          >
+                          <Button key={type.value} type="button" variant={formData.reminder_type === type.value ? "default" : "outline"} className="h-auto py-2 px-3 flex flex-col items-center gap-1" onClick={() => setFormData({ ...formData, reminder_type: type.value })}>
                             <Icon className="h-4 w-4" />
                             <span className="text-xs">{type.label}</span>
                           </Button>
@@ -406,46 +352,22 @@ const CalendarPage = () => {
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label htmlFor="date">Date *</Label>
-                      <Input
-                        id="date"
-                        type="date"
-                        value={formData.scheduled_date}
-                        onChange={(e) => setFormData({ ...formData, scheduled_date: e.target.value })}
-                        required
-                        data-testid="followup-date-input"
-                      />
+                      <Input id="date" type="date" value={formData.scheduled_date} onChange={(e) => setFormData({ ...formData, scheduled_date: e.target.value })} required data-testid="followup-date-input" />
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="time">Time</Label>
-                      <Input
-                        id="time"
-                        type="time"
-                        value={formData.scheduled_time}
-                        onChange={(e) => setFormData({ ...formData, scheduled_time: e.target.value })}
-                        data-testid="followup-time-input"
-                      />
+                      <Input id="time" type="time" value={formData.scheduled_time} onChange={(e) => setFormData({ ...formData, scheduled_time: e.target.value })} data-testid="followup-time-input" />
                     </div>
                   </div>
                   
                   <div className="space-y-2">
                     <Label htmlFor="description">Notes</Label>
-                    <Textarea
-                      id="description"
-                      value={formData.description}
-                      onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                      placeholder="Additional notes..."
-                      rows={3}
-                      data-testid="followup-notes-input"
-                    />
+                    <Textarea id="description" value={formData.description} onChange={(e) => setFormData({ ...formData, description: e.target.value })} placeholder="Additional notes..." rows={3} data-testid="followup-notes-input" />
                   </div>
                   
                   <DialogFooter>
-                    <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>
-                      Cancel
-                    </Button>
-                    <Button type="submit" data-testid="save-followup-btn">
-                      {editingFollowup ? 'Update' : 'Schedule'}
-                    </Button>
+                    <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>Cancel</Button>
+                    <Button type="submit" data-testid="save-followup-btn">{editingFollowup ? 'Update' : 'Schedule'}</Button>
                   </DialogFooter>
                 </form>
               </DialogContent>
@@ -453,55 +375,58 @@ const CalendarPage = () => {
           </div>
         </div>
 
-        {/* Stats Cards */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <Card className={overdueFollowups.length > 0 ? 'border-red-200 bg-red-50/50' : ''}>
-            <CardContent className="pt-4">
+        {/* Stats Row */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          <Card className={overdueFollowups.length > 0 ? 'border-red-200 bg-gradient-to-br from-red-50 to-white' : 'bg-gradient-to-br from-orange-50 to-white'}>
+            <CardContent className="p-4">
               <div className="flex items-center gap-3">
-                <div className={`h-10 w-10 rounded-lg ${overdueFollowups.length > 0 ? 'bg-red-100' : 'bg-orange-100'} flex items-center justify-center`}>
-                  <AlertCircle className={`h-5 w-5 ${overdueFollowups.length > 0 ? 'text-red-600' : 'text-orange-600'}`} />
+                <div className={`h-12 w-12 rounded-xl ${overdueFollowups.length > 0 ? 'bg-red-500' : 'bg-orange-500'} flex items-center justify-center`}>
+                  <AlertCircle className="h-6 w-6 text-white" />
                 </div>
                 <div>
-                  <p className="text-2xl font-bold">{overdueFollowups.length}</p>
+                  <p className="text-3xl font-bold">{overdueFollowups.length}</p>
                   <p className="text-sm text-muted-foreground">Overdue</p>
                 </div>
               </div>
             </CardContent>
           </Card>
-          <Card>
-            <CardContent className="pt-4">
+          
+          <Card className="bg-gradient-to-br from-blue-50 to-white">
+            <CardContent className="p-4">
               <div className="flex items-center gap-3">
-                <div className="h-10 w-10 rounded-lg bg-blue-100 flex items-center justify-center">
-                  <Clock className="h-5 w-5 text-blue-600" />
+                <div className="h-12 w-12 rounded-xl bg-blue-500 flex items-center justify-center">
+                  <Clock className="h-6 w-6 text-white" />
                 </div>
                 <div>
-                  <p className="text-2xl font-bold">{selectedDateFollowups.length}</p>
+                  <p className="text-3xl font-bold">{todayFollowups.filter(f => f.status !== 'completed').length}</p>
                   <p className="text-sm text-muted-foreground">Today</p>
                 </div>
               </div>
             </CardContent>
           </Card>
-          <Card>
-            <CardContent className="pt-4">
+          
+          <Card className="bg-gradient-to-br from-purple-50 to-white">
+            <CardContent className="p-4">
               <div className="flex items-center gap-3">
-                <div className="h-10 w-10 rounded-lg bg-purple-100 flex items-center justify-center">
-                  <CalendarIcon className="h-5 w-5 text-purple-600" />
+                <div className="h-12 w-12 rounded-xl bg-purple-500 flex items-center justify-center">
+                  <CalendarIcon className="h-6 w-6 text-white" />
                 </div>
                 <div>
-                  <p className="text-2xl font-bold">{upcomingFollowups.length}</p>
+                  <p className="text-3xl font-bold">{upcomingFollowups.length}</p>
                   <p className="text-sm text-muted-foreground">This Week</p>
                 </div>
               </div>
             </CardContent>
           </Card>
-          <Card>
-            <CardContent className="pt-4">
+          
+          <Card className="bg-gradient-to-br from-green-50 to-white">
+            <CardContent className="p-4">
               <div className="flex items-center gap-3">
-                <div className="h-10 w-10 rounded-lg bg-green-100 flex items-center justify-center">
-                  <CheckCircle className="h-5 w-5 text-green-600" />
+                <div className="h-12 w-12 rounded-xl bg-green-500 flex items-center justify-center">
+                  <CheckCircle className="h-6 w-6 text-white" />
                 </div>
                 <div>
-                  <p className="text-2xl font-bold">{followups.filter(f => f.status === 'completed').length}</p>
+                  <p className="text-3xl font-bold">{completedCount}</p>
                   <p className="text-sm text-muted-foreground">Completed</p>
                 </div>
               </div>
@@ -509,39 +434,35 @@ const CalendarPage = () => {
           </Card>
         </div>
 
-        {/* Calendar and Sidebar */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Main Grid */}
+        <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
           {/* Calendar */}
-          <Card className="lg:col-span-2">
+          <Card className="xl:col-span-2">
             <CardHeader className="pb-2">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <Button variant="outline" size="icon" onClick={handlePrevMonth}>
-                    <ChevronLeft className="h-4 w-4" />
+                  <Button variant="ghost" size="icon" onClick={handlePrevMonth} data-testid="prev-month-btn">
+                    <ChevronLeft className="h-5 w-5" />
                   </Button>
-                  <h2 className="text-lg font-semibold min-w-[180px] text-center">
+                  <h2 className="text-xl font-semibold min-w-[200px] text-center font-['Outfit']">
                     {format(currentMonth, 'MMMM yyyy')}
                   </h2>
-                  <Button variant="outline" size="icon" onClick={handleNextMonth}>
-                    <ChevronRight className="h-4 w-4" />
+                  <Button variant="ghost" size="icon" onClick={handleNextMonth} data-testid="next-month-btn">
+                    <ChevronRight className="h-5 w-5" />
                   </Button>
                 </div>
-                <Button variant="outline" size="sm" onClick={handleToday}>
-                  Today
-                </Button>
+                <Button variant="outline" size="sm" onClick={handleToday} data-testid="today-btn">Today</Button>
               </div>
             </CardHeader>
             <CardContent>
-              {/* Week day headers */}
+              {/* Week headers */}
               <div className="grid grid-cols-7 gap-1 mb-2">
                 {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => (
-                  <div key={day} className="text-center text-sm font-medium text-muted-foreground py-2">
-                    {day}
-                  </div>
+                  <div key={day} className="text-center text-sm font-medium text-muted-foreground py-2">{day}</div>
                 ))}
               </div>
               
-              {/* Calendar days */}
+              {/* Calendar grid */}
               <div className="grid grid-cols-7 gap-1">
                 {calendarDays.map((day, index) => {
                   const dayFollowups = getFollowupsForDate(day);
@@ -549,48 +470,33 @@ const CalendarPage = () => {
                   const isCurrentMonth = day.getMonth() === currentMonth.getMonth();
                   const isPast = isBefore(day, new Date()) && !isToday(day);
                   const hasOverdue = dayFollowups.some(f => f.status !== 'completed' && isPast);
+                  const hasPending = dayFollowups.some(f => f.status !== 'completed');
                   
                   return (
                     <button
                       key={index}
                       onClick={() => handleDateSelect(day)}
-                      className={`
-                        relative h-20 p-1 rounded-lg border transition-all text-left
-                        ${isSelected ? 'ring-2 ring-primary border-primary' : 'border-transparent hover:border-muted-foreground/20'}
-                        ${!isCurrentMonth ? 'opacity-40' : ''}
-                        ${isToday(day) ? 'bg-primary/5' : ''}
-                        ${hasOverdue ? 'bg-red-50' : ''}
-                      `}
+                      className={`relative min-h-[90px] p-2 rounded-xl border-2 transition-all text-left ${
+                        isSelected ? 'border-primary bg-primary/5 shadow-sm' : 'border-transparent hover:border-muted-foreground/20 hover:bg-muted/30'
+                      } ${!isCurrentMonth ? 'opacity-40' : ''} ${isToday(day) ? 'bg-blue-50/50' : ''} ${hasOverdue ? 'bg-red-50/30' : ''}`}
+                      data-testid={`calendar-day-${format(day, 'yyyy-MM-dd')}`}
                     >
-                      <span className={`
-                        text-sm font-medium
-                        ${isToday(day) ? 'text-primary' : ''}
-                        ${isSelected ? 'text-primary' : ''}
-                      `}>
+                      <span className={`text-sm font-semibold ${isToday(day) ? 'h-7 w-7 rounded-full bg-primary text-white flex items-center justify-center' : ''} ${isSelected && !isToday(day) ? 'text-primary' : ''}`}>
                         {format(day, 'd')}
                       </span>
                       
                       {dayFollowups.length > 0 && (
-                        <div className="mt-1 space-y-0.5">
+                        <div className="mt-1 space-y-1">
                           {dayFollowups.slice(0, 2).map((f, i) => {
                             const typeInfo = getTypeInfo(f.reminder_type);
                             return (
-                              <div 
-                                key={i}
-                                className={`text-xs px-1 py-0.5 rounded truncate ${
-                                  f.status === 'completed' 
-                                    ? 'bg-green-100 text-green-700 line-through' 
-                                    : typeInfo.color
-                                }`}
-                              >
+                              <div key={i} className={`text-xs px-1.5 py-0.5 rounded-md truncate flex items-center gap-1 ${f.status === 'completed' ? 'bg-green-100 text-green-700 line-through' : `${typeInfo.color} text-white`}`}>
                                 {f.title}
                               </div>
                             );
                           })}
                           {dayFollowups.length > 2 && (
-                            <div className="text-xs text-muted-foreground">
-                              +{dayFollowups.length - 2} more
-                            </div>
+                            <div className="text-xs text-muted-foreground px-1">+{dayFollowups.length - 2} more</div>
                           )}
                         </div>
                       )}
@@ -601,30 +507,32 @@ const CalendarPage = () => {
             </CardContent>
           </Card>
 
-          {/* Sidebar */}
-          <div className="space-y-4">
-            {/* Selected Day */}
+          {/* Right Sidebar */}
+          <div className="space-y-6">
+            {/* Selected Day Card */}
             <Card>
               <CardHeader className="pb-3">
-                <CardTitle className="text-lg flex items-center justify-between">
-                  <span>{format(selectedDate, 'EEEE, MMMM d')}</span>
-                  <Button size="sm" onClick={() => setIsDialogOpen(true)}>
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-lg font-['Outfit']">{format(selectedDate, 'EEEE, MMM d')}</CardTitle>
+                  <Button size="sm" variant="outline" onClick={() => setIsDialogOpen(true)} data-testid="add-followup-day-btn">
                     <Plus className="h-4 w-4" />
                   </Button>
-                </CardTitle>
+                </div>
               </CardHeader>
               <CardContent>
                 {loading ? (
-                  <p className="text-muted-foreground text-center py-4">Loading...</p>
+                  <div className="flex items-center justify-center py-8">
+                    <div className="h-6 w-6 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+                  </div>
                 ) : selectedDateFollowups.length === 0 ? (
-                  <div className="text-center py-6 text-muted-foreground">
-                    <Clock className="h-10 w-10 mx-auto mb-3 opacity-50" />
-                    <p className="text-sm">No follow-ups scheduled</p>
+                  <div className="text-center py-8 text-muted-foreground">
+                    <Clock className="h-10 w-10 mx-auto mb-3 opacity-30" />
+                    <p className="text-sm">No follow-ups for this day</p>
                   </div>
                 ) : (
-                  <div className="space-y-3">
+                  <div className="space-y-2">
                     {selectedDateFollowups.map((followup) => (
-                      <FollowupCard key={followup.id} followup={followup} compact />
+                      <FollowupItem key={followup.id} followup={followup} />
                     ))}
                   </div>
                 )}
@@ -635,14 +543,14 @@ const CalendarPage = () => {
             {upcomingFollowups.length > 0 && (
               <Card>
                 <CardHeader className="pb-3">
-                  <CardTitle className="text-lg">Upcoming</CardTitle>
+                  <CardTitle className="text-lg font-['Outfit']">Upcoming</CardTitle>
                   <CardDescription>Next 7 days</CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <ScrollArea className="h-48">
-                    <div className="space-y-3">
-                      {upcomingFollowups.slice(0, 5).map((followup) => (
-                        <FollowupCard key={followup.id} followup={followup} compact />
+                  <ScrollArea className="h-[250px] pr-3">
+                    <div className="space-y-2">
+                      {upcomingFollowups.slice(0, 6).map((followup) => (
+                        <FollowupItem key={followup.id} followup={followup} showDate />
                       ))}
                     </div>
                   </ScrollArea>
@@ -664,10 +572,7 @@ const CalendarPage = () => {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction 
-              onClick={handleDelete}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            >
+            <AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90" data-testid="confirm-delete-followup">
               Delete
             </AlertDialogAction>
           </AlertDialogFooter>
