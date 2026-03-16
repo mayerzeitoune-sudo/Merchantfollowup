@@ -723,36 +723,63 @@ class SMSPlatformTester:
         # Test forgot password
         self.test_forgot_password()
 
+        # Test organization and impersonation features
+        print("\n🏢 Testing Organization & Impersonation Features...")
+        self.test_create_org_admin_user()
+        if self.org_admin_token:
+            self.test_create_organization()
+            if self.created_org_id:
+                self.test_create_regular_admin_in_org()
+                self.test_list_organizations()
+                
+                # Test impersonation endpoints
+                print("\n🎭 Testing Impersonation Endpoints...")
+                self.test_impersonate_org_admin_success()
+                self.test_impersonate_org_admin_unauthorized()
+                
+                if self.regular_admin_user_id:
+                    self.test_impersonate_specific_user_success()
+                    self.test_impersonate_specific_user_unauthorized()
+                    self.test_impersonate_org_admin_forbidden()
+
         # Test client operations
+        print("\n👥 Testing Client Operations...")
         self.test_create_client()
         self.test_get_clients()
         self.test_get_client_by_id()
         self.test_update_client()
 
         # Test SMS provider operations first (needed for send reminder)
+        print("\n📱 Testing SMS Provider Operations...")
         self.test_create_sms_provider()
         self.test_get_sms_providers()
 
         # Test reminder operations
+        print("\n⏰ Testing Reminder Operations...")
         self.test_create_reminder()
         self.test_get_reminders()
         self.test_send_reminder_with_provider()  # Now should work
 
         # Test follow-up operations
+        print("\n📋 Testing Follow-up Operations...")
         self.test_create_followup()
         self.test_get_followups()
 
         # Test campaign operations
+        print("\n📢 Testing Campaign Operations...")
         self.test_create_campaign()
         self.test_get_campaigns()
 
         # Test AI functionality
+        print("\n🤖 Testing AI Functionality...")
         self.test_ai_match_response()
 
         # Test dashboard
+        print("\n📊 Testing Dashboard...")
         self.test_dashboard_stats()
 
         # Cleanup
+        print("\n🧹 Cleaning up test data...")
         self.cleanup_test_data()
 
         # Print summary
