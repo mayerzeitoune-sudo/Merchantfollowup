@@ -129,6 +129,7 @@ function AppRoutes() {
       <Route path="/activity" element={<ProtectedRoute><ActivityLog /></ProtectedRoute>} />
       <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
       <Route path="/users/:userId/history" element={<ProtectedRoute><UserHistory /></ProtectedRoute>} />
+      <Route path="/billing" element={<ProtectedRoute><Billing /></ProtectedRoute>} />
       
       {/* Default redirect */}
       <Route path="*" element={<Navigate to="/" replace />} />
