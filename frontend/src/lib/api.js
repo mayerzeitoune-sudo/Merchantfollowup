@@ -320,7 +320,10 @@ export const organizationsApi = {
   getUnassignedClients: (token) => axios.get(`${API}/organizations/unassigned/clients`, { params: { authorization: `Bearer ${token}` } }),
   getAllUsers: (token) => axios.get(`${API}/organizations/all/users`, { params: { authorization: `Bearer ${token}` } }),
   assignUser: (token, userId, orgId) => axios.post(`${API}/organizations/assign/user`, { user_id: userId, organization_id: orgId }, { params: { authorization: `Bearer ${token}` } }),
-  assignClient: (token, clientId, orgId) => axios.post(`${API}/organizations/assign/client`, { client_id: clientId, organization_id: orgId }, { params: { authorization: `Bearer ${token}` } })
+  assignClient: (token, clientId, orgId) => axios.post(`${API}/organizations/assign/client`, { client_id: clientId, organization_id: orgId }, { params: { authorization: `Bearer ${token}` } }),
+  // Impersonation - Login as user within organization
+  impersonateOrgAdmin: (token, orgId) => axios.post(`${API}/organizations/${orgId}/impersonate-admin`, {}, { params: { authorization: `Bearer ${token}` } }),
+  impersonateUser: (token, userId) => axios.post(`${API}/organizations/impersonate`, { target_user_id: userId }, { params: { authorization: `Bearer ${token}` } })
 };
 
 // Global Search API
