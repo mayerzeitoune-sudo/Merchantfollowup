@@ -115,7 +115,7 @@ const DashboardLayout = ({ children }) => {
         </div>
       )}
       {/* Mobile Header */}
-      <header className="lg:hidden fixed top-0 left-0 right-0 h-16 bg-white border-b border-border z-50 flex items-center justify-between px-4">
+      <header className={`lg:hidden fixed left-0 right-0 h-16 bg-white border-b border-border z-50 flex items-center justify-between px-4 ${isImpersonating ? 'top-10' : 'top-0'}`}>
         <button
           onClick={() => setSidebarOpen(true)}
           className="p-2 hover:bg-secondary rounded-md"
