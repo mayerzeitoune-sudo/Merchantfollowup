@@ -323,7 +323,12 @@ export const organizationsApi = {
   assignClient: (token, clientId, orgId) => axios.post(`${API}/organizations/assign/client`, { client_id: clientId, organization_id: orgId }, { params: { authorization: `Bearer ${token}` } }),
   // Impersonation - Login as user within organization
   impersonateOrgAdmin: (token, orgId) => axios.post(`${API}/organizations/${orgId}/impersonate-admin`, {}, { params: { authorization: `Bearer ${token}` } }),
-  impersonateUser: (token, userId) => axios.post(`${API}/organizations/impersonate`, { target_user_id: userId }, { params: { authorization: `Bearer ${token}` } })
+  impersonateUser: (token, userId) => axios.post(`${API}/organizations/impersonate`, { target_user_id: userId }, { params: { authorization: `Bearer ${token}` } }),
+  // Billing
+  getBillingOverview: (token) => axios.get(`${API}/organizations/billing/overview`, { params: { authorization: `Bearer ${token}` } }),
+  getOrgBilling: (token, orgId) => axios.get(`${API}/organizations/billing/${orgId}`, { params: { authorization: `Bearer ${token}` } }),
+  recordPayment: (token, data) => axios.post(`${API}/organizations/billing/payment`, data, { params: { authorization: `Bearer ${token}` } }),
+  getAllPayments: (token) => axios.get(`${API}/organizations/billing/payments`, { params: { authorization: `Bearer ${token}` } })
 };
 
 // Global Search API
