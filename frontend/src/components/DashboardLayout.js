@@ -182,8 +182,10 @@ const DashboardLayout = ({ children }) => {
             {navItems.filter(item => {
               // Filter org admin only items
               if (item.orgAdminOnly && user?.role !== 'org_admin') return false;
-              // Filter admin only items
+              // Filter admin only items (includes org_admin)
               if (item.adminOnly && !['admin', 'org_admin'].includes(user?.role)) return false;
+              // Filter admin only but NOT org_admin (for regular admin billing page)
+              if (item.adminOnlyNotOrgAdmin && (user?.role === 'org_admin' || !['admin'].includes(user?.role))) return false;
               // Filter team leader only items
               if (item.teamLeaderOnly && !['team_leader', 'admin', 'org_admin'].includes(user?.role)) return false;
               return true;
