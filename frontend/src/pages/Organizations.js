@@ -34,12 +34,14 @@ import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 
 const Organizations = () => {
-  const { user, token } = useAuth();
+  const { user, token, startImpersonation } = useAuth();
+  const navigate = useNavigate();
   const [organizations, setOrganizations] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedOrg, setSelectedOrg] = useState(null);
   const [orgUsers, setOrgUsers] = useState([]);
   const [stats, setStats] = useState(null);
+  const [impersonating, setImpersonating] = useState(false);
   
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [addUserDialogOpen, setAddUserDialogOpen] = useState(false);
