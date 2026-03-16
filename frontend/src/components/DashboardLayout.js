@@ -28,7 +28,9 @@ import {
   DollarSign,
   Building2,
   Activity,
-  UsersRound
+  UsersRound,
+  ArrowLeftCircle,
+  Eye
 } from 'lucide-react';
 import GlobalSearch from './GlobalSearch';
 import NotificationBell from './NotificationBell';
