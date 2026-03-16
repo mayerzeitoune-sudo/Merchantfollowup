@@ -373,7 +373,7 @@ const Organizations = () => {
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
             <h1 className="text-3xl font-bold font-['Outfit']">Organizations</h1>
-            <p className="text-muted-foreground mt-1">Manage all organizations in your platform</p>
+            <p className="text-muted-foreground mt-1">Manage all organizations and billing</p>
           </div>
           
           <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
@@ -423,31 +423,46 @@ const Organizations = () => {
           </Dialog>
         </div>
 
-        {/* Stats Cards */}
-        {stats && (
-          <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-4">
-            <Card className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => {}} data-testid="stat-organizations">
-              <CardContent className="pt-6">
-                <div className="flex items-center gap-3">
-                  <div className="h-10 w-10 rounded-lg bg-purple-100 flex items-center justify-center">
-                    <Building2 className="h-5 w-5 text-purple-600" />
-                  </div>
-                  <div>
-                    <p className="text-2xl font-bold">{stats.total_organizations || 0}</p>
-                    <p className="text-sm text-muted-foreground">Organizations</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-            <Card className="cursor-pointer hover:shadow-md transition-shadow" onClick={openAllUsersDialog} data-testid="stat-users-in-orgs">
-              <CardContent className="pt-6">
-                <div className="flex items-center gap-3">
-                  <div className="h-10 w-10 rounded-lg bg-blue-100 flex items-center justify-center">
-                    <Users className="h-5 w-5 text-blue-600" />
-                  </div>
-                  <div>
-                    <p className="text-2xl font-bold">{stats.total_users || 0}</p>
-                    <p className="text-sm text-muted-foreground">Users in Orgs</p>
+        {/* Main Tabs */}
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+          <TabsList className="grid w-full max-w-md grid-cols-2">
+            <TabsTrigger value="organizations" className="flex items-center gap-2">
+              <Building2 className="h-4 w-4" />
+              Organizations
+            </TabsTrigger>
+            <TabsTrigger value="billing" className="flex items-center gap-2">
+              <DollarSign className="h-4 w-4" />
+              Billing & Pricing
+            </TabsTrigger>
+          </TabsList>
+
+          {/* Organizations Tab */}
+          <TabsContent value="organizations" className="space-y-6 mt-6">
+            {/* Stats Cards */}
+            {stats && (
+              <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-4">
+                <Card className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => {}} data-testid="stat-organizations">
+                  <CardContent className="pt-6">
+                    <div className="flex items-center gap-3">
+                      <div className="h-10 w-10 rounded-lg bg-purple-100 flex items-center justify-center">
+                        <Building2 className="h-5 w-5 text-purple-600" />
+                      </div>
+                      <div>
+                        <p className="text-2xl font-bold">{stats.total_organizations || 0}</p>
+                        <p className="text-sm text-muted-foreground">Organizations</p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+                <Card className="cursor-pointer hover:shadow-md transition-shadow" onClick={openAllUsersDialog} data-testid="stat-users-in-orgs">
+                  <CardContent className="pt-6">
+                    <div className="flex items-center gap-3">
+                      <div className="h-10 w-10 rounded-lg bg-blue-100 flex items-center justify-center">
+                        <Users className="h-5 w-5 text-blue-600" />
+                      </div>
+                      <div>
+                        <p className="text-2xl font-bold">{stats.total_users || 0}</p>
+                        <p className="text-sm text-muted-foreground">Users in Orgs</p>
                   </div>
                 </div>
               </CardContent>
