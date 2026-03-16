@@ -84,6 +84,13 @@ const Organizations = () => {
     }
   }, [user, token]);
 
+  // Fetch billing data when tab changes to billing
+  useEffect(() => {
+    if (activeTab === 'billing' && !billingData) {
+      fetchBillingData();
+    }
+  }, [activeTab]);
+
   const fetchData = async () => {
     try {
       const [orgsRes, statsRes] = await Promise.all([
@@ -97,6 +104,52 @@ const Organizations = () => {
       toast.error('Failed to load organizations');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchBillingData = async () => {
+    setBillingLoading(true);
+    try {
+      const response = await organizationsApi.getBillingOverview(token);
+      setBillingData(response.data);
+    } catch (error) {
+      console.error('Failed to fetch billing data:', error);
+      toast.error('Failed to load billing data');
+    } finally {
+      setBillingLoading(false);
+    }
+  };
+
+  const handleRecordPayment = async () => {
+    if (!selectedOrgForPayment || !paymentAmount || parseFloat(paymentAmount) <= 0) {
+      toast.error('Please enter a valid payment amount');
+      return;
+    }
+    
+    try {
+      await organizationsApi.recordPayment(token, {
+        organization_id: selectedOrgForPayment.organization_id,
+        amount: parseFloat(paymentAmount),
+        notes: paymentNotes
+      });
+      toast.success('Payment recorded successfully');
+      setPaymentDialogOpen(false);
+      setPaymentAmount('');
+      setPaymentNotes('');
+      setSelectedOrgForPayment(null);
+      fetchBillingData();
+    } catch (error) {
+      toast.error(error.response?.data?.detail || 'Failed to record payment');
+    }
+  };
+
+  const handleViewOrgBilling = async (orgId) => {
+    try {
+      const response = await organizationsApi.getOrgBilling(token, orgId);
+      setSelectedOrgBilling(response.data);
+      setOrgBillingDialog(true);
+    } catch (error) {
+      toast.error('Failed to load organization billing details');
     }
   };
 
