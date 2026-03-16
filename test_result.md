@@ -107,26 +107,32 @@ user_problem_statement: "Two adjustments needed: 1) Organizations page - global 
 backend:
   - task: "Impersonation API - Login as org admin"
     implemented: true
-    working: "NA"
+    working: true
     file: "/app/backend/routes/organizations.py"
     stuck_count: 0
     priority: "high"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
       - working: "NA"
         agent: "main"
         comment: "Added POST /api/organizations/{org_id}/impersonate-admin endpoint for org_admin to login as organization admin"
+      - working: true
+        agent: "testing"
+        comment: "✅ PASSED - Endpoint working correctly. Tested: 1) Successful impersonation as org admin returns proper token, user data, impersonator info, and message. 2) Non-org_admin users get 403 Forbidden as expected. 3) Response includes all required fields: token, user (with is_impersonation=true), impersonator, organization, message. 4) Token authentication via query parameter works correctly."
   - task: "Impersonation API - Login as specific user"
     implemented: true
-    working: "NA"
+    working: true
     file: "/app/backend/routes/organizations.py"
     stuck_count: 0
     priority: "high"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
       - working: "NA"
         agent: "main"
         comment: "Added POST /api/organizations/impersonate endpoint for org_admin to login as any user"
+      - working: true
+        agent: "testing"
+        comment: "✅ PASSED - Endpoint working correctly. Tested: 1) Successful impersonation of specific user returns proper token and user data. 2) Non-org_admin users get 403 Forbidden. 3) Cannot impersonate another org_admin (returns 403 as expected). 4) Response structure matches expected format with token, user, impersonator, message fields. 5) Authorization via query parameter works correctly."
 
 frontend:
   - task: "Organizations page - Login As Admin button"
