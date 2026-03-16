@@ -21,6 +21,14 @@ class SMSPlatformTester:
         self.created_followup_id = None
         self.created_campaign_id = None
         self.created_provider_id = None
+        
+        # Organization and impersonation test data
+        self.org_admin_token = None
+        self.org_admin_user_id = None
+        self.created_org_id = None
+        self.org_admin_user = None
+        self.regular_admin_token = None
+        self.regular_admin_user_id = None
 
     def log_result(self, test_name, success, details=""):
         """Log test result"""
