@@ -593,3 +593,187 @@ async def impersonate_org_admin(org_id: str, authorization: str = Query(...)):
         },
         "message": f"Now viewing {org['name']} as {target_user['name']}"
     }
+
+
+# ============== Billing & Pricing ==============
+
+PRICE_PER_USER = 100.00  # $100 per user per month
+
+class PaymentCreate(BaseModel):
+    organization_id: str
+    amount: float
+    payment_method: Optional[str] = "manual"
+    notes: Optional[str] = None
+
+@router.get("/billing/overview")
+async def get_billing_overview(authorization: str = Query(...)):
+    """Get billing overview for all organizations (Org Admin only)"""
+    user = await get_current_user(authorization)
+    require_org_admin(user)
+    
+    orgs = await db.organizations.find({}, {"_id": 0}).to_list(1000)
+    
+    billing_data = []
+    total_owed = 0
+    total_paid = 0
+    total_users = 0
+    
+    for org in orgs:
+        org_id = org["id"]
+        
+        # Count users in this org
+        user_count = await db.users.count_documents({"org_id": org_id})
+        
+        # Calculate amount owed ($100 per user)
+        amount_owed = user_count * PRICE_PER_USER
+        
+        # Get total payments for this org
+        payments = await db.billing_payments.find(
+            {"organization_id": org_id},
+            {"_id": 0}
+        ).to_list(1000)
+        amount_paid = sum(p.get("amount", 0) for p in payments)
+        
+        # Calculate balance
+        balance = amount_owed - amount_paid
+        
+        billing_data.append({
+            "organization_id": org_id,
+            "organization_name": org["name"],
+            "user_count": user_count,
+            "price_per_user": PRICE_PER_USER,
+            "amount_owed": amount_owed,
+            "amount_paid": amount_paid,
+            "balance": balance,
+            "status": "paid" if balance <= 0 else ("partial" if amount_paid > 0 else "unpaid"),
+            "is_active": org.get("is_active", True)
+        })
+        
+        total_owed += amount_owed
+        total_paid += amount_paid
+        total_users += user_count
+    
+    return {
+        "organizations": billing_data,
+        "summary": {
+            "total_organizations": len(orgs),
+            "total_users": total_users,
+            "price_per_user": PRICE_PER_USER,
+            "total_owed": total_owed,
+            "total_paid": total_paid,
+            "total_balance": total_owed - total_paid
+        }
+    }
+
+
+@router.get("/billing/{org_id}")
+async def get_org_billing(org_id: str, authorization: str = Query(...)):
+    """Get billing details for a specific organization"""
+    user = await get_current_user(authorization)
+    
+    # Org admin can see any org, admin can only see their own
+    if user.get("role") != "org_admin":
+        if user.get("role") != "admin" or user.get("org_id") != org_id:
+            raise HTTPException(status_code=403, detail="Access denied")
+    
+    # Get organization
+    org = await db.organizations.find_one({"id": org_id}, {"_id": 0})
+    if not org:
+        raise HTTPException(status_code=404, detail="Organization not found")
+    
+    # Count users
+    user_count = await db.users.count_documents({"org_id": org_id})
+    
+    # Get users list
+    users = await db.users.find(
+        {"org_id": org_id},
+        {"_id": 0, "password": 0}
+    ).to_list(1000)
+    
+    # Calculate amount owed
+    amount_owed = user_count * PRICE_PER_USER
+    
+    # Get payment history
+    payments = await db.billing_payments.find(
+        {"organization_id": org_id},
+        {"_id": 0}
+    ).sort("created_at", -1).to_list(100)
+    
+    amount_paid = sum(p.get("amount", 0) for p in payments)
+    balance = amount_owed - amount_paid
+    
+    return {
+        "organization": {
+            "id": org_id,
+            "name": org["name"],
+            "is_active": org.get("is_active", True)
+        },
+        "billing": {
+            "user_count": user_count,
+            "price_per_user": PRICE_PER_USER,
+            "amount_owed": amount_owed,
+            "amount_paid": amount_paid,
+            "balance": balance,
+            "status": "paid" if balance <= 0 else ("partial" if amount_paid > 0 else "unpaid")
+        },
+        "users": [{"id": u["id"], "name": u["name"], "email": u["email"], "role": u.get("role", "user")} for u in users],
+        "payments": payments
+    }
+
+
+@router.post("/billing/payment")
+async def record_payment(data: PaymentCreate, authorization: str = Query(...)):
+    """Record a payment for an organization (Org Admin only)"""
+    user = await get_current_user(authorization)
+    require_org_admin(user)
+    
+    # Verify organization exists
+    org = await db.organizations.find_one({"id": data.organization_id})
+    if not org:
+        raise HTTPException(status_code=404, detail="Organization not found")
+    
+    if data.amount <= 0:
+        raise HTTPException(status_code=400, detail="Payment amount must be positive")
+    
+    payment_id = str(uuid.uuid4())
+    now = datetime.now(timezone.utc).isoformat()
+    
+    payment_doc = {
+        "id": payment_id,
+        "organization_id": data.organization_id,
+        "amount": data.amount,
+        "payment_method": data.payment_method,
+        "notes": data.notes,
+        "recorded_by": user["id"],
+        "created_at": now
+    }
+    
+    await db.billing_payments.insert_one(payment_doc)
+    del payment_doc["_id"] if "_id" in payment_doc else None
+    
+    return {
+        "message": "Payment recorded successfully",
+        "payment": payment_doc
+    }
+
+
+@router.get("/billing/payments")
+async def get_all_payments(authorization: str = Query(...), limit: int = 100):
+    """Get all payment history (Org Admin only)"""
+    user = await get_current_user(authorization)
+    require_org_admin(user)
+    
+    payments = await db.billing_payments.find(
+        {},
+        {"_id": 0}
+    ).sort("created_at", -1).to_list(limit)
+    
+    # Enrich with org names
+    for payment in payments:
+        org = await db.organizations.find_one(
+            {"id": payment["organization_id"]},
+            {"name": 1, "_id": 0}
+        )
+        payment["organization_name"] = org["name"] if org else "Unknown"
+    
+    return payments
