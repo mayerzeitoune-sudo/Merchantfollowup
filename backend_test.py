@@ -399,45 +399,35 @@ class SMSPlatformTester:
     # ============== ORGANIZATION & IMPERSONATION TESTS ==============
     
     def test_create_org_admin_user(self):
-        """Test creating an org_admin user"""
-        # First, create a regular user and then manually promote to org_admin
-        test_email = f"orgadmin_{datetime.now().strftime('%H%M%S')}@example.com"
+        """Test logging in as existing org_admin user"""
+        # Use the existing org_admin user that was promoted
+        test_email = "test_162441@example.com"  # The first user that was promoted to org_admin
         data = {
             "email": test_email,
-            "password": "orgadmin123",
-            "name": "Org Admin User",
-            "phone": "+1234567890"
+            "password": "testpass123"
         }
         
-        success, response, status = self.make_request('POST', 'auth/register', data, 200, False)
+        success, response, status = self.make_request('POST', 'auth/login', data, 200, False)
         
-        if success and 'otp' in response:
-            # Verify the user
-            verify_data = {
+        if success and 'token' in response:
+            self.org_admin_token = response['token']
+            self.org_admin_user_id = response['user']['id']
+            self.org_admin_user = {
                 "email": test_email,
-                "otp": response['otp']
+                "password": "testpass123",
+                "id": self.org_admin_user_id,
+                "name": response['user']['name']
             }
-            success, verify_response, status = self.make_request('POST', 'auth/verify', verify_data, 200, False)
             
-            if success and 'token' in verify_response:
-                self.org_admin_token = verify_response['token']
-                self.org_admin_user_id = verify_response['user']['id']
-                self.org_admin_user = {
-                    "email": test_email,
-                    "password": "orgadmin123",
-                    "id": self.org_admin_user_id,
-                    "name": "Org Admin User"
-                }
-                
-                # Note: In a real scenario, org_admin role would be set manually in the database
-                # For testing, we'll assume the first user gets admin role and we'll test with that
-                self.log_result("Create Org Admin User", True)
+            # Verify the user has org_admin role
+            if response['user'].get('role') == 'org_admin':
+                self.log_result("Login as Org Admin User", True)
                 return True
             else:
-                self.log_result("Create Org Admin User", False, f"Verification failed: {verify_response}")
+                self.log_result("Login as Org Admin User", False, f"User role is {response['user'].get('role')}, expected org_admin")
                 return False
         else:
-            self.log_result("Create Org Admin User", False, f"Registration failed: {response}")
+            self.log_result("Login as Org Admin User", False, f"Login failed: Status {status}, Response: {response}")
             return False
 
     def test_create_organization(self):
