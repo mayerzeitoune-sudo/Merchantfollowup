@@ -90,7 +90,7 @@ class SMSPlatformTester:
         
         success, response, status = self.make_request('POST', 'auth/register', data, 200, False)
         
-        if success and 'user_id' in response:
+        if success and 'otp' in response:
             self.test_user_email = test_email
             self.log_result("User Registration", True)
             return response.get('otp')
