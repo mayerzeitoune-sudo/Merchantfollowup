@@ -39,6 +39,7 @@ import AgentClients from "./pages/AgentClients";
 import Profile from "./pages/Profile";
 import UserHistory from "./pages/UserHistory";
 import Inbox from "./pages/Inbox";
+import Billing from "./pages/Billing";
 
 // Protected Route Component
 const ProtectedRoute = ({ children }) => {
