@@ -254,7 +254,7 @@ const DashboardLayout = ({ children }) => {
       </aside>
 
       {/* Main Content */}
-      <main className="lg:ml-64 pt-16 lg:pt-0 min-h-screen">
+      <main className={`lg:ml-64 min-h-screen ${isImpersonating ? 'pt-26 lg:pt-10' : 'pt-16 lg:pt-0'}`}>
         {/* Desktop Top Bar */}
         <div className="hidden lg:flex items-center justify-between h-16 px-8 bg-white border-b border-border">
           <GlobalSearch />
@@ -262,7 +262,10 @@ const DashboardLayout = ({ children }) => {
             <NotificationBell />
             <div className="text-sm text-right">
               <p className="font-medium">{user?.name || user?.email}</p>
-              <p className="text-muted-foreground text-xs capitalize">{user?.role || 'User'}</p>
+              <p className="text-muted-foreground text-xs capitalize">
+                {user?.role || 'User'}
+                {isImpersonating && <span className="ml-1 text-orange-500">(Viewing)</span>}
+              </p>
             </div>
           </div>
         </div>
