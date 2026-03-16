@@ -18,6 +18,11 @@ export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [token, setToken] = useState(localStorage.getItem('token'));
   const [loading, setLoading] = useState(true);
+  
+  // Impersonation state
+  const [isImpersonating, setIsImpersonating] = useState(false);
+  const [originalToken, setOriginalToken] = useState(localStorage.getItem('original_token'));
+  const [impersonator, setImpersonator] = useState(null);
 
   useEffect(() => {
     if (token) {
@@ -27,6 +32,17 @@ export const AuthProvider = ({ children }) => {
       setLoading(false);
     }
   }, [token]);
+
+  // Check for impersonation on load
+  useEffect(() => {
+    const storedOriginalToken = localStorage.getItem('original_token');
+    const storedImpersonator = localStorage.getItem('impersonator');
+    if (storedOriginalToken && storedImpersonator) {
+      setOriginalToken(storedOriginalToken);
+      setImpersonator(JSON.parse(storedImpersonator));
+      setIsImpersonating(true);
+    }
+  }, []);
 
   const fetchUser = async () => {
     try {
@@ -88,10 +104,64 @@ export const AuthProvider = ({ children }) => {
   };
 
   const logout = () => {
+    // Clear impersonation data too
     localStorage.removeItem('token');
+    localStorage.removeItem('original_token');
+    localStorage.removeItem('impersonator');
     delete axios.defaults.headers.common['Authorization'];
     setToken(null);
     setUser(null);
+    setIsImpersonating(false);
+    setOriginalToken(null);
+    setImpersonator(null);
+  };
+
+  // Impersonation: Start viewing as another user
+  const startImpersonation = (impersonationData) => {
+    // Save current token as original
+    const currentToken = localStorage.getItem('token');
+    localStorage.setItem('original_token', currentToken);
+    localStorage.setItem('impersonator', JSON.stringify(impersonationData.impersonator));
+    
+    // Set new impersonation token
+    const newToken = impersonationData.token;
+    localStorage.setItem('token', newToken);
+    axios.defaults.headers.common['Authorization'] = `Bearer ${newToken}`;
+    
+    setOriginalToken(currentToken);
+    setImpersonator(impersonationData.impersonator);
+    setToken(newToken);
+    setUser({
+      ...impersonationData.user,
+      is_impersonation: true
+    });
+    setIsImpersonating(true);
+  };
+
+  // Impersonation: Stop and return to org_admin
+  const stopImpersonation = async () => {
+    const storedOriginalToken = localStorage.getItem('original_token');
+    if (storedOriginalToken) {
+      // Restore original token
+      localStorage.setItem('token', storedOriginalToken);
+      localStorage.removeItem('original_token');
+      localStorage.removeItem('impersonator');
+      axios.defaults.headers.common['Authorization'] = `Bearer ${storedOriginalToken}`;
+      
+      setToken(storedOriginalToken);
+      setIsImpersonating(false);
+      setOriginalToken(null);
+      setImpersonator(null);
+      
+      // Fetch original user data
+      try {
+        const response = await axios.get(`${API}/auth/me`);
+        setUser(response.data);
+      } catch (error) {
+        console.error('Error fetching user after stopping impersonation:', error);
+        logout();
+      }
+    }
   };
 
   const value = {
@@ -104,7 +174,12 @@ export const AuthProvider = ({ children }) => {
     forgotPassword,
     resetPassword,
     logout,
-    isAuthenticated: !!token && !!user
+    isAuthenticated: !!token && !!user,
+    // Impersonation
+    isImpersonating,
+    impersonator,
+    startImpersonation,
+    stopImpersonation
   };
 
   return (
