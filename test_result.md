@@ -101,3 +101,82 @@
 #====================================================================================================
 # Testing Data - Main Agent and testing sub agent both should log testing data below this section
 #====================================================================================================
+
+user_problem_statement: "Two adjustments needed: 1) Organizations page - global admin should be able to click and auto-login as admin to see all data within any organization. 2) Fix login issues on deployment."
+
+backend:
+  - task: "Impersonation API - Login as org admin"
+    implemented: true
+    working: "NA"
+    file: "/app/backend/routes/organizations.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Added POST /api/organizations/{org_id}/impersonate-admin endpoint for org_admin to login as organization admin"
+  - task: "Impersonation API - Login as specific user"
+    implemented: true
+    working: "NA"
+    file: "/app/backend/routes/organizations.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Added POST /api/organizations/impersonate endpoint for org_admin to login as any user"
+
+frontend:
+  - task: "Organizations page - Login As Admin button"
+    implemented: true
+    working: "NA"
+    file: "/app/frontend/src/pages/Organizations.js"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Added Login As Admin button on org cards, imports LogIn icon and navigate hook"
+  - task: "Auth Context - Impersonation support"
+    implemented: true
+    working: "NA"
+    file: "/app/frontend/src/context/AuthContext.js"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Added startImpersonation, stopImpersonation functions, tracks original token and impersonator"
+  - task: "Dashboard Layout - Impersonation banner"
+    implemented: true
+    working: "NA"
+    file: "/app/frontend/src/components/DashboardLayout.js"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Added orange impersonation banner with Return to Org Admin button when viewing as another user"
+
+metadata:
+  created_by: "main_agent"
+  version: "1.0"
+  test_sequence: 1
+  run_ui: false
+
+test_plan:
+  current_focus:
+    - "Impersonation API - Login as org admin"
+    - "Impersonation API - Login as specific user"
+  stuck_tasks: []
+  test_all: false
+  test_priority: "high_first"
+
+agent_communication:
+  - agent: "main"
+    message: "Implemented org_admin impersonation feature. Need to test: 1) POST /api/organizations/{org_id}/impersonate-admin - should return token for logging in as org admin. 2) POST /api/organizations/impersonate with target_user_id - should return token for specific user. Both require org_admin role."
