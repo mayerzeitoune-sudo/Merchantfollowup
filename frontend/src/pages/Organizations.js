@@ -25,11 +25,13 @@ import {
   UserCheck,
   Phone,
   Mail,
-  Search
+  Search,
+  LogIn
 } from 'lucide-react';
 import { organizationsApi } from '../lib/api';
 import { toast } from 'sonner';
 import { useAuth } from '../context/AuthContext';
+import { useNavigate } from 'react-router-dom';
 
 const Organizations = () => {
   const { user, token } = useAuth();
