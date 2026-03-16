@@ -730,6 +730,336 @@ const Organizations = () => {
             </div>
           </DialogContent>
         </Dialog>
+          </TabsContent>
+
+          {/* Billing Tab */}
+          <TabsContent value="billing" className="space-y-6 mt-6">
+            {billingLoading ? (
+              <div className="flex items-center justify-center py-12">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-orange-600"></div>
+              </div>
+            ) : billingData ? (
+              <>
+                {/* Billing Summary Cards */}
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                  <Card className="border-2 border-green-200 bg-green-50">
+                    <CardContent className="pt-6">
+                      <div className="flex items-center gap-3">
+                        <div className="h-12 w-12 rounded-lg bg-green-100 flex items-center justify-center">
+                          <DollarSign className="h-6 w-6 text-green-600" />
+                        </div>
+                        <div>
+                          <p className="text-3xl font-bold text-green-700">
+                            ${billingData.summary.total_paid.toLocaleString()}
+                          </p>
+                          <p className="text-sm text-green-600">Total Paid</p>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                  
+                  <Card className="border-2 border-orange-200 bg-orange-50">
+                    <CardContent className="pt-6">
+                      <div className="flex items-center gap-3">
+                        <div className="h-12 w-12 rounded-lg bg-orange-100 flex items-center justify-center">
+                          <Receipt className="h-6 w-6 text-orange-600" />
+                        </div>
+                        <div>
+                          <p className="text-3xl font-bold text-orange-700">
+                            ${billingData.summary.total_owed.toLocaleString()}
+                          </p>
+                          <p className="text-sm text-orange-600">Total Owed</p>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                  
+                  <Card className={`border-2 ${billingData.summary.total_balance > 0 ? 'border-red-200 bg-red-50' : 'border-green-200 bg-green-50'}`}>
+                    <CardContent className="pt-6">
+                      <div className="flex items-center gap-3">
+                        <div className={`h-12 w-12 rounded-lg ${billingData.summary.total_balance > 0 ? 'bg-red-100' : 'bg-green-100'} flex items-center justify-center`}>
+                          {billingData.summary.total_balance > 0 ? (
+                            <AlertCircle className="h-6 w-6 text-red-600" />
+                          ) : (
+                            <CheckCircle className="h-6 w-6 text-green-600" />
+                          )}
+                        </div>
+                        <div>
+                          <p className={`text-3xl font-bold ${billingData.summary.total_balance > 0 ? 'text-red-700' : 'text-green-700'}`}>
+                            ${Math.abs(billingData.summary.total_balance).toLocaleString()}
+                          </p>
+                          <p className={`text-sm ${billingData.summary.total_balance > 0 ? 'text-red-600' : 'text-green-600'}`}>
+                            {billingData.summary.total_balance > 0 ? 'Outstanding Balance' : 'Credit Balance'}
+                          </p>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                  
+                  <Card>
+                    <CardContent className="pt-6">
+                      <div className="flex items-center gap-3">
+                        <div className="h-12 w-12 rounded-lg bg-blue-100 flex items-center justify-center">
+                          <Users className="h-6 w-6 text-blue-600" />
+                        </div>
+                        <div>
+                          <p className="text-3xl font-bold">{billingData.summary.total_users}</p>
+                          <p className="text-sm text-muted-foreground">
+                            @ ${billingData.summary.price_per_user}/user
+                          </p>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
+
+                {/* Pricing Info */}
+                <Card className="bg-gradient-to-r from-orange-50 to-amber-50 border-orange-200">
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <CreditCard className="h-5 w-5 text-orange-600" />
+                      Pricing Structure
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-4xl font-bold text-orange-600">$100</p>
+                        <p className="text-muted-foreground">per user / month</p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-sm text-muted-foreground">Current total users</p>
+                        <p className="text-2xl font-bold">{billingData.summary.total_users} users</p>
+                        <p className="text-sm text-muted-foreground mt-1">
+                          Monthly billing: <span className="font-semibold text-orange-600">${billingData.summary.total_owed.toLocaleString()}</span>
+                        </p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Organization Billing Table */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Organization Billing</CardTitle>
+                    <CardDescription>Billing status for each organization</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="overflow-x-auto">
+                      <table className="w-full">
+                        <thead>
+                          <tr className="border-b">
+                            <th className="text-left py-3 px-4 font-medium">Organization</th>
+                            <th className="text-center py-3 px-4 font-medium">Users</th>
+                            <th className="text-right py-3 px-4 font-medium">Amount Owed</th>
+                            <th className="text-right py-3 px-4 font-medium">Amount Paid</th>
+                            <th className="text-right py-3 px-4 font-medium">Balance</th>
+                            <th className="text-center py-3 px-4 font-medium">Status</th>
+                            <th className="text-right py-3 px-4 font-medium">Actions</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {billingData.organizations.map((org) => (
+                            <tr key={org.organization_id} className="border-b hover:bg-muted/50">
+                              <td className="py-3 px-4">
+                                <div className="flex items-center gap-2">
+                                  <Building2 className="h-4 w-4 text-muted-foreground" />
+                                  <span className="font-medium">{org.organization_name}</span>
+                                </div>
+                              </td>
+                              <td className="text-center py-3 px-4">{org.user_count}</td>
+                              <td className="text-right py-3 px-4">${org.amount_owed.toLocaleString()}</td>
+                              <td className="text-right py-3 px-4 text-green-600">${org.amount_paid.toLocaleString()}</td>
+                              <td className={`text-right py-3 px-4 font-medium ${org.balance > 0 ? 'text-red-600' : 'text-green-600'}`}>
+                                ${Math.abs(org.balance).toLocaleString()}
+                                {org.balance < 0 && ' credit'}
+                              </td>
+                              <td className="text-center py-3 px-4">
+                                <Badge 
+                                  variant={org.status === 'paid' ? 'default' : org.status === 'partial' ? 'secondary' : 'destructive'}
+                                  className={
+                                    org.status === 'paid' ? 'bg-green-100 text-green-700' :
+                                    org.status === 'partial' ? 'bg-yellow-100 text-yellow-700' :
+                                    'bg-red-100 text-red-700'
+                                  }
+                                >
+                                  {org.status === 'paid' ? (
+                                    <><CheckCircle className="h-3 w-3 mr-1" /> Paid</>
+                                  ) : org.status === 'partial' ? (
+                                    <><Clock className="h-3 w-3 mr-1" /> Partial</>
+                                  ) : (
+                                    <><AlertCircle className="h-3 w-3 mr-1" /> Unpaid</>
+                                  )}
+                                </Badge>
+                              </td>
+                              <td className="text-right py-3 px-4">
+                                <div className="flex justify-end gap-2">
+                                  <Button 
+                                    variant="outline" 
+                                    size="sm"
+                                    onClick={() => handleViewOrgBilling(org.organization_id)}
+                                  >
+                                    <Eye className="h-4 w-4" />
+                                  </Button>
+                                  <Button 
+                                    size="sm"
+                                    className="bg-green-600 hover:bg-green-700"
+                                    onClick={() => {
+                                      setSelectedOrgForPayment(org);
+                                      setPaymentAmount(org.balance > 0 ? org.balance.toString() : '');
+                                      setPaymentDialogOpen(true);
+                                    }}
+                                  >
+                                    <DollarSign className="h-4 w-4 mr-1" />
+                                    Record Payment
+                                  </Button>
+                                </div>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </CardContent>
+                </Card>
+              </>
+            ) : (
+              <Card>
+                <CardContent className="py-12 text-center">
+                  <DollarSign className="h-12 w-12 mx-auto mb-4 text-muted-foreground opacity-50" />
+                  <p className="text-muted-foreground">No billing data available</p>
+                </CardContent>
+              </Card>
+            )}
+          </TabsContent>
+        </Tabs>
+
+        {/* Record Payment Dialog */}
+        <Dialog open={paymentDialogOpen} onOpenChange={setPaymentDialogOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <DollarSign className="h-5 w-5 text-green-600" />
+                Record Payment
+              </DialogTitle>
+              <DialogDescription>
+                Record a payment for {selectedOrgForPayment?.organization_name}
+              </DialogDescription>
+            </DialogHeader>
+            
+            <div className="space-y-4 mt-4">
+              <div className="p-4 bg-muted rounded-lg">
+                <div className="flex justify-between items-center">
+                  <span className="text-muted-foreground">Outstanding Balance:</span>
+                  <span className="text-xl font-bold text-orange-600">
+                    ${selectedOrgForPayment?.balance?.toLocaleString() || 0}
+                  </span>
+                </div>
+              </div>
+              
+              <div className="space-y-2">
+                <Label>Payment Amount *</Label>
+                <div className="relative">
+                  <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    value={paymentAmount}
+                    onChange={(e) => setPaymentAmount(e.target.value)}
+                    placeholder="0.00"
+                    className="pl-10"
+                  />
+                </div>
+              </div>
+              
+              <div className="space-y-2">
+                <Label>Notes (optional)</Label>
+                <Textarea
+                  value={paymentNotes}
+                  onChange={(e) => setPaymentNotes(e.target.value)}
+                  placeholder="Payment reference, check number, etc."
+                  rows={2}
+                />
+              </div>
+            </div>
+            
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setPaymentDialogOpen(false)}>Cancel</Button>
+              <Button onClick={handleRecordPayment} className="bg-green-600 hover:bg-green-700">
+                <CheckCircle className="h-4 w-4 mr-2" />
+                Record Payment
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Org Billing Details Dialog */}
+        <Dialog open={orgBillingDialog} onOpenChange={setOrgBillingDialog}>
+          <DialogContent className="max-w-2xl">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <Receipt className="h-5 w-5 text-orange-600" />
+                Billing Details: {selectedOrgBilling?.organization?.name}
+              </DialogTitle>
+            </DialogHeader>
+            
+            {selectedOrgBilling && (
+              <div className="space-y-4 mt-4">
+                {/* Summary */}
+                <div className="grid grid-cols-3 gap-4">
+                  <div className="p-4 bg-blue-50 rounded-lg text-center">
+                    <p className="text-2xl font-bold text-blue-600">{selectedOrgBilling.billing.user_count}</p>
+                    <p className="text-sm text-muted-foreground">Users</p>
+                  </div>
+                  <div className="p-4 bg-orange-50 rounded-lg text-center">
+                    <p className="text-2xl font-bold text-orange-600">${selectedOrgBilling.billing.amount_owed}</p>
+                    <p className="text-sm text-muted-foreground">Amount Owed</p>
+                  </div>
+                  <div className="p-4 bg-green-50 rounded-lg text-center">
+                    <p className="text-2xl font-bold text-green-600">${selectedOrgBilling.billing.amount_paid}</p>
+                    <p className="text-sm text-muted-foreground">Amount Paid</p>
+                  </div>
+                </div>
+                
+                {/* Users List */}
+                <div>
+                  <h4 className="font-medium mb-2">Users ({selectedOrgBilling.users.length})</h4>
+                  <div className="border rounded-lg divide-y max-h-40 overflow-y-auto">
+                    {selectedOrgBilling.users.map((u) => (
+                      <div key={u.id} className="p-2 flex justify-between items-center text-sm">
+                        <span>{u.name} ({u.email})</span>
+                        <Badge variant="outline">{u.role}</Badge>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+                
+                {/* Payment History */}
+                <div>
+                  <h4 className="font-medium mb-2">Payment History</h4>
+                  {selectedOrgBilling.payments.length > 0 ? (
+                    <div className="border rounded-lg divide-y max-h-40 overflow-y-auto">
+                      {selectedOrgBilling.payments.map((p) => (
+                        <div key={p.id} className="p-2 flex justify-between items-center text-sm">
+                          <div>
+                            <span className="font-medium text-green-600">${p.amount.toLocaleString()}</span>
+                            {p.notes && <span className="text-muted-foreground ml-2">- {p.notes}</span>}
+                          </div>
+                          <span className="text-muted-foreground text-xs">
+                            {new Date(p.created_at).toLocaleDateString()}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-sm text-muted-foreground text-center py-4">No payments recorded yet</p>
+                  )}
+                </div>
+              </div>
+            )}
+          </DialogContent>
+        </Dialog>
 
         {/* Unassigned Users Dialog */}
         <Dialog open={unassignedUsersDialog} onOpenChange={setUnassignedUsersDialog}>
