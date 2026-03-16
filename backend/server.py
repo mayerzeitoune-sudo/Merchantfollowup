@@ -4431,7 +4431,7 @@ async def submit_onboarding(data: dict, current_user: dict = Depends(get_current
 @api_router.get("/onboarding/status")
 async def get_onboarding_status(current_user: dict = Depends(get_current_user)):
     """Get SMS registration status"""
-    onboarding = db.sms_onboarding.find_one(
+    onboarding = await db.sms_onboarding.find_one(
         {"user_id": current_user["user_id"]},
         {"_id": 0}
     )
