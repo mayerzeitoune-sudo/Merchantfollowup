@@ -461,3 +461,135 @@ async def remove_user_from_org(org_id: str, user_id: str, authorization: str = Q
     await db.users.delete_one({"id": user_id})
     
     return {"message": "User removed"}
+
+
+# ============== Impersonation (Org Admin Only) ==============
+
+class ImpersonateRequest(BaseModel):
+    target_user_id: str
+
+@router.post("/impersonate")
+async def impersonate_user(data: ImpersonateRequest, authorization: str = Query(...)):
+    """
+    Generate an impersonation token for org_admin to login as any user.
+    Org Admin can view organization data by logging in as an admin of that organization.
+    """
+    from datetime import timedelta
+    
+    user = await get_current_user(authorization)
+    require_org_admin(user)
+    
+    # Find target user
+    target_user = await db.users.find_one({"id": data.target_user_id}, {"_id": 0, "password": 0})
+    if not target_user:
+        raise HTTPException(status_code=404, detail="Target user not found")
+    
+    # Cannot impersonate another org_admin
+    if target_user.get("role") == "org_admin":
+        raise HTTPException(status_code=403, detail="Cannot impersonate another Org Admin")
+    
+    # Generate impersonation token (shorter expiry for security)
+    payload = {
+        "user_id": target_user["id"],
+        "email": target_user["email"],
+        "impersonator_id": user["id"],  # Track who is impersonating
+        "impersonator_email": user["email"],
+        "is_impersonation": True,
+        "exp": datetime.now(timezone.utc) + timedelta(hours=4)  # 4 hour session
+    }
+    
+    impersonation_token = jwt.encode(payload, JWT_SECRET, algorithm="HS256")
+    
+    return {
+        "token": impersonation_token,
+        "user": {
+            "id": target_user["id"],
+            "email": target_user["email"],
+            "name": target_user["name"],
+            "role": target_user.get("role", "user"),
+            "org_id": target_user.get("org_id"),
+            "org_name": target_user.get("org_name"),
+            "is_impersonation": True
+        },
+        "impersonator": {
+            "id": user["id"],
+            "email": user["email"],
+            "name": user["name"]
+        },
+        "message": f"Now viewing as {target_user['name']} ({target_user['email']})"
+    }
+
+
+@router.post("/{org_id}/impersonate-admin")
+async def impersonate_org_admin(org_id: str, authorization: str = Query(...)):
+    """
+    Org Admin can login as an admin of a specific organization to view all org data.
+    If no admin exists in the org, returns the first user with highest role.
+    """
+    from datetime import timedelta
+    
+    user = await get_current_user(authorization)
+    require_org_admin(user)
+    
+    # Verify organization exists
+    org = await db.organizations.find_one({"id": org_id}, {"_id": 0})
+    if not org:
+        raise HTTPException(status_code=404, detail="Organization not found")
+    
+    # Find an admin in this organization first, then fallback to any user
+    target_user = await db.users.find_one(
+        {"org_id": org_id, "role": "admin"},
+        {"_id": 0, "password": 0}
+    )
+    
+    if not target_user:
+        # Fallback to team_leader
+        target_user = await db.users.find_one(
+            {"org_id": org_id, "role": "team_leader"},
+            {"_id": 0, "password": 0}
+        )
+    
+    if not target_user:
+        # Fallback to any user in the org
+        target_user = await db.users.find_one(
+            {"org_id": org_id},
+            {"_id": 0, "password": 0}
+        )
+    
+    if not target_user:
+        raise HTTPException(status_code=404, detail="No users found in this organization")
+    
+    # Generate impersonation token
+    payload = {
+        "user_id": target_user["id"],
+        "email": target_user["email"],
+        "impersonator_id": user["id"],
+        "impersonator_email": user["email"],
+        "is_impersonation": True,
+        "exp": datetime.now(timezone.utc) + timedelta(hours=4)
+    }
+    
+    impersonation_token = jwt.encode(payload, JWT_SECRET, algorithm="HS256")
+    
+    return {
+        "token": impersonation_token,
+        "user": {
+            "id": target_user["id"],
+            "email": target_user["email"],
+            "name": target_user["name"],
+            "role": target_user.get("role", "user"),
+            "org_id": org_id,
+            "org_name": org["name"],
+            "is_impersonation": True
+        },
+        "impersonator": {
+            "id": user["id"],
+            "email": user["email"],
+            "name": user["name"]
+        },
+        "organization": {
+            "id": org_id,
+            "name": org["name"]
+        },
+        "message": f"Now viewing {org['name']} as {target_user['name']}"
+    }
