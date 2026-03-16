@@ -240,10 +240,12 @@ class SMSPlatformTester:
             return False
             
         tomorrow = (datetime.now() + timedelta(days=1)).strftime('%Y-%m-%d')
+        next_week = (datetime.now() + timedelta(days=7)).strftime('%Y-%m-%d')
         data = {
             "client_id": self.created_client_id,
             "amount_due": 150.50,
-            "due_date": tomorrow,
+            "start_date": tomorrow,
+            "end_date": next_week,
             "message": "Test payment reminder message"
         }
         
