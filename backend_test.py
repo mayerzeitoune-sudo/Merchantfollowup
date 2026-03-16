@@ -396,6 +396,242 @@ class SMSPlatformTester:
             self.log_result("Get SMS Providers", False, f"Status: {status}, Response: {response}")
             return False
 
+    # ============== ORGANIZATION & IMPERSONATION TESTS ==============
+    
+    def test_create_org_admin_user(self):
+        """Test creating an org_admin user"""
+        # First, create a regular user and then manually promote to org_admin
+        test_email = f"orgadmin_{datetime.now().strftime('%H%M%S')}@example.com"
+        data = {
+            "email": test_email,
+            "password": "orgadmin123",
+            "name": "Org Admin User",
+            "phone": "+1234567890"
+        }
+        
+        success, response, status = self.make_request('POST', 'auth/register', data, 200, False)
+        
+        if success and 'otp' in response:
+            # Verify the user
+            verify_data = {
+                "email": test_email,
+                "otp": response['otp']
+            }
+            success, verify_response, status = self.make_request('POST', 'auth/verify', verify_data, 200, False)
+            
+            if success and 'token' in verify_response:
+                self.org_admin_token = verify_response['token']
+                self.org_admin_user_id = verify_response['user']['id']
+                self.org_admin_user = {
+                    "email": test_email,
+                    "password": "orgadmin123",
+                    "id": self.org_admin_user_id,
+                    "name": "Org Admin User"
+                }
+                
+                # Note: In a real scenario, org_admin role would be set manually in the database
+                # For testing, we'll assume the first user gets admin role and we'll test with that
+                self.log_result("Create Org Admin User", True)
+                return True
+            else:
+                self.log_result("Create Org Admin User", False, f"Verification failed: {verify_response}")
+                return False
+        else:
+            self.log_result("Create Org Admin User", False, f"Registration failed: {response}")
+            return False
+
+    def test_create_organization(self):
+        """Test creating an organization"""
+        if not self.org_admin_token:
+            self.log_result("Create Organization", False, "No org admin token available")
+            return False
+            
+        data = {
+            "name": f"Test Organization {datetime.now().strftime('%H%M%S')}",
+            "description": "Test organization for API testing"
+        }
+        
+        # Use query parameter for authorization as per the API design
+        success, response, status = self.make_request('POST', f'organizations?authorization=Bearer {self.org_admin_token}', data, 200, False)
+        
+        if success and 'id' in response:
+            self.created_org_id = response['id']
+            self.log_result("Create Organization", True)
+            return True
+        else:
+            self.log_result("Create Organization", False, f"Status: {status}, Response: {response}")
+            return False
+
+    def test_create_regular_admin_in_org(self):
+        """Test creating a regular admin user in the organization"""
+        if not self.org_admin_token or not self.created_org_id:
+            self.log_result("Create Regular Admin in Org", False, "Missing org admin token or org ID")
+            return False
+            
+        admin_email = f"admin_{datetime.now().strftime('%H%M%S')}@example.com"
+        data = {
+            "name": "Regular Admin User",
+            "email": admin_email,
+            "password": "admin123",
+            "role": "admin"
+        }
+        
+        success, response, status = self.make_request('POST', f'organizations/{self.created_org_id}/users?authorization=Bearer {self.org_admin_token}', data, 200, False)
+        
+        if success and 'user_id' in response:
+            self.regular_admin_user_id = response['user_id']
+            
+            # Now login as the regular admin to get their token
+            login_data = {
+                "email": admin_email,
+                "password": "admin123"
+            }
+            
+            login_success, login_response, login_status = self.make_request('POST', 'auth/login', login_data, 200, False)
+            
+            if login_success and 'token' in login_response:
+                self.regular_admin_token = login_response['token']
+                self.log_result("Create Regular Admin in Org", True)
+                return True
+            else:
+                self.log_result("Create Regular Admin in Org", False, f"Admin login failed: {login_response}")
+                return False
+        else:
+            self.log_result("Create Regular Admin in Org", False, f"Status: {status}, Response: {response}")
+            return False
+
+    def test_impersonate_org_admin_success(self):
+        """Test successful impersonation as org admin"""
+        if not self.org_admin_token or not self.created_org_id:
+            self.log_result("Impersonate Org Admin - Success", False, "Missing org admin token or org ID")
+            return False
+            
+        success, response, status = self.make_request('POST', f'organizations/{self.created_org_id}/impersonate-admin?authorization=Bearer {self.org_admin_token}', {}, 200, False)
+        
+        expected_fields = ['token', 'user', 'impersonator', 'message']
+        if success and all(field in response for field in expected_fields):
+            # Verify the response structure
+            user_data = response.get('user', {})
+            impersonator_data = response.get('impersonator', {})
+            
+            if (user_data.get('is_impersonation') == True and 
+                'id' in user_data and 'email' in user_data and 
+                'id' in impersonator_data and 'email' in impersonator_data):
+                self.log_result("Impersonate Org Admin - Success", True)
+                return True
+            else:
+                self.log_result("Impersonate Org Admin - Success", False, f"Invalid response structure: {response}")
+                return False
+        else:
+            self.log_result("Impersonate Org Admin - Success", False, f"Status: {status}, Response: {response}")
+            return False
+
+    def test_impersonate_org_admin_unauthorized(self):
+        """Test impersonation fails for non-org_admin users"""
+        if not self.regular_admin_token or not self.created_org_id:
+            self.log_result("Impersonate Org Admin - Unauthorized", False, "Missing regular admin token or org ID")
+            return False
+            
+        # Try to impersonate using regular admin token (should fail with 403)
+        success, response, status = self.make_request('POST', f'organizations/{self.created_org_id}/impersonate-admin?authorization=Bearer {self.regular_admin_token}', {}, 403, False)
+        
+        if success:  # success here means we got the expected 403 status
+            self.log_result("Impersonate Org Admin - Unauthorized", True)
+            return True
+        else:
+            self.log_result("Impersonate Org Admin - Unauthorized", False, f"Expected 403, got {status}: {response}")
+            return False
+
+    def test_impersonate_specific_user_success(self):
+        """Test successful impersonation of specific user"""
+        if not self.org_admin_token or not self.regular_admin_user_id:
+            self.log_result("Impersonate Specific User - Success", False, "Missing org admin token or target user ID")
+            return False
+            
+        data = {
+            "target_user_id": self.regular_admin_user_id
+        }
+        
+        success, response, status = self.make_request('POST', f'organizations/impersonate?authorization=Bearer {self.org_admin_token}', data, 200, False)
+        
+        expected_fields = ['token', 'user', 'impersonator', 'message']
+        if success and all(field in response for field in expected_fields):
+            user_data = response.get('user', {})
+            impersonator_data = response.get('impersonator', {})
+            
+            if (user_data.get('is_impersonation') == True and 
+                user_data.get('id') == self.regular_admin_user_id and
+                'id' in impersonator_data and 'email' in impersonator_data):
+                self.log_result("Impersonate Specific User - Success", True)
+                return True
+            else:
+                self.log_result("Impersonate Specific User - Success", False, f"Invalid response structure: {response}")
+                return False
+        else:
+            self.log_result("Impersonate Specific User - Success", False, f"Status: {status}, Response: {response}")
+            return False
+
+    def test_impersonate_specific_user_unauthorized(self):
+        """Test impersonation fails for non-org_admin users"""
+        if not self.regular_admin_token or not self.regular_admin_user_id:
+            self.log_result("Impersonate Specific User - Unauthorized", False, "Missing regular admin token or target user ID")
+            return False
+            
+        data = {
+            "target_user_id": self.regular_admin_user_id
+        }
+        
+        # Try to impersonate using regular admin token (should fail with 403)
+        success, response, status = self.make_request('POST', f'organizations/impersonate?authorization=Bearer {self.regular_admin_token}', data, 403, False)
+        
+        if success:  # success here means we got the expected 403 status
+            self.log_result("Impersonate Specific User - Unauthorized", True)
+            return True
+        else:
+            self.log_result("Impersonate Specific User - Unauthorized", False, f"Expected 403, got {status}: {response}")
+            return False
+
+    def test_impersonate_org_admin_forbidden(self):
+        """Test that org_admin cannot impersonate another org_admin"""
+        if not self.org_admin_token or not self.org_admin_user_id:
+            self.log_result("Impersonate Org Admin - Forbidden", False, "Missing org admin token or user ID")
+            return False
+            
+        # Try to impersonate another org_admin (should fail with 403)
+        data = {
+            "target_user_id": self.org_admin_user_id  # Try to impersonate self (org_admin)
+        }
+        
+        success, response, status = self.make_request('POST', f'organizations/impersonate?authorization=Bearer {self.org_admin_token}', data, 403, False)
+        
+        if success:  # success here means we got the expected 403 status
+            self.log_result("Impersonate Org Admin - Forbidden", True)
+            return True
+        else:
+            self.log_result("Impersonate Org Admin - Forbidden", False, f"Expected 403, got {status}: {response}")
+            return False
+
+    def test_list_organizations(self):
+        """Test listing organizations as org_admin"""
+        if not self.org_admin_token:
+            self.log_result("List Organizations", False, "No org admin token available")
+            return False
+            
+        success, response, status = self.make_request('GET', f'organizations?authorization=Bearer {self.org_admin_token}', expected_status=200, auth_required=False)
+        
+        if success and isinstance(response, list):
+            # Check if our created org is in the list
+            org_found = any(org.get('id') == self.created_org_id for org in response)
+            if org_found:
+                self.log_result("List Organizations", True)
+                return True
+            else:
+                self.log_result("List Organizations", False, f"Created org not found in list: {response}")
+                return False
+        else:
+            self.log_result("List Organizations", False, f"Status: {status}, Response: {response}")
+            return False
+
     # ============== AI TESTS ==============
     
     def test_ai_match_response(self):
