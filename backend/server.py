@@ -492,11 +492,14 @@ async def get_accessible_user_ids(current_user: dict) -> List[str]:
     """
     Get list of user IDs whose data the current user can access.
     - org_admin: all users
-    - admin: all users in their org/team
+    - admin: all users in their org
     - team_leader: themselves + their assigned agents
     - agent/viewer: only themselves
     """
     user = await db.users.find_one({"id": current_user["user_id"]}, {"_id": 0})
+    if not user:
+        return [current_user["user_id"]]
+    
     role = user.get("role", "agent")
     
     if role == "org_admin":
@@ -505,13 +508,22 @@ async def get_accessible_user_ids(current_user: dict) -> List[str]:
         return [u["id"] for u in all_users]
     
     elif role == "admin":
-        # Admin sees all users in their team/org
-        team_id = user.get("team_id") or current_user["user_id"]
-        team_users = await db.users.find(
-            {"$or": [{"team_id": team_id}, {"id": team_id}]},
-            {"id": 1, "_id": 0}
-        ).to_list(1000)
-        return [u["id"] for u in team_users]
+        # Admin sees all users in their organization (by org_id)
+        org_id = user.get("org_id")
+        if org_id:
+            org_users = await db.users.find(
+                {"org_id": org_id},
+                {"id": 1, "_id": 0}
+            ).to_list(1000)
+            return [u["id"] for u in org_users]
+        else:
+            # Fallback to team_id for backwards compatibility
+            team_id = user.get("team_id") or current_user["user_id"]
+            team_users = await db.users.find(
+                {"$or": [{"team_id": team_id}, {"id": team_id}]},
+                {"id": 1, "_id": 0}
+            ).to_list(1000)
+            return [u["id"] for u in team_users]
     
     elif role == "team_leader":
         # Team leader sees their own data + their agents' data
