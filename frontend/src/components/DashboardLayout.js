@@ -56,7 +56,7 @@ const navItems = [
   { path: '/my-team', label: 'My Team', icon: UsersRound, teamLeaderOnly: true },
   { path: '/organizations', label: 'Organizations', icon: Building2, orgAdminOnly: true },
   { path: '/activity', label: 'Activity Log', icon: Activity, adminOnly: true },
-  { path: '/billing', label: 'Billing', icon: BarChart3, adminOnly: true },
+  { path: '/billing', label: 'Billing', icon: BarChart3, adminOnlyNotOrgAdmin: true },
   { divider: true, label: 'Settings' },
   { path: '/compliance', label: 'SMS Compliance', icon: Shield },
   { path: '/phone-numbers', label: 'Phone Numbers', icon: Phone },
