@@ -26,7 +26,13 @@ import {
   Phone,
   Mail,
   Search,
-  LogIn
+  LogIn,
+  DollarSign,
+  CreditCard,
+  Receipt,
+  CheckCircle,
+  AlertCircle,
+  Clock
 } from 'lucide-react';
 import { organizationsApi } from '../lib/api';
 import { toast } from 'sonner';
@@ -42,6 +48,17 @@ const Organizations = () => {
   const [orgUsers, setOrgUsers] = useState([]);
   const [stats, setStats] = useState(null);
   const [impersonating, setImpersonating] = useState(false);
+  const [activeTab, setActiveTab] = useState('organizations');
+  
+  // Billing state
+  const [billingData, setBillingData] = useState(null);
+  const [billingLoading, setBillingLoading] = useState(false);
+  const [paymentDialogOpen, setPaymentDialogOpen] = useState(false);
+  const [selectedOrgForPayment, setSelectedOrgForPayment] = useState(null);
+  const [paymentAmount, setPaymentAmount] = useState('');
+  const [paymentNotes, setPaymentNotes] = useState('');
+  const [orgBillingDialog, setOrgBillingDialog] = useState(false);
+  const [selectedOrgBilling, setSelectedOrgBilling] = useState(null);
   
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [addUserDialogOpen, setAddUserDialogOpen] = useState(false);
