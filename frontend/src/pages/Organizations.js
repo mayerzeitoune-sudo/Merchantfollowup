@@ -456,7 +456,7 @@ const Organizations = () => {
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {organizations.map((org) => (
-              <Card key={org.id} className="hover:shadow-md transition-shadow cursor-pointer" data-testid={`org-card-${org.id}`}>
+              <Card key={org.id} className="hover:shadow-md transition-shadow" data-testid={`org-card-${org.id}`}>
                 <CardHeader className="pb-3">
                   <div className="flex items-start justify-between">
                     <div className="flex items-center gap-3">
@@ -476,7 +476,7 @@ const Organizations = () => {
                   </div>
                 </CardHeader>
                 <CardContent>
-                  <div className="flex items-center justify-between text-sm">
+                  <div className="flex items-center justify-between text-sm mb-3">
                     <div className="flex gap-4 text-muted-foreground">
                       <span>
                         <Users className="h-4 w-4 inline mr-1" />
@@ -487,13 +487,26 @@ const Organizations = () => {
                         {org.client_count || 0} clients
                       </span>
                     </div>
+                  </div>
+                  <div className="flex gap-2">
                     <Button 
-                      variant="ghost" 
+                      variant="outline" 
                       size="sm"
+                      className="flex-1"
                       onClick={() => handleViewOrg(org)}
                     >
+                      <Eye className="h-4 w-4 mr-1" />
                       View Details
-                      <ChevronRight className="h-4 w-4 ml-1" />
+                    </Button>
+                    <Button 
+                      size="sm"
+                      className="flex-1 bg-orange-600 hover:bg-orange-700"
+                      onClick={() => handleLoginAsOrgAdmin(org)}
+                      disabled={impersonating || org.user_count === 0}
+                      data-testid={`login-as-org-${org.id}`}
+                    >
+                      <LogIn className="h-4 w-4 mr-1" />
+                      {impersonating ? 'Loading...' : 'Login As Admin'}
                     </Button>
                   </div>
                 </CardContent>
