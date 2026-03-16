@@ -16,19 +16,27 @@ import {
 import { organizationsApi } from '../lib/api';
 import { toast } from 'sonner';
 import { useAuth } from '../context/AuthContext';
+import { useNavigate } from 'react-router-dom';
 
 const Billing = () => {
   const { user, token } = useAuth();
+  const navigate = useNavigate();
   const [billing, setBilling] = useState(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    // Org admin should use Organizations page for billing
+    if (user?.role === 'org_admin') {
+      navigate('/organizations');
+      return;
+    }
+    
     if (user?.org_id) {
       fetchBilling();
     } else {
       setLoading(false);
     }
-  }, [user, token]);
+  }, [user, token, navigate]);
 
   const fetchBilling = async () => {
     try {
