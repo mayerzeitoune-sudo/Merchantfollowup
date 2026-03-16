@@ -4817,10 +4817,10 @@ async def get_client_profile(client_id: str, current_user: dict = Depends(get_cu
     messages = await db.conversations.find(
         {"client_id": client_id, "user_id": {"$in": accessible_ids}},
         {"_id": 0}
-    ).sort("created_at", -1).to_list(100)
+    ).sort("timestamp", -1).to_list(100)
     
     # Get deals for this client
-    deals = await db.deals.find(
+    deals = await db.funded_deals.find(
         {"client_id": client_id, "user_id": {"$in": accessible_ids}},
         {"_id": 0}
     ).to_list(50)
@@ -4850,7 +4850,7 @@ async def get_client_profile(client_id: str, current_user: dict = Depends(get_cu
         "stats": {
             "total_messages": len(messages),
             "total_deals": len(deals),
-            "last_contact": messages[0]["created_at"] if messages else None
+            "last_contact": messages[0].get("timestamp") if messages else None
         }
     }
 
