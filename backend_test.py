@@ -124,7 +124,7 @@ class SMSPlatformTester:
         """Test user login"""
         data = {
             "email": self.test_user_email,
-            "password": self.test_user_password
+            "password": "testpass123"  # Use the correct password
         }
         
         success, response, status = self.make_request('POST', 'auth/login', data, 200, False)
