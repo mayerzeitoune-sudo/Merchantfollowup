@@ -749,7 +749,7 @@ async def record_payment(data: PaymentCreate, authorization: str = Query(...)):
     }
     
     await db.billing_payments.insert_one(payment_doc)
-    del payment_doc["_id"] if "_id" in payment_doc else None
+    payment_doc.pop("_id", None)
     
     return {
         "message": "Payment recorded successfully",
