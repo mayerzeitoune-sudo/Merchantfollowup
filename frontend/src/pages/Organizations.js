@@ -219,6 +219,50 @@ const Organizations = () => {
     }
   };
 
+  // Login as admin of an organization
+  const handleLoginAsOrgAdmin = async (org) => {
+    setImpersonating(true);
+    try {
+      const response = await organizationsApi.impersonateOrgAdmin(token, org.id);
+      const impersonationData = response.data;
+      
+      // Start impersonation session
+      startImpersonation(impersonationData);
+      
+      toast.success(impersonationData.message || `Now viewing as ${org.name} admin`);
+      
+      // Navigate to dashboard
+      navigate('/dashboard');
+    } catch (error) {
+      console.error('Impersonation error:', error);
+      toast.error(error.response?.data?.detail || 'Failed to login as organization admin');
+    } finally {
+      setImpersonating(false);
+    }
+  };
+
+  // Login as a specific user
+  const handleLoginAsUser = async (userId, userName) => {
+    setImpersonating(true);
+    try {
+      const response = await organizationsApi.impersonateUser(token, userId);
+      const impersonationData = response.data;
+      
+      // Start impersonation session
+      startImpersonation(impersonationData);
+      
+      toast.success(impersonationData.message || `Now viewing as ${userName}`);
+      
+      // Navigate to dashboard
+      navigate('/dashboard');
+    } catch (error) {
+      console.error('Impersonation error:', error);
+      toast.error(error.response?.data?.detail || 'Failed to login as user');
+    } finally {
+      setImpersonating(false);
+    }
+  };
+
   // Open unassigned users dialog
   const openUnassignedUsersDialog = () => {
     fetchUnassignedUsers();
