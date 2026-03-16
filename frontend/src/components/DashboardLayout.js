@@ -68,7 +68,7 @@ const DashboardLayout = ({ children }) => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
-  const { user, logout } = useAuth();
+  const { user, logout, isImpersonating, impersonator, stopImpersonation } = useAuth();
 
   const logoUrl = "https://customer-assets.emergentagent.com/job_8de675b6-2eb0-4aa2-9eba-eeadd9657b38/artifacts/gcg3jc1g_Image_20260311_161856_605.png";
 
@@ -81,8 +81,39 @@ const DashboardLayout = ({ children }) => {
     }, 100);
   };
 
+  const handleStopImpersonation = async () => {
+    await stopImpersonation();
+    navigate('/organizations');
+  };
+
   return (
     <div className="min-h-screen bg-secondary/30">
+      {/* Impersonation Banner */}
+      {isImpersonating && (
+        <div className="fixed top-0 left-0 right-0 bg-orange-600 text-white py-2 px-4 z-[100] flex items-center justify-between shadow-lg">
+          <div className="flex items-center gap-3">
+            <Eye className="h-5 w-5" />
+            <span className="text-sm font-medium">
+              Viewing as <strong>{user?.name}</strong> ({user?.email}) 
+              {user?.org_name && <span className="ml-1">• {user?.org_name}</span>}
+            </span>
+            {impersonator && (
+              <span className="text-orange-200 text-xs">
+                (Logged in by: {impersonator.name})
+              </span>
+            )}
+          </div>
+          <Button 
+            variant="secondary" 
+            size="sm"
+            onClick={handleStopImpersonation}
+            className="bg-white text-orange-600 hover:bg-orange-50"
+          >
+            <ArrowLeftCircle className="h-4 w-4 mr-1" />
+            Return to Org Admin
+          </Button>
+        </div>
+      )}
       {/* Mobile Header */}
       <header className="lg:hidden fixed top-0 left-0 right-0 h-16 bg-white border-b border-border z-50 flex items-center justify-between px-4">
         <button
