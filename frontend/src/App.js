@@ -40,6 +40,8 @@ import Profile from "./pages/Profile";
 import UserHistory from "./pages/UserHistory";
 import Inbox from "./pages/Inbox";
 import Billing from "./pages/Billing";
+import PrivacyPolicy from "./pages/PrivacyPolicy";
+import TermsOfService from "./pages/TermsOfService";
 
 // Protected Route Component
 const ProtectedRoute = ({ children }) => {
