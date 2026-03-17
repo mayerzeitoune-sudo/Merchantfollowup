@@ -686,6 +686,11 @@ const LandingPage = () => {
           </div>
           <div className="pt-8 border-t border-gray-800 text-center text-sm">
             <p>&copy; {new Date().getFullYear()} Merchant Follow Up. All rights reserved.</p>
+            <div className="mt-2 space-x-4">
+              <Link to="/privacy" className="hover:text-white transition">Privacy Policy</Link>
+              <span>•</span>
+              <Link to="/terms" className="hover:text-white transition">Terms of Service</Link>
+            </div>
           </div>
         </div>
       </footer>
