@@ -695,6 +695,9 @@ async def register(user: UserCreate):
         "password": hash_password(user.password),
         "name": user.name,
         "phone": user.phone,
+        "business": user.business,
+        "sms_opt_in": user.sms_opt_in,
+        "sms_opt_in_date": now if user.sms_opt_in else None,
         "is_verified": False,  # Requires OTP verification
         "role": "admin" if is_first_user else "agent",  # First user gets admin role
         "otp": otp,
@@ -706,6 +709,9 @@ async def register(user: UserCreate):
     await db.users.insert_one(user_doc)
     
     logger.info(f"New user registered: {user.email}, OTP: {otp}")
+    
+    # TODO: Send OTP via email using support email configuration
+    # For now, returning OTP for testing
     
     return {
         "message": "Registration successful! Please verify your account.",
