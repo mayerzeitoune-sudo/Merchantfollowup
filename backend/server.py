@@ -54,6 +54,8 @@ class UserCreate(BaseModel):
     password: str
     name: str
     phone: Optional[str] = None
+    business: Optional[str] = None
+    sms_opt_in: bool = False
 
 class UserLogin(BaseModel):
     email: EmailStr
