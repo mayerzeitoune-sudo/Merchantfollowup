@@ -67,6 +67,8 @@ class UserResponse(BaseModel):
     email: str
     name: str
     phone: Optional[str] = None
+    business: Optional[str] = None
+    sms_opt_in: bool = False
     is_verified: bool = False
     role: str = "user"
     org_id: Optional[str] = None
