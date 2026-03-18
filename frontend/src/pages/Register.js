@@ -5,16 +5,19 @@ import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
-import { Mail, Lock, Eye, EyeOff, User, Phone, ArrowRight } from 'lucide-react';
+import { Checkbox } from '../components/ui/checkbox';
+import { Mail, Lock, Eye, EyeOff, User, Phone, ArrowRight, Building2 } from 'lucide-react';
 import { toast } from 'sonner';
 
 const Register = () => {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
+  const [business, setBusiness] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [smsOptIn, setSmsOptIn] = useState(false);
   const [loading, setLoading] = useState(false);
   const { register } = useAuth();
   const navigate = useNavigate();
@@ -23,6 +26,27 @@ const Register = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    
+    // Validate required fields
+    if (!name.trim()) {
+      toast.error('Please enter your full name');
+      return;
+    }
+    
+    if (!phone.trim()) {
+      toast.error('Please enter your phone number');
+      return;
+    }
+    
+    if (!business.trim()) {
+      toast.error('Please enter your business name');
+      return;
+    }
+    
+    if (!smsOptIn) {
+      toast.error('Please agree to receive text messages to continue');
+      return;
+    }
     
     if (password !== confirmPassword) {
       toast.error('Passwords do not match');
@@ -36,7 +60,7 @@ const Register = () => {
 
     setLoading(true);
     try {
-      const response = await register(name, email, password, phone);
+      const response = await register(name, email, password, phone, business, smsOptIn);
       // Navigate to OTP verification page
       toast.success('Account created! Please verify your account.');
       navigate('/verify-otp', { state: { email, otp: response.otp } });
@@ -76,9 +100,9 @@ const Register = () => {
       </div>
 
       {/* Right Panel - Register Form */}
-      <div className="flex-1 flex items-center justify-center p-8 bg-white">
-        <div className="w-full max-w-md">
-          <div className="text-center mb-8 lg:hidden">
+      <div className="flex-1 flex items-center justify-center p-8 bg-white overflow-y-auto">
+        <div className="w-full max-w-md py-4">
+          <div className="text-center mb-6 lg:hidden">
             <img 
               src={logoUrl} 
               alt="Merchant Follow Up" 
@@ -94,7 +118,7 @@ const Register = () => {
             <CardContent>
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="name">Full Name</Label>
+                  <Label htmlFor="name">Full Name <span className="text-red-500">*</span></Label>
                   <div className="relative">
                     <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                     <Input
@@ -111,7 +135,7 @@ const Register = () => {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="email">Email</Label>
+                  <Label htmlFor="email">Email <span className="text-red-500">*</span></Label>
                   <div className="relative">
                     <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                     <Input
@@ -128,7 +152,7 @@ const Register = () => {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="phone">Phone Number</Label>
+                  <Label htmlFor="phone">Phone Number <span className="text-red-500">*</span></Label>
                   <div className="relative">
                     <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                     <Input
@@ -138,13 +162,31 @@ const Register = () => {
                       value={phone}
                       onChange={(e) => setPhone(e.target.value)}
                       className="pl-10"
+                      required
                       data-testid="register-phone-input"
                     />
                   </div>
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="password">Password</Label>
+                  <Label htmlFor="business">Business Name <span className="text-red-500">*</span></Label>
+                  <div className="relative">
+                    <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      id="business"
+                      type="text"
+                      placeholder="Your Company Inc."
+                      value={business}
+                      onChange={(e) => setBusiness(e.target.value)}
+                      className="pl-10"
+                      required
+                      data-testid="register-business-input"
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="password">Password <span className="text-red-500">*</span></Label>
                   <div className="relative">
                     <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                     <Input
@@ -168,7 +210,7 @@ const Register = () => {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="confirmPassword">Confirm Password</Label>
+                  <Label htmlFor="confirmPassword">Confirm Password <span className="text-red-500">*</span></Label>
                   <div className="relative">
                     <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                     <Input
@@ -181,6 +223,33 @@ const Register = () => {
                       required
                       data-testid="register-confirm-password-input"
                     />
+                  </div>
+                </div>
+
+                {/* SMS Opt-In Checkbox */}
+                <div className="space-y-2 pt-2">
+                  <div className="flex items-start space-x-3">
+                    <Checkbox
+                      id="smsOptIn"
+                      checked={smsOptIn}
+                      onCheckedChange={(checked) => setSmsOptIn(checked)}
+                      className="mt-1"
+                      data-testid="sms-optin-checkbox"
+                    />
+                    <label
+                      htmlFor="smsOptIn"
+                      className="text-xs text-muted-foreground leading-relaxed cursor-pointer"
+                    >
+                      By checking this box, you agree to receive text messages (e.g., payment reminders, 2FA, account notifications, alerts, customer service) from Merchant Follow Up LLC at the cell number used when signing up. Consent is not a condition of any purchase. Reply STOP to unsubscribe, HELP for help. Message & data rates may apply. Message frequency varies. I have read and agree with the{' '}
+                      <Link to="/terms" className="text-primary hover:underline" target="_blank">
+                        Terms and Conditions
+                      </Link>
+                      {' & '}
+                      <Link to="/privacy" className="text-primary hover:underline" target="_blank">
+                        Privacy Policy
+                      </Link>
+                      . <span className="text-red-500">*</span>
+                    </label>
                   </div>
                 </div>
 
