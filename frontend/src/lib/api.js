@@ -368,3 +368,10 @@ export const callsApi = {
   initiate: (toNumber, fromNumber) => axios.post(`${API}/calls/initiate`, { to_number: toNumber, from_number: fromNumber }),
   end: (callId) => axios.post(`${API}/calls/${callId}/end`)
 };
+
+// Support Email Settings API
+export const supportEmailApi = {
+  getConfig: () => axios.get(`${API}/settings/support-email`),
+  saveConfig: (config) => axios.post(`${API}/settings/support-email`, config),
+  testEmail: () => axios.post(`${API}/settings/support-email/test`)
+};
