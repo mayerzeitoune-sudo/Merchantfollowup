@@ -5000,6 +5000,113 @@ async def get_team_leader_dashboard(current_user: dict = Depends(get_current_use
     }
 
 
+# ============== SUPPORT EMAIL SETTINGS ==============
+
+class SupportEmailConfig(BaseModel):
+    smtp_host: str
+    smtp_port: int = 587
+    smtp_username: str
+    smtp_password: str
+    from_email: str
+    from_name: str = "Merchant Follow Up"
+    use_tls: bool = True
+
+@api_router.get("/settings/support-email")
+async def get_support_email_config(current_user: dict = Depends(get_current_user)):
+    """Get support email configuration (admin only)"""
+    user = await db.users.find_one({"id": current_user["user_id"]})
+    if user.get("role") not in ["admin", "org_admin"]:
+        raise HTTPException(status_code=403, detail="Admin access required")
+    
+    config = await db.settings.find_one({"type": "support_email"}, {"_id": 0})
+    if not config:
+        return {"configured": False, "config": None}
+    
+    # Don't return password
+    config.pop("smtp_password", None)
+    return {"configured": True, "config": config}
+
+@api_router.post("/settings/support-email")
+async def save_support_email_config(config: SupportEmailConfig, current_user: dict = Depends(get_current_user)):
+    """Save support email configuration (admin only)"""
+    user = await db.users.find_one({"id": current_user["user_id"]})
+    if user.get("role") not in ["admin", "org_admin"]:
+        raise HTTPException(status_code=403, detail="Admin access required")
+    
+    now = datetime.now(timezone.utc).isoformat()
+    
+    config_doc = {
+        "type": "support_email",
+        "smtp_host": config.smtp_host,
+        "smtp_port": config.smtp_port,
+        "smtp_username": config.smtp_username,
+        "smtp_password": config.smtp_password,  # Should be encrypted in production
+        "from_email": config.from_email,
+        "from_name": config.from_name,
+        "use_tls": config.use_tls,
+        "updated_at": now,
+        "updated_by": current_user["user_id"]
+    }
+    
+    await db.settings.update_one(
+        {"type": "support_email"},
+        {"$set": config_doc},
+        upsert=True
+    )
+    
+    return {"message": "Support email configuration saved successfully"}
+
+@api_router.post("/settings/support-email/test")
+async def test_support_email(current_user: dict = Depends(get_current_user)):
+    """Test support email configuration by sending a test email"""
+    import smtplib
+    from email.mime.text import MIMEText
+    from email.mime.multipart import MIMEMultipart
+    
+    user = await db.users.find_one({"id": current_user["user_id"]})
+    if user.get("role") not in ["admin", "org_admin"]:
+        raise HTTPException(status_code=403, detail="Admin access required")
+    
+    config = await db.settings.find_one({"type": "support_email"})
+    if not config:
+        raise HTTPException(status_code=400, detail="Support email not configured")
+    
+    try:
+        # Create message
+        msg = MIMEMultipart()
+        msg['From'] = f"{config['from_name']} <{config['from_email']}>"
+        msg['To'] = user['email']
+        msg['Subject'] = "Merchant Follow Up - Test Email"
+        
+        body = """
+        <html>
+        <body style="font-family: Arial, sans-serif;">
+            <h2 style="color: #f97316;">Test Email Successful!</h2>
+            <p>This is a test email from Merchant Follow Up.</p>
+            <p>Your support email configuration is working correctly.</p>
+            <br>
+            <p style="color: #666;">- Merchant Follow Up Team</p>
+        </body>
+        </html>
+        """
+        msg.attach(MIMEText(body, 'html'))
+        
+        # Send email
+        if config.get('use_tls', True):
+            server = smtplib.SMTP(config['smtp_host'], config['smtp_port'])
+            server.starttls()
+        else:
+            server = smtplib.SMTP_SSL(config['smtp_host'], config['smtp_port'])
+        
+        server.login(config['smtp_username'], config['smtp_password'])
+        server.send_message(msg)
+        server.quit()
+        
+        return {"message": f"Test email sent successfully to {user['email']}"}
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Failed to send test email: {str(e)}")
+
+
 # Include the main router AFTER enhanced routes
 app.include_router(api_router)
 
