@@ -1,8 +1,11 @@
-import React from 'react';
-import { Link } from 'react-router-dom';
+import React, { useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import { Button } from '../components/ui/button';
 import { Card, CardContent } from '../components/ui/card';
 import { Badge } from '../components/ui/badge';
+import { Input } from '../components/ui/input';
+import { Label } from '../components/ui/label';
+import { Checkbox } from '../components/ui/checkbox';
 import { 
   Users, 
   MessageSquare, 
@@ -24,11 +27,83 @@ import {
   Star,
   Send,
   Inbox,
-  PhoneCall
+  PhoneCall,
+  User,
+  Lock,
+  Eye,
+  EyeOff
 } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
+import { toast } from 'sonner';
 
 const LandingPage = () => {
+  const navigate = useNavigate();
+  const { register } = useAuth();
   const logoUrl = "https://customer-assets.emergentagent.com/job_8de675b6-2eb0-4aa2-9eba-eeadd9657b38/artifacts/gcg3jc1g_Image_20260311_161856_605.png";
+  
+  // Registration form state
+  const [formData, setFormData] = useState({
+    name: '',
+    email: '',
+    phone: '',
+    business: '',
+    password: '',
+    confirmPassword: ''
+  });
+  const [showPassword, setShowPassword] = useState(false);
+  const [smsOptIn, setSmsOptIn] = useState(false);
+  const [loading, setLoading] = useState(false);
+
+  const handleInputChange = (e) => {
+    setFormData({ ...formData, [e.target.name]: e.target.value });
+  };
+
+  const handleRegister = async (e) => {
+    e.preventDefault();
+    
+    if (!formData.name.trim()) {
+      toast.error('Please enter your full name');
+      return;
+    }
+    if (!formData.phone.trim()) {
+      toast.error('Please enter your phone number');
+      return;
+    }
+    if (!formData.business.trim()) {
+      toast.error('Please enter your business name');
+      return;
+    }
+    if (!smsOptIn) {
+      toast.error('Please agree to receive text messages to continue');
+      return;
+    }
+    if (formData.password !== formData.confirmPassword) {
+      toast.error('Passwords do not match');
+      return;
+    }
+    if (formData.password.length < 6) {
+      toast.error('Password must be at least 6 characters');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const response = await register(
+        formData.name, 
+        formData.email, 
+        formData.password, 
+        formData.phone, 
+        formData.business, 
+        smsOptIn
+      );
+      toast.success('Account created! Please verify your account.');
+      navigate('/verify-otp', { state: { email: formData.email, otp: response.otp } });
+    } catch (error) {
+      toast.error(error.response?.data?.detail || 'Registration failed');
+    } finally {
+      setLoading(false);
+    }
+  };
   
   const features = [
     {
