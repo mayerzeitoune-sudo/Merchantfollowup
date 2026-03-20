@@ -217,36 +217,212 @@ const LandingPage = () => {
       {/* Hero Section */}
       <section className="pt-20 pb-32 px-4 sm:px-6 lg:px-8">
         <div className="max-w-7xl mx-auto">
-          <div className="text-center max-w-4xl mx-auto">
-            <Badge className="mb-6 bg-orange-100 text-orange-700 hover:bg-orange-100">
-              <Sparkles className="h-3 w-3 mr-1" />
-              AI-Powered Lead Management
-            </Badge>
-            <h1 className="text-5xl sm:text-6xl lg:text-7xl font-bold text-gray-900 font-['Outfit'] leading-tight">
-              Turn More Leads Into
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-orange-600 to-orange-500"> Customers</span>
-            </h1>
-            <p className="mt-6 text-xl text-gray-600 max-w-2xl mx-auto">
-              The all-in-one platform to capture, nurture, and convert leads with automated SMS, 
-              email campaigns, and AI-powered follow-ups. Built for every industry.
-            </p>
-            <div className="mt-10 flex flex-col sm:flex-row gap-4 justify-center">
-              <Link to="/register">
-                <Button size="lg" className="bg-orange-600 hover:bg-orange-700 text-lg px-8 h-14 font-medium">
-                  Start Free Trial
-                  <ArrowRight className="ml-2 h-5 w-5" />
-                </Button>
-              </Link>
-              <a href="#product">
-                <Button size="lg" variant="outline" className="text-lg px-8 h-14 font-medium">
-                  See How It Works
-                </Button>
-              </a>
+          <div className="grid lg:grid-cols-2 gap-12 items-start">
+            {/* Left side - Text content */}
+            <div className="text-center lg:text-left">
+              <Badge className="mb-6 bg-orange-100 text-orange-700 hover:bg-orange-100">
+                <Sparkles className="h-3 w-3 mr-1" />
+                AI-Powered Lead Management
+              </Badge>
+              <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold text-gray-900 font-['Outfit'] leading-tight">
+                Turn More Leads Into
+                <span className="text-transparent bg-clip-text bg-gradient-to-r from-orange-600 to-orange-500"> Customers</span>
+              </h1>
+              <p className="mt-6 text-xl text-gray-600 max-w-xl">
+                The all-in-one platform to capture, nurture, and convert leads with automated SMS, 
+                email campaigns, and AI-powered follow-ups. Built for every industry.
+              </p>
+              
+              {/* Feature bullets */}
+              <div className="mt-8 space-y-3">
+                <div className="flex items-center gap-3 justify-center lg:justify-start">
+                  <CheckCircle className="h-5 w-5 text-green-500" />
+                  <span className="text-gray-700">Automated SMS & Email Follow-ups</span>
+                </div>
+                <div className="flex items-center gap-3 justify-center lg:justify-start">
+                  <CheckCircle className="h-5 w-5 text-green-500" />
+                  <span className="text-gray-700">AI-Powered Message Generation</span>
+                </div>
+                <div className="flex items-center gap-3 justify-center lg:justify-start">
+                  <CheckCircle className="h-5 w-5 text-green-500" />
+                  <span className="text-gray-700">Visual Pipeline & Lead Tracking</span>
+                </div>
+                <div className="flex items-center gap-3 justify-center lg:justify-start">
+                  <CheckCircle className="h-5 w-5 text-green-500" />
+                  <span className="text-gray-700">Team Collaboration & Analytics</span>
+                </div>
+              </div>
+
+              <p className="mt-8 text-sm text-gray-500">
+                No credit card required • Free 14-day trial • Cancel anytime
+              </p>
             </div>
-            <p className="mt-4 text-sm text-gray-500">
-              No credit card required • Free 14-day trial • Cancel anytime
-            </p>
+
+            {/* Right side - Registration Form */}
+            <div className="w-full max-w-md mx-auto lg:mx-0">
+              <Card className="shadow-2xl border-0">
+                <CardContent className="p-8">
+                  <h2 className="text-2xl font-bold text-center mb-2 font-['Outfit']">Start Your Free Trial</h2>
+                  <p className="text-gray-500 text-center mb-6 text-sm">Get started in less than 2 minutes</p>
+                  
+                  <form onSubmit={handleRegister} className="space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="name">Full Name <span className="text-red-500">*</span></Label>
+                      <div className="relative">
+                        <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                        <Input
+                          id="name"
+                          name="name"
+                          type="text"
+                          placeholder="John Doe"
+                          value={formData.name}
+                          onChange={handleInputChange}
+                          className="pl-10"
+                          required
+                        />
+                      </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="email">Email <span className="text-red-500">*</span></Label>
+                      <div className="relative">
+                        <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                        <Input
+                          id="email"
+                          name="email"
+                          type="email"
+                          placeholder="you@example.com"
+                          value={formData.email}
+                          onChange={handleInputChange}
+                          className="pl-10"
+                          required
+                        />
+                      </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="phone">Phone Number <span className="text-red-500">*</span></Label>
+                      <div className="relative">
+                        <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                        <Input
+                          id="phone"
+                          name="phone"
+                          type="tel"
+                          placeholder="+1 (555) 000-0000"
+                          value={formData.phone}
+                          onChange={handleInputChange}
+                          className="pl-10"
+                          required
+                        />
+                      </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="business">Business Name <span className="text-red-500">*</span></Label>
+                      <div className="relative">
+                        <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                        <Input
+                          id="business"
+                          name="business"
+                          type="text"
+                          placeholder="Your Company Inc."
+                          value={formData.business}
+                          onChange={handleInputChange}
+                          className="pl-10"
+                          required
+                        />
+                      </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="password">Password <span className="text-red-500">*</span></Label>
+                      <div className="relative">
+                        <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                        <Input
+                          id="password"
+                          name="password"
+                          type={showPassword ? 'text' : 'password'}
+                          placeholder="••••••••"
+                          value={formData.password}
+                          onChange={handleInputChange}
+                          className="pl-10 pr-10"
+                          required
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowPassword(!showPassword)}
+                          className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                        >
+                          {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="confirmPassword">Confirm Password <span className="text-red-500">*</span></Label>
+                      <div className="relative">
+                        <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                        <Input
+                          id="confirmPassword"
+                          name="confirmPassword"
+                          type={showPassword ? 'text' : 'password'}
+                          placeholder="••••••••"
+                          value={formData.confirmPassword}
+                          onChange={handleInputChange}
+                          className="pl-10"
+                          required
+                        />
+                      </div>
+                    </div>
+
+                    {/* SMS Opt-In Checkbox */}
+                    <div className="space-y-2 pt-2">
+                      <div className="flex items-start space-x-3">
+                        <Checkbox
+                          id="smsOptIn"
+                          checked={smsOptIn}
+                          onCheckedChange={(checked) => setSmsOptIn(checked)}
+                          className="mt-1"
+                        />
+                        <label
+                          htmlFor="smsOptIn"
+                          className="text-xs text-muted-foreground leading-relaxed cursor-pointer"
+                        >
+                          By checking this box, you agree to receive text messages (e.g., payment reminders, 2FA, account notifications, alerts, customer service) from Merchant Follow Up LLC at the cell number used when signing up. Consent is not a condition of any purchase. Reply STOP to unsubscribe, HELP for help. Message & data rates may apply. Message frequency varies. I have read and agree with the{' '}
+                          <Link to="/terms" className="text-primary hover:underline" target="_blank">
+                            Terms and Conditions
+                          </Link>
+                          {' & '}
+                          <Link to="/privacy" className="text-primary hover:underline" target="_blank">
+                            Privacy Policy
+                          </Link>
+                          . <span className="text-red-500">*</span>
+                        </label>
+                      </div>
+                    </div>
+
+                    <Button 
+                      type="submit" 
+                      className="w-full bg-orange-600 hover:bg-orange-700 h-12 text-base font-medium" 
+                      disabled={loading}
+                    >
+                      {loading ? 'Creating account...' : 'Start Free Trial'}
+                      <ArrowRight className="ml-2 h-4 w-4" />
+                    </Button>
+                  </form>
+
+                  <div className="mt-6 text-center text-sm">
+                    <span className="text-muted-foreground">Already have an account? </span>
+                    <Link to="/login" className="text-orange-600 hover:underline font-medium">
+                      Login here
+                    </Link>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
           </div>
+        </div>
+      </section>
 
           {/* Hero Image - Dashboard Preview */}
           <div className="mt-20 relative">
