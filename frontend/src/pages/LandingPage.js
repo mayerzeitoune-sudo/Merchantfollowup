@@ -424,63 +424,6 @@ const LandingPage = () => {
         </div>
       </section>
 
-          {/* Hero Image - Dashboard Preview */}
-          <div className="mt-20 relative">
-            <div className="absolute inset-0 bg-gradient-to-t from-white via-transparent to-transparent z-10 pointer-events-none" />
-            <div className="rounded-2xl overflow-hidden shadow-2xl border border-gray-200 bg-gradient-to-br from-slate-100 to-slate-200 p-8">
-              <div className="bg-white rounded-xl shadow-lg p-6">
-                <div className="flex items-center gap-4 mb-6">
-                  <img src={logoUrl} alt="Merchant Follow Up" className="h-10 w-auto" />
-                  <div>
-                    <h3 className="font-bold text-xl">Dashboard Overview</h3>
-                    <p className="text-gray-500 text-sm">Real-time insights at your fingertips</p>
-                  </div>
-                </div>
-                <div className="grid grid-cols-4 gap-4 mb-6">
-                  <div className="p-4 bg-blue-50 rounded-lg">
-                    <p className="text-sm text-blue-600">Total Clients</p>
-                    <p className="text-2xl font-bold text-blue-700">1,247</p>
-                  </div>
-                  <div className="p-4 bg-green-50 rounded-lg">
-                    <p className="text-sm text-green-600">Total Value</p>
-                    <p className="text-2xl font-bold text-green-700">$2.4M</p>
-                  </div>
-                  <div className="p-4 bg-orange-50 rounded-lg">
-                    <p className="text-sm text-orange-600">Active Campaigns</p>
-                    <p className="text-2xl font-bold text-orange-700">23</p>
-                  </div>
-                  <div className="p-4 bg-purple-50 rounded-lg">
-                    <p className="text-sm text-purple-600">Response Rate</p>
-                    <p className="text-2xl font-bold text-purple-700">34%</p>
-                  </div>
-                </div>
-                {/* Recent Activity Feed */}
-                <div className="bg-gray-50 rounded-lg p-4">
-                  <p className="text-sm font-medium text-gray-700 mb-3">Recent Activity</p>
-                  <div className="space-y-2">
-                    <div className="flex items-center gap-3 text-sm">
-                      <div className="h-2 w-2 rounded-full bg-green-500"></div>
-                      <span className="text-gray-600">New lead: Sarah M. from Google Ads</span>
-                      <span className="text-gray-400 ml-auto">2m ago</span>
-                    </div>
-                    <div className="flex items-center gap-3 text-sm">
-                      <div className="h-2 w-2 rounded-full bg-blue-500"></div>
-                      <span className="text-gray-600">SMS sent to 45 contacts in "Follow Up" campaign</span>
-                      <span className="text-gray-400 ml-auto">15m ago</span>
-                    </div>
-                    <div className="flex items-center gap-3 text-sm">
-                      <div className="h-2 w-2 rounded-full bg-orange-500"></div>
-                      <span className="text-gray-600">Mike R. replied: "Yes, I'm interested!"</span>
-                      <span className="text-gray-400 ml-auto">32m ago</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
       {/* Social Proof Bar */}
       <section className="py-12 bg-gray-50 border-y">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
