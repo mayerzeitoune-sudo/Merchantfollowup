@@ -223,8 +223,10 @@ const PhoneNumbers = () => {
     if (!numberToAssign) return;
     
     try {
-      // Convert empty string to null for unassignment
-      const assignedId = selectedAgentId && selectedAgentId !== '' ? selectedAgentId : null;
+      // Convert "unassigned" or empty string to null for unassignment
+      const assignedId = selectedAgentId && selectedAgentId !== '' && selectedAgentId !== 'unassigned' 
+        ? selectedAgentId 
+        : null;
       
       await phoneNumbersApi.update(numberToAssign.id, {
         assigned_user_id: assignedId
@@ -242,7 +244,7 @@ const PhoneNumbers = () => {
 
   const openAssignDialog = (number) => {
     setNumberToAssign(number);
-    setSelectedAgentId(number.assigned_user_id || '');
+    setSelectedAgentId(number.assigned_user_id || 'unassigned');
     setAssignDialogOpen(true);
   };
 
