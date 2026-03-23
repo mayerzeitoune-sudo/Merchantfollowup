@@ -302,7 +302,7 @@ class PhoneNumberCreate(BaseModel):
 
 class PhoneNumberUpdate(BaseModel):
     friendly_name: Optional[str] = None
-    assigned_user_id: Optional[str] = None
+    assigned_user_id: Optional[str] = "___UNSET___"  # Sentinel to distinguish null from not-provided
     is_active: Optional[bool] = None
 
 class PhoneNumberResponse(BaseModel):
@@ -2860,6 +2860,12 @@ async def purchase_phone_number(data: PhoneNumberCreate, current_user: dict = De
         "created_at": now
     }
     
+    # If purchaser has no org but assigns to someone who does, use their org_id
+    if not phone_doc["org_id"] and data.assigned_user_id:
+        assigned_user = await db.users.find_one({"id": data.assigned_user_id})
+        if assigned_user and assigned_user.get("org_id"):
+            phone_doc["org_id"] = assigned_user["org_id"]
+    
     await db.phone_numbers.insert_one(phone_doc)
     if "_id" in phone_doc:
         del phone_doc["_id"]
@@ -2880,17 +2886,23 @@ async def get_owned_numbers(current_user: dict = Depends(get_current_user)):
         # Org admin sees all numbers
         numbers = await db.phone_numbers.find({}, {"_id": 0}).to_list(500)
     elif role == "admin":
-        # Admin sees:
-        # 1. All numbers in their org
-        # 2. Numbers assigned to them
-        # 3. Numbers they created (user_id matches)
-        query = {
-            "$or": [
-                {"org_id": org_id} if org_id else {"org_id": {"$exists": False}},
-                {"assigned_user_id": user_id},
-                {"user_id": user_id}
-            ]
-        }
+        # Admin sees all numbers in their org + numbers assigned to them
+        # Also find numbers assigned to any user in their org (even if org_id on number is None)
+        org_user_ids = []
+        if org_id:
+            org_users = await db.users.find({"org_id": org_id}, {"id": 1, "_id": 0}).to_list(500)
+            org_user_ids = [u["id"] for u in org_users]
+        
+        conditions = [
+            {"assigned_user_id": user_id},
+            {"user_id": user_id}
+        ]
+        if org_id:
+            conditions.append({"org_id": org_id})
+        if org_user_ids:
+            conditions.append({"assigned_user_id": {"$in": org_user_ids}})
+        
+        query = {"$or": conditions}
         numbers = await db.phone_numbers.find(query, {"_id": 0}).to_list(200)
     else:
         # Agents see only numbers assigned to them
@@ -2909,14 +2921,22 @@ async def update_phone_number(phone_id: str, data: PhoneNumberUpdate, current_us
     update_data = {}
     if data.friendly_name is not None:
         update_data["friendly_name"] = data.friendly_name
-    if data.assigned_user_id is not None:
-        update_data["assigned_user_id"] = data.assigned_user_id
-        # Get assigned user name
+    
+    # Handle assignment: sentinel "___UNSET___" means not provided, None means unassign, string means assign
+    if data.assigned_user_id != "___UNSET___":
         if data.assigned_user_id:
+            # Assigning to a user
             assigned_user = await db.users.find_one({"id": data.assigned_user_id})
+            update_data["assigned_user_id"] = data.assigned_user_id
             update_data["assigned_user_name"] = assigned_user.get("name") if assigned_user else None
+            # Also update org_id to match the assigned user's org so admins in the same org can see it
+            if assigned_user and assigned_user.get("org_id"):
+                update_data["org_id"] = assigned_user["org_id"]
         else:
+            # Unassigning (null was sent)
+            update_data["assigned_user_id"] = None
             update_data["assigned_user_name"] = None
+    
     if data.is_active is not None:
         update_data["is_active"] = data.is_active
     
