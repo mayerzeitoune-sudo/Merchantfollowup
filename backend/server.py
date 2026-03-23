@@ -2874,32 +2874,27 @@ async def get_owned_numbers(current_user: dict = Depends(get_current_user)):
     
     role = user.get("role", "agent")
     org_id = user.get("org_id")
+    user_id = current_user["user_id"]
     
     if role == "org_admin":
         # Org admin sees all numbers
         numbers = await db.phone_numbers.find({}, {"_id": 0}).to_list(500)
     elif role == "admin":
-        # Admin sees all numbers in their org
-        query = {"org_id": org_id} if org_id else {"user_id": current_user["user_id"]}
-        numbers = await db.phone_numbers.find(query, {"_id": 0}).to_list(200)
-    else:
-        # Agents see only numbers assigned to them OR unassigned numbers in their org
+        # Admin sees:
+        # 1. All numbers in their org
+        # 2. Numbers assigned to them
+        # 3. Numbers they created (user_id matches)
         query = {
             "$or": [
-                {"assigned_user_id": current_user["user_id"]},
-                {"assigned_user_id": None, "org_id": org_id} if org_id else {"assigned_user_id": None, "user_id": current_user["user_id"]}
+                {"org_id": org_id} if org_id else {"org_id": {"$exists": False}},
+                {"assigned_user_id": user_id},
+                {"user_id": user_id}
             ]
         }
-        if org_id:
-            query = {
-                "org_id": org_id,
-                "$or": [
-                    {"assigned_user_id": current_user["user_id"]},
-                    {"assigned_user_id": None}
-                ]
-            }
-        else:
-            query = {"user_id": current_user["user_id"]}
+        numbers = await db.phone_numbers.find(query, {"_id": 0}).to_list(200)
+    else:
+        # Agents see only numbers assigned to them
+        query = {"assigned_user_id": user_id}
         numbers = await db.phone_numbers.find(query, {"_id": 0}).to_list(100)
     
     return numbers
