@@ -3152,11 +3152,31 @@ async def send_sms_to_contact(
         {"user_id": current_user["user_id"], "is_active": True}
     )
     
-    # Validate from_number if provided
+    # Validate from_number - user must have access to this number
     if from_number:
-        owned_number = await db.phone_numbers.find_one(
-            {"user_id": current_user["user_id"], "phone_number": from_number}
-        )
+        user = await db.users.find_one({"id": current_user["user_id"]})
+        role = user.get("role", "agent") if user else "agent"
+        org_id = user.get("org_id") if user else None
+        
+        if role == "org_admin":
+            owned_number = await db.phone_numbers.find_one({"phone_number": from_number})
+        elif role == "admin":
+            # Admins can use any number in their org
+            owned_number = await db.phone_numbers.find_one({
+                "phone_number": from_number,
+                "$or": [
+                    {"org_id": org_id} if org_id else {"user_id": current_user["user_id"]},
+                    {"assigned_user_id": current_user["user_id"]},
+                    {"user_id": current_user["user_id"]}
+                ]
+            })
+        else:
+            # Agents can only use numbers assigned to them
+            owned_number = await db.phone_numbers.find_one({
+                "phone_number": from_number,
+                "assigned_user_id": current_user["user_id"]
+            })
+        
         if not owned_number:
             raise HTTPException(status_code=400, detail="You don't own this phone number")
     
@@ -3373,9 +3393,27 @@ async def initiate_call(
     # Validate from_number if provided
     caller_id = None
     if from_number:
-        phone_num = await db.phone_numbers.find_one(
-            {"user_id": current_user["user_id"], "phone_number": from_number}
-        )
+        user = await db.users.find_one({"id": current_user["user_id"]})
+        role = user.get("role", "agent") if user else "agent"
+        org_id = user.get("org_id") if user else None
+        
+        if role == "org_admin":
+            phone_num = await db.phone_numbers.find_one({"phone_number": from_number})
+        elif role == "admin":
+            phone_num = await db.phone_numbers.find_one({
+                "phone_number": from_number,
+                "$or": [
+                    {"org_id": org_id} if org_id else {"user_id": current_user["user_id"]},
+                    {"assigned_user_id": current_user["user_id"]},
+                    {"user_id": current_user["user_id"]}
+                ]
+            })
+        else:
+            phone_num = await db.phone_numbers.find_one({
+                "phone_number": from_number,
+                "assigned_user_id": current_user["user_id"]
+            })
+        
         if phone_num:
             caller_id = from_number
     
@@ -3872,18 +3910,37 @@ async def send_template_message(
     variables = request_data.get("variables", {})
     from_number = request_data.get("from_number")
     
-    # Get client
+    # Get client using role-based access
+    accessible_ids = await get_accessible_user_ids(current_user)
     client = await db.clients.find_one(
-        {"id": client_id, "user_id": current_user["user_id"]}
+        {"id": client_id, "user_id": {"$in": accessible_ids}}
     )
     if not client:
         raise HTTPException(status_code=404, detail="Client not found")
     
-    # Validate from_number if provided
+    # Validate from_number - user must have access to this number
     if from_number:
-        phone_num = await db.phone_numbers.find_one(
-            {"user_id": current_user["user_id"], "phone_number": from_number}
-        )
+        user = await db.users.find_one({"id": current_user["user_id"]})
+        role = user.get("role", "agent") if user else "agent"
+        org_id = user.get("org_id") if user else None
+        
+        if role == "org_admin":
+            phone_num = await db.phone_numbers.find_one({"phone_number": from_number})
+        elif role == "admin":
+            phone_num = await db.phone_numbers.find_one({
+                "phone_number": from_number,
+                "$or": [
+                    {"org_id": org_id} if org_id else {"user_id": current_user["user_id"]},
+                    {"assigned_user_id": current_user["user_id"]},
+                    {"user_id": current_user["user_id"]}
+                ]
+            })
+        else:
+            phone_num = await db.phone_numbers.find_one({
+                "phone_number": from_number,
+                "assigned_user_id": current_user["user_id"]
+            })
+        
         if not phone_num:
             raise HTTPException(status_code=400, detail="Invalid from number")
     

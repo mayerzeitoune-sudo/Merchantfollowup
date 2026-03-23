@@ -10,7 +10,19 @@
   2. Unassignment silently failed (Pydantic couldn't distinguish `null` from "not provided") — fixed with sentinel value
   3. Admin query only matched `org_id` — now also finds numbers assigned to ANY user in the admin's org
 - **Files Modified**: `backend/server.py` (PhoneNumberUpdate model, get_owned_numbers, update_phone_number, purchase endpoint)
-- **Testing**: 12/12 backend + all frontend UI flows passed
+
+#### P0 Bug Fix: "You don't own this phone number" when sending SMS
+- **Root Cause**: The send-sms, send-template, and initiate-call endpoints validated number ownership using `user_id` (the purchaser), not considering `assigned_user_id` or `org_id`
+- **Fix**: All 3 endpoints now use role-based number validation:
+  - `org_admin`: Can use any number
+  - `admin`: Can use any number in their org (by `org_id`, `assigned_user_id`, or `user_id`)
+  - `agent`: Can only use numbers assigned to them (`assigned_user_id`)
+- **Files Modified**: `backend/server.py` (send_sms_to_contact, send_template_message, initiate_call)
+
+#### Number Visibility (Privacy)
+- Agents only see their own assigned numbers — verified Emily (unassigned agent) sees 0 numbers
+- Admins see all org numbers for management
+- No cross-org number leakage
 
 ### Previous Session Completed
 - Inbox Page Redesign with split-view, phone number selector, conversation chains
@@ -62,10 +74,5 @@
 - **Monolithic server.py**: Backend file too large, needs refactoring
 - **Twilio Voice**: Placeholder credentials, not fully integrated
 - **Bulk User Upload**: Backend endpoint is placeholder
-- **SMS Sending**: MOCKED — Twilio credentials not configured
+- **SMS Sending**: MOCKED — Twilio credentials not configured (messages save but don't actually send)
 - **OTP Email**: Only logs to console, no real email service
-
-### Key API Endpoints
-- `GET /api/phone-numbers/owned` — Role-based phone number retrieval
-- `PUT /api/phone-numbers/{phone_id}` — Assign/unassign numbers with org_id propagation
-- `POST /api/phone-numbers/purchase` — Purchase numbers with org_id inheritance
