@@ -2813,17 +2813,36 @@ async def search_available_numbers(
 
 @api_router.post("/phone-numbers/purchase")
 async def purchase_phone_number(data: PhoneNumberCreate, current_user: dict = Depends(get_current_user)):
-    """Purchase/add a phone number"""
+    """Purchase/add a phone number - stored at org level"""
+    user = await db.users.find_one({"id": current_user["user_id"]})
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    # Only admins can add phone numbers
+    if user.get("role") not in ["admin", "org_admin"]:
+        raise HTTPException(status_code=403, detail="Only admins can add phone numbers")
+    
     phone_id = str(uuid.uuid4())
     now = datetime.now(timezone.utc).isoformat()
     
+    # Get assigned user name if provided
+    assigned_user_name = None
+    if data.assigned_user_id:
+        assigned_user = await db.users.find_one({"id": data.assigned_user_id})
+        if assigned_user:
+            assigned_user_name = assigned_user.get("name")
+    
     phone_doc = {
         "id": phone_id,
-        "user_id": current_user["user_id"],
+        "user_id": current_user["user_id"],  # Who purchased it
+        "org_id": user.get("org_id"),  # Organization it belongs to
         "phone_number": data.phone_number,
         "friendly_name": data.friendly_name or data.phone_number,
         "provider": data.provider,
         "is_active": True,
+        "is_default": False,
+        "assigned_user_id": data.assigned_user_id,
+        "assigned_user_name": assigned_user_name,
         "monthly_cost": 1.00,
         "created_at": now
     }
@@ -2835,12 +2854,74 @@ async def purchase_phone_number(data: PhoneNumberCreate, current_user: dict = De
 
 @api_router.get("/phone-numbers/owned", response_model=List[PhoneNumberResponse])
 async def get_owned_numbers(current_user: dict = Depends(get_current_user)):
-    """List all owned phone numbers"""
-    numbers = await db.phone_numbers.find(
-        {"user_id": current_user["user_id"]},
-        {"_id": 0}
-    ).to_list(100)
+    """List phone numbers - admins see all org numbers, agents see only assigned"""
+    user = await db.users.find_one({"id": current_user["user_id"]})
+    if not user:
+        return []
+    
+    role = user.get("role", "agent")
+    org_id = user.get("org_id")
+    
+    if role == "org_admin":
+        # Org admin sees all numbers
+        numbers = await db.phone_numbers.find({}, {"_id": 0}).to_list(500)
+    elif role == "admin":
+        # Admin sees all numbers in their org
+        query = {"org_id": org_id} if org_id else {"user_id": current_user["user_id"]}
+        numbers = await db.phone_numbers.find(query, {"_id": 0}).to_list(200)
+    else:
+        # Agents see only numbers assigned to them OR unassigned numbers in their org
+        query = {
+            "$or": [
+                {"assigned_user_id": current_user["user_id"]},
+                {"assigned_user_id": None, "org_id": org_id} if org_id else {"assigned_user_id": None, "user_id": current_user["user_id"]}
+            ]
+        }
+        if org_id:
+            query = {
+                "org_id": org_id,
+                "$or": [
+                    {"assigned_user_id": current_user["user_id"]},
+                    {"assigned_user_id": None}
+                ]
+            }
+        else:
+            query = {"user_id": current_user["user_id"]}
+        numbers = await db.phone_numbers.find(query, {"_id": 0}).to_list(100)
+    
     return numbers
+
+@api_router.put("/phone-numbers/{phone_id}")
+async def update_phone_number(phone_id: str, data: PhoneNumberUpdate, current_user: dict = Depends(get_current_user)):
+    """Update a phone number (admin only)"""
+    user = await db.users.find_one({"id": current_user["user_id"]})
+    if user.get("role") not in ["admin", "org_admin"]:
+        raise HTTPException(status_code=403, detail="Only admins can update phone numbers")
+    
+    update_data = {}
+    if data.friendly_name is not None:
+        update_data["friendly_name"] = data.friendly_name
+    if data.assigned_user_id is not None:
+        update_data["assigned_user_id"] = data.assigned_user_id
+        # Get assigned user name
+        if data.assigned_user_id:
+            assigned_user = await db.users.find_one({"id": data.assigned_user_id})
+            update_data["assigned_user_name"] = assigned_user.get("name") if assigned_user else None
+        else:
+            update_data["assigned_user_name"] = None
+    if data.is_active is not None:
+        update_data["is_active"] = data.is_active
+    
+    if update_data:
+        result = await db.phone_numbers.update_one(
+            {"id": phone_id},
+            {"$set": update_data}
+        )
+        if result.matched_count == 0:
+            raise HTTPException(status_code=404, detail="Phone number not found")
+    
+    updated = await db.phone_numbers.find_one({"id": phone_id}, {"_id": 0})
+    return updated
 
 @api_router.delete("/phone-numbers/{phone_id}")
 async def release_phone_number(phone_id: str, current_user: dict = Depends(get_current_user)):
