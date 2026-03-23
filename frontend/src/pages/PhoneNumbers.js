@@ -496,7 +496,32 @@ const PhoneNumbers = () => {
                           )}
                         </div>
                       </div>
-                      <div className="mt-4 flex items-center justify-between">
+                      
+                      {/* Assigned Agent */}
+                      <div className="mt-3 pt-3 border-t">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2 text-sm">
+                            <User className="h-4 w-4 text-muted-foreground" />
+                            {number.assigned_user_name ? (
+                              <span className="text-foreground">{number.assigned_user_name}</span>
+                            ) : (
+                              <span className="text-muted-foreground">Unassigned</span>
+                            )}
+                          </div>
+                          {isAdmin && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => openAssignDialog(number)}
+                            >
+                              <Edit className="h-3 w-3 mr-1" />
+                              {number.assigned_user_id ? 'Change' : 'Assign'}
+                            </Button>
+                          )}
+                        </div>
+                      </div>
+                      
+                      <div className="mt-3 flex items-center justify-between">
                         <div className="flex gap-2">
                           <Badge variant="outline" className="text-xs">SMS</Badge>
                           <Badge variant="outline" className="text-xs">Voice</Badge>
@@ -512,17 +537,19 @@ const PhoneNumbers = () => {
                               Set Default
                             </Button>
                           )}
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="text-destructive hover:text-destructive hover:bg-destructive/10"
-                            onClick={() => {
-                              setNumberToDelete(number);
-                              setDeleteDialogOpen(true);
-                            }}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
+                          {isAdmin && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                              onClick={() => {
+                                setNumberToDelete(number);
+                                setDeleteDialogOpen(true);
+                              }}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          )}
                         </div>
                       </div>
                       <p className="text-xs text-muted-foreground mt-3">
@@ -535,6 +562,52 @@ const PhoneNumbers = () => {
             )}
           </CardContent>
         </Card>
+
+        {/* Assign Agent Dialog */}
+        <Dialog open={assignDialogOpen} onOpenChange={setAssignDialogOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Assign Agent to Phone Number</DialogTitle>
+              <DialogDescription>
+                Assign an agent to use {numberToAssign?.phone_number}. Only this agent will see this number for messaging.
+              </DialogDescription>
+            </DialogHeader>
+            
+            <div className="space-y-4 mt-4">
+              <div className="space-y-2">
+                <Label>Select Agent</Label>
+                <Select value={selectedAgentId} onValueChange={setSelectedAgentId}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select an agent (or leave unassigned)" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">
+                      <div className="flex items-center gap-2">
+                        <Users className="h-4 w-4" />
+                        Unassigned (All admins can use)
+                      </div>
+                    </SelectItem>
+                    {teamMembers.map((member) => (
+                      <SelectItem key={member.id} value={member.id}>
+                        <div className="flex items-center gap-2">
+                          <User className="h-4 w-4" />
+                          {member.name} ({member.role})
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            
+            <DialogFooter className="mt-4">
+              <Button variant="outline" onClick={() => setAssignDialogOpen(false)}>Cancel</Button>
+              <Button onClick={handleAssignAgent}>
+                {selectedAgentId ? 'Assign Agent' : 'Remove Assignment'}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
 
         {/* Single Delete Confirmation */}
         <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
