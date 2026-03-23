@@ -223,16 +223,20 @@ const PhoneNumbers = () => {
     if (!numberToAssign) return;
     
     try {
+      // Convert empty string to null for unassignment
+      const assignedId = selectedAgentId && selectedAgentId !== '' ? selectedAgentId : null;
+      
       await phoneNumbersApi.update(numberToAssign.id, {
-        assigned_user_id: selectedAgentId || null
+        assigned_user_id: assignedId
       });
-      toast.success(selectedAgentId ? 'Agent assigned to phone number' : 'Agent unassigned from phone number');
+      toast.success(assignedId ? 'Agent assigned to phone number' : 'Agent unassigned from phone number');
       setAssignDialogOpen(false);
       setNumberToAssign(null);
       setSelectedAgentId('');
       fetchOwnedNumbers();
     } catch (error) {
-      toast.error('Failed to assign agent');
+      console.error('Assign error:', error);
+      toast.error(error.response?.data?.detail || 'Failed to assign agent');
     }
   };
 
