@@ -101,7 +101,8 @@ export const phoneNumbersApi = {
   getOwned: () => axios.get(`${API}/phone-numbers/owned`),
   release: (id) => axios.delete(`${API}/phone-numbers/${id}`),
   setDefault: (id) => axios.put(`${API}/phone-numbers/${id}/set-default`),
-  getDefault: () => axios.get(`${API}/phone-numbers/default`)
+  getDefault: () => axios.get(`${API}/phone-numbers/default`),
+  update: (id, data) => axios.put(`${API}/phone-numbers/${id}`, data)
 };
 
 // Contacts/Messaging API
