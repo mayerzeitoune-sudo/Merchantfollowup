@@ -219,6 +219,29 @@ const PhoneNumbers = () => {
     }
   };
 
+  const handleAssignAgent = async () => {
+    if (!numberToAssign) return;
+    
+    try {
+      await phoneNumbersApi.update(numberToAssign.id, {
+        assigned_user_id: selectedAgentId || null
+      });
+      toast.success(selectedAgentId ? 'Agent assigned to phone number' : 'Agent unassigned from phone number');
+      setAssignDialogOpen(false);
+      setNumberToAssign(null);
+      setSelectedAgentId('');
+      fetchOwnedNumbers();
+    } catch (error) {
+      toast.error('Failed to assign agent');
+    }
+  };
+
+  const openAssignDialog = (number) => {
+    setNumberToAssign(number);
+    setSelectedAgentId(number.assigned_user_id || '');
+    setAssignDialogOpen(true);
+  };
+
   const toggleSelectNumber = (numberId) => {
     setSelectedNumbers(prev => 
       prev.includes(numberId) 
