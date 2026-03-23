@@ -2925,25 +2925,45 @@ async def update_phone_number(phone_id: str, data: PhoneNumberUpdate, current_us
 
 @api_router.delete("/phone-numbers/{phone_id}")
 async def release_phone_number(phone_id: str, current_user: dict = Depends(get_current_user)):
-    """Release a phone number"""
-    result = await db.phone_numbers.delete_one(
-        {"id": phone_id, "user_id": current_user["user_id"]}
-    )
+    """Release a phone number (admin only)"""
+    user = await db.users.find_one({"id": current_user["user_id"]})
+    if user.get("role") not in ["admin", "org_admin"]:
+        raise HTTPException(status_code=403, detail="Only admins can release phone numbers")
+    
+    result = await db.phone_numbers.delete_one({"id": phone_id})
     if result.deleted_count == 0:
         raise HTTPException(status_code=404, detail="Phone number not found")
     return {"message": "Phone number released"}
 
 @api_router.put("/phone-numbers/{phone_id}/set-default")
 async def set_default_phone_number(phone_id: str, current_user: dict = Depends(get_current_user)):
-    """Set a phone number as the default"""
-    # First, unset all current defaults for this user
-    await db.phone_numbers.update_many(
-        {"user_id": current_user["user_id"]},
-        {"$set": {"is_default": False}}
-    )
+    """Set a phone number as the default for the user"""
+    user = await db.users.find_one({"id": current_user["user_id"]})
+    org_id = user.get("org_id")
+    
+    # Unset all current defaults in user's scope
+    if user.get("role") in ["admin", "org_admin"]:
+        # Admin: unset defaults in org
+        if org_id:
+            await db.phone_numbers.update_many(
+                {"org_id": org_id},
+                {"$set": {"is_default": False}}
+            )
+        else:
+            await db.phone_numbers.update_many(
+                {"user_id": current_user["user_id"]},
+                {"$set": {"is_default": False}}
+            )
+    else:
+        # Agent: only affects their assigned numbers
+        await db.phone_numbers.update_many(
+            {"assigned_user_id": current_user["user_id"]},
+            {"$set": {"is_default": False}}
+        )
+    
     # Set the new default
     result = await db.phone_numbers.update_one(
-        {"id": phone_id, "user_id": current_user["user_id"]},
+        {"id": phone_id},
         {"$set": {"is_default": True}}
     )
     if result.matched_count == 0:
