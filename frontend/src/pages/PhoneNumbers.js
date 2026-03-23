@@ -585,7 +585,7 @@ const PhoneNumbers = () => {
                     <SelectValue placeholder="Select an agent (or leave unassigned)" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">
+                    <SelectItem value="unassigned">
                       <div className="flex items-center gap-2">
                         <Users className="h-4 w-4" />
                         Unassigned (All admins can use)
@@ -607,7 +607,7 @@ const PhoneNumbers = () => {
             <DialogFooter className="mt-4">
               <Button variant="outline" onClick={() => setAssignDialogOpen(false)}>Cancel</Button>
               <Button onClick={handleAssignAgent}>
-                {selectedAgentId ? 'Assign Agent' : 'Remove Assignment'}
+                {selectedAgentId && selectedAgentId !== 'unassigned' ? 'Assign Agent' : 'Remove Assignment'}
               </Button>
             </DialogFooter>
           </DialogContent>
