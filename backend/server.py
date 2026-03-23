@@ -1760,21 +1760,34 @@ async def import_csv_leads(file: UploadFile, auto_tags: str = "", current_user: 
 
 @api_router.get("/team/members")
 async def get_team_members(current_user: dict = Depends(get_current_user), include_archived: bool = False):
-    """Get all team members"""
-    # Get the team_id from current user or create one
+    """Get all team members in the user's organization"""
     user = await db.users.find_one({"id": current_user["user_id"]}, {"_id": 0})
+    org_id = user.get("org_id")
     team_id = user.get("team_id") or current_user["user_id"]
+    role = user.get("role", "agent")
     
-    # Build query - exclude archived by default
-    query = {"$or": [{"team_id": team_id}, {"id": team_id}]}
+    # Build query based on role
+    if role == "org_admin":
+        # Org admin sees all users
+        query = {}
+    elif org_id:
+        # Users with org_id see all users in their org
+        query = {"org_id": org_id}
+    else:
+        # Fallback to team_id for backwards compatibility
+        query = {"$or": [{"team_id": team_id}, {"id": team_id}]}
+    
+    # Exclude archived by default
     if not include_archived:
-        query["$and"] = [{"$or": [{"is_archived": {"$ne": True}}, {"is_archived": {"$exists": False}}]}]
+        if "$and" not in query:
+            query = {"$and": [query]} if query else {"$and": []}
+        query["$and"].append({"$or": [{"is_archived": {"$ne": True}}, {"is_archived": {"$exists": False}}]})
     
-    # Get all members with same team_id
+    # Get all members
     members = await db.users.find(
         query,
-        {"_id": 0, "hashed_password": 0, "otp": 0}
-    ).to_list(100)
+        {"_id": 0, "password": 0, "hashed_password": 0, "otp": 0}
+    ).to_list(500)
     
     # Add stats for each member
     for member in members:
