@@ -298,15 +298,25 @@ class PhoneNumberCreate(BaseModel):
     phone_number: str
     friendly_name: Optional[str] = None
     provider: str = "twilio"
+    assigned_user_id: Optional[str] = None  # Agent assigned to this number
+
+class PhoneNumberUpdate(BaseModel):
+    friendly_name: Optional[str] = None
+    assigned_user_id: Optional[str] = None
+    is_active: Optional[bool] = None
 
 class PhoneNumberResponse(BaseModel):
     model_config = ConfigDict(extra="ignore")
     id: str
-    user_id: str
+    user_id: str  # Who created/purchased it
+    org_id: Optional[str] = None
     phone_number: str
     friendly_name: Optional[str] = None
     provider: str
     is_active: bool = True
+    is_default: bool = False
+    assigned_user_id: Optional[str] = None
+    assigned_user_name: Optional[str] = None
     monthly_cost: float = 1.00
     created_at: str
 
