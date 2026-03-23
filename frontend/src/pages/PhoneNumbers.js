@@ -84,6 +84,7 @@ const STATE_AREA_CODES = {
 };
 
 const PhoneNumbers = () => {
+  const { user } = useAuth();
   const [ownedNumbers, setOwnedNumbers] = useState([]);
   const [availableNumbers, setAvailableNumbers] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -97,10 +98,30 @@ const PhoneNumbers = () => {
   const [numberToDelete, setNumberToDelete] = useState(null);
   const [bulkDeleteDialogOpen, setBulkDeleteDialogOpen] = useState(false);
   const [defaultNumber, setDefaultNumber] = useState(null);
+  
+  // Agent assignment
+  const [teamMembers, setTeamMembers] = useState([]);
+  const [assignDialogOpen, setAssignDialogOpen] = useState(false);
+  const [numberToAssign, setNumberToAssign] = useState(null);
+  const [selectedAgentId, setSelectedAgentId] = useState('');
+  
+  const isAdmin = user?.role === 'admin' || user?.role === 'org_admin';
 
   useEffect(() => {
     fetchOwnedNumbers();
-  }, []);
+    if (isAdmin) {
+      fetchTeamMembers();
+    }
+  }, [isAdmin]);
+
+  const fetchTeamMembers = async () => {
+    try {
+      const response = await teamApi.getMembers();
+      setTeamMembers(response.data || []);
+    } catch (error) {
+      console.error('Failed to fetch team members:', error);
+    }
+  };
 
   // When state is selected, show the area codes for that state
   const handleStateChange = (state) => {
