@@ -547,17 +547,22 @@ const Inbox = () => {
                       </SelectTrigger>
                       <SelectContent>
                         {ownedNumbers.length === 0 ? (
-                          <SelectItem value="default">Default Number</SelectItem>
+                          <SelectItem value="default">No numbers available</SelectItem>
                         ) : (
                           ownedNumbers.map((num) => (
                             <SelectItem key={num.id || num.phone_number} value={num.phone_number}>
                               <div className="flex items-center gap-2">
                                 <span className="font-mono">{num.phone_number}</span>
-                                {num.friendly_name && (
+                                {num.friendly_name && num.friendly_name !== num.phone_number && (
                                   <span className="text-muted-foreground">({num.friendly_name})</span>
                                 )}
                                 {num.is_default && (
                                   <Badge className="ml-1 h-4 px-1 text-[10px] bg-orange-100 text-orange-700">Default</Badge>
+                                )}
+                                {num.assigned_user_name && (
+                                  <Badge variant="outline" className="ml-1 h-4 px-1 text-[10px]">
+                                    {num.assigned_user_name}
+                                  </Badge>
                                 )}
                               </div>
                             </SelectItem>
