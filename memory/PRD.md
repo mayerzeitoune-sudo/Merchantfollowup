@@ -1,48 +1,29 @@
 # Merchant Follow Up - Product Requirements Document
 
-## Implementation Status - March 23, 2026
+## Implementation Status - March 24, 2026
 
-### COMPLETED (This Session - March 23, 2026)
+### COMPLETED (This Session)
 
-#### P0 Bug Fix: Phone Number Assignment in Inbox
-- **Root Causes Fixed**:
-  1. Numbers created by org_admin had `org_id: None` — assignment now propagates the assigned user's `org_id`
-  2. Unassignment silently failed (Pydantic couldn't distinguish `null` from "not provided") — fixed with sentinel value
-  3. Admin query only matched `org_id` — now also finds numbers assigned to ANY user in the admin's org
-- **Files Modified**: `backend/server.py` (PhoneNumberUpdate model, get_owned_numbers, update_phone_number, purchase endpoint)
+#### Feature: Phone Number Purchasing for All Roles
+- **Admins** can purchase numbers → goes to org, must assign to a rep
+- **Agents/Reps** can purchase numbers → auto-assigned to themselves
+- **Org Admin** can toggle `allow_rep_purchases` per organization (Organizations page dialog)
+- **Admin** can set `rep_monthly_number_limit` per rep (Settings > Phone Numbers tab, defaults to 0 = no limit)
+- Agent purchase blocked when org disables rep purchases or monthly limit reached
+- Files: `backend/server.py`, `backend/routes/organizations.py`, `frontend/src/pages/PhoneNumbers.js`, `frontend/src/pages/Settings.js`, `frontend/src/pages/Organizations.js`, `frontend/src/lib/api.js`
+- Testing: 12/12 backend + all frontend UI flows passed
 
-#### P0 Bug Fix: "You don't own this phone number" when sending SMS
-- **Root Cause**: The send-sms, send-template, and initiate-call endpoints validated number ownership using `user_id` (the purchaser), not considering `assigned_user_id` or `org_id`
-- **Fix**: All 3 endpoints now use role-based number validation:
-  - `org_admin`: Can use any number
-  - `admin`: Can use any number in their org (by `org_id`, `assigned_user_id`, or `user_id`)
-  - `agent`: Can only use numbers assigned to them (`assigned_user_id`)
-- **Files Modified**: `backend/server.py` (send_sms_to_contact, send_template_message, initiate_call)
+#### Bug Fix: Phone Number Assignment in Inbox
+- Fixed org_id propagation on assignment
+- Fixed unassignment (was silently failing)
+- Admin sees all org numbers, agent sees only assigned
 
-#### Number Visibility (Privacy)
-- Agents only see their own assigned numbers — verified Emily (unassigned agent) sees 0 numbers
-- Admins see all org numbers for management
-- No cross-org number leakage
-
-### Previous Session Completed
-- Inbox Page Redesign with split-view, phone number selector, conversation chains
-- Calendar Page Redesign with stats cards
-- Archive users and user history page
-- Clickable notifications, Team delete buttons
-- Phone Numbers state search, Phone dialer
-- OTP verification, Pipeline fix, User Profile, Bulk delete
-- Global search fix
-- Org Admin Impersonation
-- Client Data Access Fixes
-- Organization Billing System
-- Legal Pages (Privacy Policy, Terms of Service)
-- Signup & Landing Page Overhaul
-- Branding (favicon, tab title)
+#### Bug Fix: "You don't own this phone number" SMS Error
+- Fixed send-sms, send-template, initiate-call endpoints to use role-based number validation
 
 ### Technical Stack
 - **Backend**: FastAPI + MongoDB (Motor async driver)
 - **Frontend**: React + Tailwind + Shadcn/UI
-- **AI**: OpenAI GPT-5.2 via Emergent LLM Key
 - **Auth**: JWT with role-based access (org_admin, admin, team_leader, agent)
 
 ### Test Credentials
@@ -55,24 +36,21 @@
 **P0 - Critical**
 - Configure live Twilio credentials (Account SID + Auth Token) for real SMS
 - Refactor `server.py` monolith (~5000 lines) into modular route files
-- Implement Twilio Voice call functionality
+- Twilio Voice call functionality
 
 **P1 - Important**
 - Support Email UI — backend exists, frontend Settings form missing
-- Live Email Sending — integrate SendGrid or similar for OTP emails
+- Live Email Sending — integrate email service for OTP emails
 - Twilio A2P 10DLC registration backend
-- Bulk User Upload backend (UI exists)
+- Bulk User Upload backend
 - Real-time notifications (WebSocket)
 
 **P2 - Nice to Have**
 - Email Inbox View
 - Auto-import leads from email
 - Background automation for drip campaigns
-- N+1 Query Optimizations
 
 ### Known Issues
-- **Monolithic server.py**: Backend file too large, needs refactoring
-- **Twilio Voice**: Placeholder credentials, not fully integrated
-- **Bulk User Upload**: Backend endpoint is placeholder
-- **SMS Sending**: MOCKED — Twilio credentials not configured (messages save but don't actually send)
+- **SMS Sending**: MOCKED — Twilio credentials not configured
 - **OTP Email**: Only logs to console, no real email service
+- **Monolithic server.py**: ~5000 lines, needs refactoring
