@@ -40,6 +40,8 @@ class OrganizationUpdate(BaseModel):
     name: Optional[str] = None
     description: Optional[str] = None
     is_active: Optional[bool] = None
+    allow_rep_purchases: Optional[bool] = None
+    rep_monthly_number_limit: Optional[int] = None
 
 class UserCreate(BaseModel):
     name: str
@@ -259,6 +261,8 @@ async def list_organizations(authorization: str = Query(...)):
     for org in orgs:
         org["user_count"] = await db.users.count_documents({"org_id": org["id"]})
         org["client_count"] = await db.clients.count_documents({"org_id": org["id"]})
+        org.setdefault("allow_rep_purchases", True)
+        org.setdefault("rep_monthly_number_limit", 0)
     
     return orgs
 
@@ -307,6 +311,10 @@ async def get_organization(org_id: str, authorization: str = Query(...)):
     org["admin_count"] = await db.users.count_documents({"org_id": org_id, "role": "admin"})
     org["client_count"] = await db.clients.count_documents({"org_id": org_id})
     
+    # Ensure defaults for phone number settings
+    org.setdefault("allow_rep_purchases", True)
+    org.setdefault("rep_monthly_number_limit", 0)
+    
     return org
 
 
@@ -323,6 +331,10 @@ async def update_organization(org_id: str, data: OrganizationUpdate, authorizati
         update_data["description"] = data.description
     if data.is_active is not None:
         update_data["is_active"] = data.is_active
+    if data.allow_rep_purchases is not None:
+        update_data["allow_rep_purchases"] = data.allow_rep_purchases
+    if data.rep_monthly_number_limit is not None:
+        update_data["rep_monthly_number_limit"] = data.rep_monthly_number_limit
     
     result = await db.organizations.update_one(
         {"id": org_id},

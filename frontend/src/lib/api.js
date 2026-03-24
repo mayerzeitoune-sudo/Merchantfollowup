@@ -102,7 +102,10 @@ export const phoneNumbersApi = {
   release: (id) => axios.delete(`${API}/phone-numbers/${id}`),
   setDefault: (id) => axios.put(`${API}/phone-numbers/${id}/set-default`),
   getDefault: () => axios.get(`${API}/phone-numbers/default`),
-  update: (id, data) => axios.put(`${API}/phone-numbers/${id}`, data)
+  update: (id, data) => axios.put(`${API}/phone-numbers/${id}`, data),
+  getPurchaseStatus: () => axios.get(`${API}/phone-numbers/purchase-status`),
+  getSettings: () => axios.get(`${API}/settings/phone-numbers`),
+  updateSettings: (data) => axios.put(`${API}/settings/phone-numbers`, data)
 };
 
 // Contacts/Messaging API

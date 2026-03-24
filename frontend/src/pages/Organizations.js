@@ -38,6 +38,7 @@ import { organizationsApi } from '../lib/api';
 import { toast } from 'sonner';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
+import { Switch } from '../components/ui/switch';
 
 const Organizations = () => {
   const { user, token, startImpersonation } = useAuth();
@@ -710,6 +711,69 @@ const Organizations = () => {
                 </div>
               )}
               
+              {/* Phone Number Settings */}
+              <div className="mt-6 pt-4 border-t">
+                <h3 className="font-semibold mb-4 flex items-center gap-2">
+                  <Phone className="h-4 w-4" />
+                  Phone Number Settings
+                </h3>
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between p-3 rounded-lg border bg-muted/30">
+                    <div>
+                      <p className="font-medium text-sm">Allow Reps to Purchase Numbers</p>
+                      <p className="text-xs text-muted-foreground">When enabled, reps can buy their own phone numbers</p>
+                    </div>
+                    <Switch
+                      checked={selectedOrg?.allow_rep_purchases !== false}
+                      onCheckedChange={async (checked) => {
+                        try {
+                          await organizationsApi.update(token, selectedOrg.id, { allow_rep_purchases: checked });
+                          setSelectedOrg(prev => ({ ...prev, allow_rep_purchases: checked }));
+                          toast.success(checked ? 'Reps can now purchase numbers' : 'Rep purchasing disabled');
+                        } catch (error) {
+                          toast.error('Failed to update setting');
+                        }
+                      }}
+                      data-testid="allow-rep-purchases-toggle"
+                    />
+                  </div>
+                  <div className="flex items-center justify-between p-3 rounded-lg border bg-muted/30">
+                    <div>
+                      <p className="font-medium text-sm">Rep Monthly Purchase Limit</p>
+                      <p className="text-xs text-muted-foreground">Max numbers a rep can buy per month (0 = no limit)</p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Input
+                        type="number"
+                        min="0"
+                        className="w-20 h-8 text-center"
+                        value={selectedOrg?.rep_monthly_number_limit || 0}
+                        onChange={(e) => setSelectedOrg(prev => ({ ...prev, rep_monthly_number_limit: parseInt(e.target.value) || 0 }))}
+                        data-testid="org-rep-limit-input"
+                      />
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="h-8"
+                        onClick={async () => {
+                          try {
+                            await organizationsApi.update(token, selectedOrg.id, { 
+                              rep_monthly_number_limit: selectedOrg?.rep_monthly_number_limit || 0 
+                            });
+                            toast.success('Monthly limit updated');
+                          } catch (error) {
+                            toast.error('Failed to update limit');
+                          }
+                        }}
+                        data-testid="save-org-rep-limit-btn"
+                      >
+                        Save
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
               {/* Danger Zone - Delete Organization */}
               <div className="mt-6 pt-4 border-t border-destructive/30">
                 <div className="flex items-center justify-between p-4 rounded-lg border border-destructive/30 bg-destructive/5">

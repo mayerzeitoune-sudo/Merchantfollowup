@@ -2826,14 +2826,44 @@ async def search_available_numbers(
 
 @api_router.post("/phone-numbers/purchase")
 async def purchase_phone_number(data: PhoneNumberCreate, current_user: dict = Depends(get_current_user)):
-    """Purchase/add a phone number - stored at org level"""
+    """Purchase/add a phone number - admins and agents can buy"""
     user = await db.users.find_one({"id": current_user["user_id"]})
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
     
-    # Only admins can add phone numbers
-    if user.get("role") not in ["admin", "org_admin"]:
-        raise HTTPException(status_code=403, detail="Only admins can add phone numbers")
+    role = user.get("role", "agent")
+    org_id = user.get("org_id")
+    
+    # org_admin can always buy
+    if role == "org_admin":
+        pass
+    elif role == "admin":
+        # Admins can always buy for their org
+        pass
+    elif role in ["agent", "team_leader"]:
+        # Check if org allows rep purchases
+        if org_id:
+            org = await db.organizations.find_one({"id": org_id})
+            if org and org.get("allow_rep_purchases") is False:
+                raise HTTPException(status_code=403, detail="Your organization does not allow reps to purchase phone numbers")
+            
+            # Check monthly purchase limit
+            rep_limit = org.get("rep_monthly_number_limit", 0) if org else 0  # 0 = no limit
+            if rep_limit > 0:
+                # Count how many numbers this rep bought this month
+                now = datetime.now(timezone.utc)
+                month_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0).isoformat()
+                purchased_this_month = await db.phone_numbers.count_documents({
+                    "user_id": current_user["user_id"],
+                    "created_at": {"$gte": month_start}
+                })
+                if purchased_this_month >= rep_limit:
+                    raise HTTPException(
+                        status_code=403, 
+                        detail=f"Monthly purchase limit reached ({rep_limit} numbers/month). Contact your admin."
+                    )
+    else:
+        raise HTTPException(status_code=403, detail="You don't have permission to purchase phone numbers")
     
     phone_id = str(uuid.uuid4())
     now = datetime.now(timezone.utc).isoformat()
@@ -2845,6 +2875,12 @@ async def purchase_phone_number(data: PhoneNumberCreate, current_user: dict = De
         if assigned_user:
             assigned_user_name = assigned_user.get("name")
     
+    # For agents, auto-assign to themselves
+    assigned_user_id = data.assigned_user_id
+    if role in ["agent", "team_leader"] and not assigned_user_id:
+        assigned_user_id = current_user["user_id"]
+        assigned_user_name = user.get("name")
+    
     phone_doc = {
         "id": phone_id,
         "user_id": current_user["user_id"],  # Who purchased it
@@ -2854,15 +2890,15 @@ async def purchase_phone_number(data: PhoneNumberCreate, current_user: dict = De
         "provider": data.provider,
         "is_active": True,
         "is_default": False,
-        "assigned_user_id": data.assigned_user_id,
+        "assigned_user_id": assigned_user_id,
         "assigned_user_name": assigned_user_name,
         "monthly_cost": 1.00,
         "created_at": now
     }
     
     # If purchaser has no org but assigns to someone who does, use their org_id
-    if not phone_doc["org_id"] and data.assigned_user_id:
-        assigned_user = await db.users.find_one({"id": data.assigned_user_id})
+    if not phone_doc["org_id"] and assigned_user_id:
+        assigned_user = await db.users.find_one({"id": assigned_user_id})
         if assigned_user and assigned_user.get("org_id"):
             phone_doc["org_id"] = assigned_user["org_id"]
     
@@ -5301,6 +5337,93 @@ async def test_support_email(current_user: dict = Depends(get_current_user)):
         return {"message": f"Test email sent successfully to {user['email']}"}
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"Failed to send test email: {str(e)}")
+
+
+# ============== ORG PHONE NUMBER SETTINGS (Admin) ==============
+
+@api_router.get("/settings/phone-numbers")
+async def get_phone_number_settings(current_user: dict = Depends(get_current_user)):
+    """Get phone number settings for the admin's org"""
+    user = await db.users.find_one({"id": current_user["user_id"]})
+    if not user or user.get("role") not in ["admin", "org_admin"]:
+        raise HTTPException(status_code=403, detail="Admin access required")
+    
+    org_id = user.get("org_id")
+    if not org_id:
+        return {"allow_rep_purchases": True, "rep_monthly_number_limit": 0}
+    
+    org = await db.organizations.find_one({"id": org_id}, {"_id": 0})
+    if not org:
+        return {"allow_rep_purchases": True, "rep_monthly_number_limit": 0}
+    
+    return {
+        "allow_rep_purchases": org.get("allow_rep_purchases", True),
+        "rep_monthly_number_limit": org.get("rep_monthly_number_limit", 0)
+    }
+
+@api_router.put("/settings/phone-numbers")
+async def update_phone_number_settings(data: dict, current_user: dict = Depends(get_current_user)):
+    """Update phone number settings for the admin's org"""
+    user = await db.users.find_one({"id": current_user["user_id"]})
+    if not user or user.get("role") not in ["admin", "org_admin"]:
+        raise HTTPException(status_code=403, detail="Admin access required")
+    
+    org_id = user.get("org_id")
+    if not org_id:
+        raise HTTPException(status_code=400, detail="No organization found")
+    
+    update_data = {}
+    if "rep_monthly_number_limit" in data:
+        update_data["rep_monthly_number_limit"] = max(0, int(data["rep_monthly_number_limit"]))
+    
+    if update_data:
+        await db.organizations.update_one(
+            {"id": org_id},
+            {"$set": update_data}
+        )
+    
+    return {"message": "Phone number settings updated"}
+
+@api_router.get("/phone-numbers/purchase-status")
+async def get_purchase_status(current_user: dict = Depends(get_current_user)):
+    """Check if the current user can purchase phone numbers and how many they have left"""
+    user = await db.users.find_one({"id": current_user["user_id"]})
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    role = user.get("role", "agent")
+    org_id = user.get("org_id")
+    
+    result = {"can_purchase": True, "reason": None, "limit": 0, "purchased_this_month": 0}
+    
+    if role in ["org_admin", "admin"]:
+        result["can_purchase"] = True
+        return result
+    
+    # For agents/reps
+    if org_id:
+        org = await db.organizations.find_one({"id": org_id})
+        if org and org.get("allow_rep_purchases") is False:
+            result["can_purchase"] = False
+            result["reason"] = "Your organization does not allow reps to purchase phone numbers"
+            return result
+        
+        rep_limit = org.get("rep_monthly_number_limit", 0) if org else 0
+        result["limit"] = rep_limit
+        
+        if rep_limit > 0:
+            now = datetime.now(timezone.utc)
+            month_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0).isoformat()
+            purchased = await db.phone_numbers.count_documents({
+                "user_id": current_user["user_id"],
+                "created_at": {"$gte": month_start}
+            })
+            result["purchased_this_month"] = purchased
+            if purchased >= rep_limit:
+                result["can_purchase"] = False
+                result["reason"] = f"Monthly limit reached ({purchased}/{rep_limit})"
+    
+    return result
 
 
 # Include the main router AFTER enhanced routes

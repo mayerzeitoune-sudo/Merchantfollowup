@@ -1,0 +1,119 @@
+{
+  "summary": "Phone Number Purchasing Feature - All tests PASSED. Backend API tests (12/12 passed) verified: Admin/Agent purchase endpoints, purchase status checks, org settings for allow_rep_purchases and monthly limits. Frontend UI tests verified: Agent sees Buy section on Phone Numbers page, Admin Settings has Phone Numbers tab with monthly limit, Org admin Organizations dialog has phone number settings toggle and limit input, Agent purchased numbers appear in Inbox Send from dropdown.",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {
+        "endpoint": "POST /api/phone-numbers/purchase",
+        "issue": "Returns 200 instead of 201 for successful creation (minor - works correctly)"
+      }
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_phone_number_purchasing.py",
+    "/app/test_reports/pytest/phone_number_purchasing_results.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [],
+  "updated_files": [
+    "/app/backend/tests/test_phone_number_purchasing.py"
+  ],
+  "success_rate": {
+    "backend": "100% (12/12 tests passed)",
+    "frontend": "100% (All UI flows verified)"
+  },
+  "test_credentials": {
+    "admin": {
+      "email": "john@acmefunding.com",
+      "password": "Password123!"
+    },
+    "agent": {
+      "email": "mike@acmefunding.com",
+      "password": "Password123!"
+    },
+    "org_admin": {
+      "email": "orgadmin@merchant.com",
+      "password": "Admin123!"
+    }
+  },
+  "seed_data_creation": "None - used existing data. Test phone numbers were cleaned up after testing.",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Phone number purchasing feature is fully working. Admin can always purchase. Agent can purchase when org allows (allow_rep_purchases=true) and within monthly limit (rep_monthly_number_limit, 0=no limit). Agent purchased numbers are auto-assigned to them. Org settings restored to: allow_rep_purchases=true, rep_monthly_number_limit=0.",
+  "features_tested": {
+    "GET /api/phone-numbers/purchase-status - Admin": {
+      "status": "PASS",
+      "description": "Admin always has can_purchase=true"
+    },
+    "GET /api/phone-numbers/purchase-status - Agent (allowed)": {
+      "status": "PASS",
+      "description": "Agent sees can_purchase=true when org allows rep purchases"
+    },
+    "GET /api/phone-numbers/purchase-status - Agent (blocked)": {
+      "status": "PASS",
+      "description": "Agent sees can_purchase=false with reason when org disables rep purchases"
+    },
+    "GET /api/settings/phone-numbers": {
+      "status": "PASS",
+      "description": "Admin can get phone number settings for their org"
+    },
+    "PUT /api/settings/phone-numbers": {
+      "status": "PASS",
+      "description": "Admin can update rep_monthly_number_limit"
+    },
+    "PUT /api/organizations/{org_id} - toggle allow_rep_purchases": {
+      "status": "PASS",
+      "description": "Org admin can toggle allow_rep_purchases"
+    },
+    "PUT /api/organizations/{org_id} - set monthly limit": {
+      "status": "PASS",
+      "description": "Org admin can set rep_monthly_number_limit"
+    },
+    "POST /api/phone-numbers/purchase - Admin": {
+      "status": "PASS",
+      "description": "Admin can purchase phone numbers"
+    },
+    "POST /api/phone-numbers/purchase - Agent (auto-assign)": {
+      "status": "PASS",
+      "description": "Agent purchased number is auto-assigned to them"
+    },
+    "POST /api/phone-numbers/purchase - Agent (blocked by org)": {
+      "status": "PASS",
+      "description": "Agent gets 403 when org disables rep purchases"
+    },
+    "POST /api/phone-numbers/purchase - Agent (monthly limit)": {
+      "status": "PASS",
+      "description": "Agent gets 403 when monthly limit is reached"
+    },
+    "Frontend - Agent Phone Numbers page": {
+      "status": "PASS",
+      "description": "Agent sees Buy New Phone Numbers section with state/area code search"
+    },
+    "Frontend - Admin Settings Phone Numbers tab": {
+      "status": "PASS",
+      "description": "Admin sees Phone Numbers tab with monthly limit input and save button"
+    },
+    "Frontend - Org Admin Organizations dialog": {
+      "status": "PASS",
+      "description": "Org admin sees Phone Number Settings with allow_rep_purchases toggle and monthly limit input"
+    },
+    "Frontend - Agent Inbox Send from dropdown": {
+      "status": "PASS",
+      "description": "Agent sees their assigned phone numbers in Send from dropdown"
+    }
+  },
+  "mocked_apis": {
+    "Twilio SMS sending": "MOCKED - no real messages are sent"
+  },
+  "org_settings_restored": {
+    "org_id": "4ed58e9b-7502-4182-825e-7981c0371a49",
+    "org_name": "Acme Funding Corp",
+    "allow_rep_purchases": true,
+    "rep_monthly_number_limit": 0
+  }
+}

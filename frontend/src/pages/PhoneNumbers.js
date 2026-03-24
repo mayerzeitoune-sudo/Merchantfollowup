@@ -106,13 +106,24 @@ const PhoneNumbers = () => {
   const [selectedAgentId, setSelectedAgentId] = useState('');
   
   const isAdmin = user?.role === 'admin' || user?.role === 'org_admin';
+  const [purchaseStatus, setPurchaseStatus] = useState({ can_purchase: true, limit: 0, purchased_this_month: 0 });
 
   useEffect(() => {
     fetchOwnedNumbers();
+    fetchPurchaseStatus();
     if (isAdmin) {
       fetchTeamMembers();
     }
   }, [isAdmin]);
+
+  const fetchPurchaseStatus = async () => {
+    try {
+      const response = await phoneNumbersApi.getPurchaseStatus();
+      setPurchaseStatus(response.data);
+    } catch (error) {
+      console.error('Failed to fetch purchase status:', error);
+    }
+  };
 
   const fetchTeamMembers = async () => {
     try {
@@ -190,8 +201,9 @@ const PhoneNumbers = () => {
       toast.success('Phone number added successfully!');
       setIsDialogOpen(false);
       fetchOwnedNumbers();
+      fetchPurchaseStatus();
     } catch (error) {
-      toast.error('Failed to add number');
+      toast.error(error.response?.data?.detail || 'Failed to add number');
     }
   };
 
@@ -279,14 +291,20 @@ const PhoneNumbers = () => {
         </div>
 
         {/* Search for Numbers */}
+        {purchaseStatus.can_purchase ? (
         <Card className="bg-gradient-to-br from-blue-50 to-white border-blue-100">
           <CardHeader>
             <CardTitle className="font-['Outfit'] flex items-center gap-2">
               <ShoppingCart className="h-5 w-5 text-blue-600" />
               Buy New Phone Numbers
             </CardTitle>
-            <CardDescription>
-              Search by state or enter an area code directly
+            <CardDescription className="flex items-center justify-between">
+              <span>Search by state or enter an area code directly</span>
+              {!isAdmin && purchaseStatus.limit > 0 && (
+                <Badge variant="outline" className="ml-2">
+                  {purchaseStatus.purchased_this_month}/{purchaseStatus.limit} this month
+                </Badge>
+              )}
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -363,6 +381,22 @@ const PhoneNumbers = () => {
             </div>
           </CardContent>
         </Card>
+        ) : (
+        <Card className="bg-gradient-to-br from-gray-50 to-white border-gray-200">
+          <CardHeader>
+            <CardTitle className="font-['Outfit'] flex items-center gap-2 text-muted-foreground">
+              <ShoppingCart className="h-5 w-5" />
+              Buy New Phone Numbers
+            </CardTitle>
+            <CardDescription>
+              <div className="flex items-center gap-2 text-amber-600">
+                <AlertCircle className="h-4 w-4" />
+                {purchaseStatus.reason || "You cannot purchase phone numbers at this time."}
+              </div>
+            </CardDescription>
+          </CardHeader>
+        </Card>
+        )}
 
         {/* Available Numbers Dialog */}
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>

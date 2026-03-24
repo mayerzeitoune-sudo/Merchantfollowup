@@ -21,9 +21,10 @@ import {
   ExternalLink,
   Mail,
   Link,
-  Unlink
+  Unlink,
+  Hash
 } from 'lucide-react';
-import { smsProvidersApi, gmailApi } from '../lib/api';
+import { smsProvidersApi, gmailApi, phoneNumbersApi } from '../lib/api';
 import { useAuth } from '../context/AuthContext';
 import { toast } from 'sonner';
 
@@ -55,10 +56,17 @@ const Settings = () => {
     from_number: '',
     is_active: false
   });
+  const [repMonthlyLimit, setRepMonthlyLimit] = useState(0);
+  const [phoneSettingsLoading, setPhoneSettingsLoading] = useState(false);
+  
+  const isAdmin = user?.role === 'admin' || user?.role === 'org_admin';
 
   useEffect(() => {
     fetchProviders();
     fetchGmailStatus();
+    if (isAdmin) {
+      fetchPhoneSettings();
+    }
     
     // Check for Gmail callback params
     if (searchParams.get('gmail_connected') === 'true') {
@@ -67,7 +75,28 @@ const Settings = () => {
     } else if (searchParams.get('gmail_error')) {
       toast.error(`Gmail connection failed: ${searchParams.get('gmail_error')}`);
     }
-  }, [searchParams]);
+  }, [searchParams, isAdmin]);
+
+  const fetchPhoneSettings = async () => {
+    try {
+      const response = await phoneNumbersApi.getSettings();
+      setRepMonthlyLimit(response.data.rep_monthly_number_limit || 0);
+    } catch (error) {
+      console.error('Failed to fetch phone settings:', error);
+    }
+  };
+
+  const handleSavePhoneSettings = async () => {
+    setPhoneSettingsLoading(true);
+    try {
+      await phoneNumbersApi.updateSettings({ rep_monthly_number_limit: repMonthlyLimit });
+      toast.success('Phone number settings saved');
+    } catch (error) {
+      toast.error(error.response?.data?.detail || 'Failed to save settings');
+    } finally {
+      setPhoneSettingsLoading(false);
+    }
+  };
 
   const fetchGmailStatus = async () => {
     if (!token) return;
@@ -286,6 +315,7 @@ const Settings = () => {
           <TabsList>
             <TabsTrigger value="providers">SMS Providers</TabsTrigger>
             <TabsTrigger value="gmail">Gmail</TabsTrigger>
+            {isAdmin && <TabsTrigger value="phone-settings">Phone Numbers</TabsTrigger>}
             <TabsTrigger value="profile">Profile</TabsTrigger>
           </TabsList>
 
@@ -597,6 +627,54 @@ const Settings = () => {
               </CardContent>
             </Card>
           </TabsContent>
+
+          {/* Phone Number Settings Tab (Admin only) */}
+          {isAdmin && (
+          <TabsContent value="phone-settings" className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle className="font-['Outfit'] flex items-center gap-2">
+                  <Phone className="h-5 w-5" />
+                  Rep Phone Number Limits
+                </CardTitle>
+                <CardDescription>
+                  Control how many phone numbers your reps can purchase per month
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div className="space-y-3">
+                  <Label htmlFor="rep-limit" className="flex items-center gap-2">
+                    <Hash className="h-4 w-4 text-muted-foreground" />
+                    Monthly Purchase Limit Per Rep
+                  </Label>
+                  <div className="flex items-center gap-4 max-w-sm">
+                    <Input
+                      id="rep-limit"
+                      type="number"
+                      min="0"
+                      value={repMonthlyLimit}
+                      onChange={(e) => setRepMonthlyLimit(parseInt(e.target.value) || 0)}
+                      data-testid="rep-monthly-limit-input"
+                    />
+                    <span className="text-sm text-muted-foreground whitespace-nowrap">
+                      {repMonthlyLimit === 0 ? 'No limit' : `${repMonthlyLimit}/month`}
+                    </span>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Set to 0 for no limit. This controls the maximum number of phone numbers each rep can purchase per calendar month.
+                  </p>
+                </div>
+                <Button 
+                  onClick={handleSavePhoneSettings} 
+                  disabled={phoneSettingsLoading}
+                  data-testid="save-phone-settings-btn"
+                >
+                  {phoneSettingsLoading ? 'Saving...' : 'Save Settings'}
+                </Button>
+              </CardContent>
+            </Card>
+          </TabsContent>
+          )}
 
           {/* Profile Tab */}
           <TabsContent value="profile">
