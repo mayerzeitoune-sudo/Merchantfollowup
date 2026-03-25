@@ -43,11 +43,6 @@ const Register = () => {
       return;
     }
     
-    if (!smsOptIn) {
-      toast.error('Please agree to receive text messages to continue');
-      return;
-    }
-    
     if (password !== confirmPassword) {
       toast.error('Passwords do not match');
       return;

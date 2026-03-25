@@ -73,10 +73,6 @@ const LandingPage = () => {
       toast.error('Please enter your business name');
       return;
     }
-    if (!smsOptIn) {
-      toast.error('Please agree to receive text messages to continue');
-      return;
-    }
     if (formData.password !== formData.confirmPassword) {
       toast.error('Passwords do not match');
       return;
