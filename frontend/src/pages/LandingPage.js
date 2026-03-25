@@ -61,12 +61,8 @@ const LandingPage = () => {
   const handleRegister = async (e) => {
     e.preventDefault();
     
-    if (formData.password !== formData.confirmPassword) {
+    if (formData.password && formData.password !== formData.confirmPassword) {
       toast.error('Passwords do not match');
-      return;
-    }
-    if (formData.password.length < 6) {
-      toast.error('Password must be at least 6 characters');
       return;
     }
 
@@ -251,7 +247,7 @@ const LandingPage = () => {
                   
                   <form onSubmit={handleRegister} className="space-y-4">
                     <div className="space-y-2">
-                      <Label htmlFor="name">Full Name <span className="text-red-500">*</span></Label>
+                      <Label htmlFor="name">Full Name</Label>
                       <div className="relative">
                         <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                         <Input
@@ -262,30 +258,28 @@ const LandingPage = () => {
                           value={formData.name}
                           onChange={handleInputChange}
                           className="pl-10"
-                          required
                         />
                       </div>
                     </div>
 
                     <div className="space-y-2">
-                      <Label htmlFor="email">Email <span className="text-red-500">*</span></Label>
+                      <Label htmlFor="email">Email</Label>
                       <div className="relative">
                         <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                         <Input
                           id="email"
                           name="email"
-                          type="email"
+                          type="text"
                           placeholder="you@example.com"
                           value={formData.email}
                           onChange={handleInputChange}
                           className="pl-10"
-                          required
                         />
                       </div>
                     </div>
 
                     <div className="space-y-2">
-                      <Label htmlFor="phone">Phone Number <span className="text-red-500">*</span></Label>
+                      <Label htmlFor="phone">Phone Number</Label>
                       <div className="relative">
                         <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                         <Input
@@ -296,13 +290,12 @@ const LandingPage = () => {
                           value={formData.phone}
                           onChange={handleInputChange}
                           className="pl-10"
-                          required
                         />
                       </div>
                     </div>
 
                     <div className="space-y-2">
-                      <Label htmlFor="business">Business Name <span className="text-red-500">*</span></Label>
+                      <Label htmlFor="business">Business Name</Label>
                       <div className="relative">
                         <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                         <Input
@@ -313,13 +306,12 @@ const LandingPage = () => {
                           value={formData.business}
                           onChange={handleInputChange}
                           className="pl-10"
-                          required
                         />
                       </div>
                     </div>
 
                     <div className="space-y-2">
-                      <Label htmlFor="password">Password <span className="text-red-500">*</span></Label>
+                      <Label htmlFor="password">Password</Label>
                       <div className="relative">
                         <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                         <Input
@@ -330,7 +322,6 @@ const LandingPage = () => {
                           value={formData.password}
                           onChange={handleInputChange}
                           className="pl-10 pr-10"
-                          required
                         />
                         <button
                           type="button"
@@ -343,7 +334,7 @@ const LandingPage = () => {
                     </div>
 
                     <div className="space-y-2">
-                      <Label htmlFor="confirmPassword">Confirm Password <span className="text-red-500">*</span></Label>
+                      <Label htmlFor="confirmPassword">Confirm Password</Label>
                       <div className="relative">
                         <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                         <Input
@@ -354,7 +345,6 @@ const LandingPage = () => {
                           value={formData.confirmPassword}
                           onChange={handleInputChange}
                           className="pl-10"
-                          required
                         />
                       </div>
                     </div>
@@ -380,7 +370,7 @@ const LandingPage = () => {
                           <Link to="/privacy" className="text-primary hover:underline" target="_blank">
                             Privacy Policy
                           </Link>
-                          . <span className="text-red-500">*</span>
+                          . 
                         </label>
                       </div>
                     </div>

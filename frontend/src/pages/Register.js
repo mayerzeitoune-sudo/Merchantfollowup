@@ -27,13 +27,8 @@ const Register = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     
-    if (password !== confirmPassword) {
+    if (password && password !== confirmPassword) {
       toast.error('Passwords do not match');
-      return;
-    }
-
-    if (password.length < 6) {
-      toast.error('Password must be at least 6 characters');
       return;
     }
 
@@ -97,7 +92,7 @@ const Register = () => {
             <CardContent>
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="name">Full Name <span className="text-red-500">*</span></Label>
+                  <Label htmlFor="name">Full Name</Label>
                   <div className="relative">
                     <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                     <Input
@@ -107,31 +102,29 @@ const Register = () => {
                       value={name}
                       onChange={(e) => setName(e.target.value)}
                       className="pl-10"
-                      required
                       data-testid="register-name-input"
                     />
                   </div>
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="email">Email <span className="text-red-500">*</span></Label>
+                  <Label htmlFor="email">Email</Label>
                   <div className="relative">
                     <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                     <Input
                       id="email"
-                      type="email"
+                      type="text"
                       placeholder="you@example.com"
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
                       className="pl-10"
-                      required
                       data-testid="register-email-input"
                     />
                   </div>
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="phone">Phone Number <span className="text-red-500">*</span></Label>
+                  <Label htmlFor="phone">Phone Number</Label>
                   <div className="relative">
                     <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                     <Input
@@ -141,14 +134,13 @@ const Register = () => {
                       value={phone}
                       onChange={(e) => setPhone(e.target.value)}
                       className="pl-10"
-                      required
                       data-testid="register-phone-input"
                     />
                   </div>
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="business">Business Name <span className="text-red-500">*</span></Label>
+                  <Label htmlFor="business">Business Name</Label>
                   <div className="relative">
                     <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                     <Input
@@ -158,14 +150,13 @@ const Register = () => {
                       value={business}
                       onChange={(e) => setBusiness(e.target.value)}
                       className="pl-10"
-                      required
                       data-testid="register-business-input"
                     />
                   </div>
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="password">Password <span className="text-red-500">*</span></Label>
+                  <Label htmlFor="password">Password</Label>
                   <div className="relative">
                     <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                     <Input
@@ -175,7 +166,6 @@ const Register = () => {
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
                       className="pl-10 pr-10"
-                      required
                       data-testid="register-password-input"
                     />
                     <button
@@ -189,7 +179,7 @@ const Register = () => {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="confirmPassword">Confirm Password <span className="text-red-500">*</span></Label>
+                  <Label htmlFor="confirmPassword">Confirm Password</Label>
                   <div className="relative">
                     <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                     <Input
@@ -199,7 +189,6 @@ const Register = () => {
                       value={confirmPassword}
                       onChange={(e) => setConfirmPassword(e.target.value)}
                       className="pl-10"
-                      required
                       data-testid="register-confirm-password-input"
                     />
                   </div>
@@ -227,7 +216,7 @@ const Register = () => {
                       <Link to="/privacy" className="text-primary hover:underline" target="_blank">
                         Privacy Policy
                       </Link>
-                      . <span className="text-red-500">*</span>
+                      .
                     </label>
                   </div>
                 </div>
