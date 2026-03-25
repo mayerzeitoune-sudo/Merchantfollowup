@@ -61,18 +61,6 @@ const LandingPage = () => {
   const handleRegister = async (e) => {
     e.preventDefault();
     
-    if (!formData.name.trim()) {
-      toast.error('Please enter your full name');
-      return;
-    }
-    if (!formData.phone.trim()) {
-      toast.error('Please enter your phone number');
-      return;
-    }
-    if (!formData.business.trim()) {
-      toast.error('Please enter your business name');
-      return;
-    }
     if (formData.password !== formData.confirmPassword) {
       toast.error('Passwords do not match');
       return;

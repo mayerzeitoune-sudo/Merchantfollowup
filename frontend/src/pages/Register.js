@@ -27,22 +27,6 @@ const Register = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     
-    // Validate required fields
-    if (!name.trim()) {
-      toast.error('Please enter your full name');
-      return;
-    }
-    
-    if (!phone.trim()) {
-      toast.error('Please enter your phone number');
-      return;
-    }
-    
-    if (!business.trim()) {
-      toast.error('Please enter your business name');
-      return;
-    }
-    
     if (password !== confirmPassword) {
       toast.error('Passwords do not match');
       return;
