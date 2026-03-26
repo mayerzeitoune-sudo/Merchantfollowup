@@ -27,7 +27,6 @@ import DripCampaigns from "./pages/DripCampaigns";
 import Analytics from "./pages/Analytics";
 import LeadCapture from "./pages/LeadCapture";
 import Compliance from "./pages/Compliance";
-import Revival from "./pages/Revival";
 import Team from "./pages/Team";
 import FundedDeals from "./pages/FundedDeals";
 import FundedDealProfile from "./pages/FundedDealProfile";
@@ -122,7 +121,6 @@ function AppRoutes() {
       <Route path="/analytics" element={<ProtectedRoute><Analytics /></ProtectedRoute>} />
       <Route path="/lead-capture" element={<ProtectedRoute><LeadCapture /></ProtectedRoute>} />
       <Route path="/compliance" element={<ProtectedRoute><Compliance /></ProtectedRoute>} />
-      <Route path="/revival" element={<ProtectedRoute><Revival /></ProtectedRoute>} />
       <Route path="/team" element={<ProtectedRoute><Team /></ProtectedRoute>} />
       <Route path="/funded" element={<ProtectedRoute><FundedDeals /></ProtectedRoute>} />
       <Route path="/funded/:dealId" element={<ProtectedRoute><FundedDealProfile /></ProtectedRoute>} />

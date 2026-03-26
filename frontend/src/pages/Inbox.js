@@ -31,8 +31,16 @@ import {
   Sparkles,
   Plus
 } from 'lucide-react';
-import { clientsApi, contactsApi, phoneNumbersApi, templatesApi } from '../lib/api';
+import { clientsApi, contactsApi, phoneNumbersApi, templatesApi, enhancedCampaignsApi } from '../lib/api';
 import { toast } from 'sonner';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter
+} from '../components/ui/dialog';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -75,6 +83,8 @@ const Inbox = () => {
   const [ownedNumbers, setOwnedNumbers] = useState([]);
   const [templates, setTemplates] = useState([]);
   const [selectedFromNumber, setSelectedFromNumber] = useState('default');
+  const [campaignPopup, setCampaignPopup] = useState(null); // { clientId, clientName, campaigns }
+  const [areCodePopup, setAreaCodePopup] = useState(null); // { areaCode, clientName }
 
   useEffect(() => {
     fetchData();
@@ -143,6 +153,20 @@ const Inbox = () => {
       const firstChain = chains.length > 0 ? chains[0].from_number : 'default';
       setActiveChain(firstChain);
       
+      // Check if we have a number matching the client's area code
+      const clientPhone = client.phone?.replace(/\D/g, '') || '';
+      const clientAreaCode = clientPhone.length >= 10 ? clientPhone.slice(clientPhone.length === 11 ? 1 : 0, clientPhone.length === 11 ? 4 : 3) : '';
+      if (clientAreaCode && ownedNumbers.length > 0) {
+        const hasMatchingNumber = ownedNumbers.some(n => {
+          const numDigits = n.phone_number.replace(/\D/g, '');
+          const numAC = numDigits.length >= 10 ? numDigits.slice(numDigits.length === 11 ? 1 : 0, numDigits.length === 11 ? 4 : 3) : '';
+          return numAC === clientAreaCode;
+        });
+        if (!hasMatchingNumber) {
+          setAreaCodePopup({ areaCode: clientAreaCode, clientName: client.name });
+        }
+      }
+      
       // Fetch messages
       await fetchMessages(client.id, firstChain);
     } catch (error) {
@@ -155,8 +179,24 @@ const Inbox = () => {
   const fetchMessages = async (clientId, fromNumber) => {
     try {
       const response = await contactsApi.getConversation(clientId, fromNumber === 'default' ? null : fromNumber);
-      // Reverse to show oldest first
-      setMessages((response.data.messages || []).reverse());
+      const msgs = (response.data.messages || []).reverse();
+      setMessages(msgs);
+      
+      // Check if client has incoming messages and is in an active campaign
+      const hasIncoming = msgs.some(m => m.direction === 'inbound');
+      if (hasIncoming) {
+        try {
+          const campaignsRes = await enhancedCampaignsApi.getClientActiveCampaigns(clientId);
+          if (campaignsRes.data && campaignsRes.data.length > 0) {
+            const client = clients.find(c => c.id === clientId);
+            setCampaignPopup({
+              clientId,
+              clientName: client?.name || 'Client',
+              campaigns: campaignsRes.data
+            });
+          }
+        } catch (e) { /* silent */ }
+      }
     } catch (error) {
       console.error('Failed to fetch messages:', error);
       setMessages([]);
@@ -585,6 +625,86 @@ const Inbox = () => {
           </Card>
         </div>
       </div>
+
+      {/* Area Code Purchase Suggestion Popup */}
+      <Dialog open={!!areCodePopup} onOpenChange={(open) => !open && setAreaCodePopup(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="font-['Outfit'] flex items-center gap-2">
+              <Smartphone className="h-5 w-5 text-blue-600" />
+              Local Number Suggestion
+            </DialogTitle>
+            <DialogDescription>
+              You don't have a phone number with area code ({areCodePopup?.areaCode}) matching {areCodePopup?.clientName}'s location. A local number can increase response rates.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="p-4 rounded-lg bg-blue-50 border border-blue-200 text-center">
+            <p className="font-semibold text-blue-800">Buy a ({areCodePopup?.areaCode}) number</p>
+            <p className="text-sm text-blue-600 mt-1">$1.00/month — familiar area codes get more replies</p>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setAreaCodePopup(null)}>
+              Not Now
+            </Button>
+            <Button 
+              onClick={() => {
+                setAreaCodePopup(null);
+                window.location.href = '/phone-numbers';
+              }}
+              data-testid="buy-area-code-btn"
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              Buy Number
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Campaign Response Popup */}
+      <Dialog open={!!campaignPopup} onOpenChange={(open) => !open && setCampaignPopup(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="font-['Outfit'] flex items-center gap-2">
+              <MessageSquare className="h-5 w-5 text-green-600" />
+              Response Recorded
+            </DialogTitle>
+            <DialogDescription>
+              {campaignPopup?.clientName} has responded to a message. Remove them from the campaign to avoid daily texts?
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2 py-2">
+            {campaignPopup?.campaigns.map((c) => (
+              <div key={c.enrollment_id} className="p-3 rounded-lg border bg-muted/30 flex items-center justify-between">
+                <div>
+                  <p className="font-medium text-sm">{c.campaign_name}</p>
+                  <p className="text-xs text-muted-foreground">Step {c.current_step} of campaign</p>
+                </div>
+                <Button
+                  size="sm"
+                  variant="destructive"
+                  onClick={async () => {
+                    try {
+                      await enhancedCampaignsApi.removeClient(c.campaign_id, campaignPopup.clientId);
+                      toast.success(`${campaignPopup.clientName} removed from campaign and tagged as Responded`);
+                      setCampaignPopup(null);
+                    } catch (error) {
+                      toast.error('Failed to remove from campaign');
+                    }
+                  }}
+                  data-testid="remove-from-campaign-btn"
+                >
+                  Remove from Campaign
+                </Button>
+              </div>
+            ))}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setCampaignPopup(null)}>
+              Keep in Campaign
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </DashboardLayout>
   );
 };

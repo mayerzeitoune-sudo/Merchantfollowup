@@ -1133,7 +1133,7 @@ Format your response as JSON:
         try:
             result = json.loads(response.strip().replace("```json", "").replace("```", ""))
             return result
-        except:
+        except Exception:
             # Fallback parsing
             return {"suggestions": [response.strip()]}
             
@@ -1160,7 +1160,7 @@ async def rewrite_message(message: str, tone: str = "professional", current_user
         response = await chat.send_message(UserMessage(text=message))
         return {"rewritten": response.strip()}
         
-    except Exception as e:
+    except Exception:
         return {"rewritten": message}
 
 # ============== DEAD LEAD REVIVAL ==============
@@ -1439,7 +1439,7 @@ async def update_client_pipeline(
     updated_tags = [t for t in current_tags if t not in stage_tag_values]
     updated_tags.append(STAGE_TO_TAG.get(stage, stage))
     
-    result = await db.clients.update_one(
+    await db.clients.update_one(
         query,
         {"$set": {
             "pipeline_stage": stage,
@@ -1449,3 +1449,260 @@ async def update_client_pipeline(
     )
     
     return {"message": "Pipeline stage updated"}
+
+
+# ============== PRE-BUILT DRIP CAMPAIGNS ==============
+
+from campaign_templates import ALL_PREBUILT_CAMPAIGNS
+
+@router.get("/campaigns/prebuilt")
+async def get_prebuilt_campaigns(current_user: dict = Depends(get_current_user)):
+    """List all available pre-built campaign templates"""
+    templates = []
+    for key, template in ALL_PREBUILT_CAMPAIGNS.items():
+        templates.append({
+            "id": key,
+            "name": template["name"],
+            "description": template["description"],
+            "campaign_type": template["campaign_type"],
+            "target_tag": template["target_tag"],
+            "total_steps": len(template["steps"]),
+            "total_days": template["steps"][-1]["day"] if template["steps"] else 0
+        })
+    return templates
+
+@router.get("/campaigns/prebuilt/{campaign_type}")
+async def get_prebuilt_campaign_detail(campaign_type: str, current_user: dict = Depends(get_current_user)):
+    """Get full details of a pre-built campaign template"""
+    template = ALL_PREBUILT_CAMPAIGNS.get(campaign_type)
+    if not template:
+        raise HTTPException(status_code=404, detail="Campaign template not found")
+    return template
+
+@router.post("/campaigns/prebuilt/{campaign_type}/launch")
+async def launch_prebuilt_campaign(
+    campaign_type: str,
+    data: dict,
+    current_user: dict = Depends(get_current_user)
+):
+    """Launch a pre-built campaign with bulk enrollment by tag"""
+    template = ALL_PREBUILT_CAMPAIGNS.get(campaign_type)
+    if not template:
+        raise HTTPException(status_code=404, detail="Campaign template not found")
+    
+    user = await db.users.find_one({"id": current_user["user_id"]})
+    now = datetime.now(timezone.utc).isoformat()
+    campaign_id = str(uuid.uuid4())
+    
+    # Get accessible user IDs for this user
+    from server import get_accessible_user_ids
+    accessible_ids = await get_accessible_user_ids(current_user)
+    
+    # Create the campaign
+    campaign_doc = {
+        "id": campaign_id,
+        "user_id": current_user["user_id"],
+        "org_id": user.get("org_id") if user else None,
+        "name": data.get("name", template["name"]),
+        "description": template["description"],
+        "campaign_type": campaign_type,
+        "type": "prebuilt",
+        "target_tag": template["target_tag"],
+        "steps": template["steps"],
+        "status": "active",
+        "created_at": now,
+        "started_at": now
+    }
+    
+    await db.enhanced_campaigns.insert_one(campaign_doc)
+    
+    # Enroll clients by tag
+    tag = data.get("tag", template["target_tag"])
+    clients = await db.clients.find(
+        {"user_id": {"$in": accessible_ids}, "tags": tag},
+        {"_id": 0, "id": 1, "name": 1, "phone": 1}
+    ).to_list(10000)
+    
+    enrolled_count = 0
+    for client in clients:
+        # Check if client is already enrolled in an active campaign of same type
+        existing = await db.campaign_enrollments.find_one({
+            "client_id": client["id"],
+            "campaign_type": campaign_type,
+            "status": "active"
+        })
+        if existing:
+            continue
+        
+        enrollment = {
+            "id": str(uuid.uuid4()),
+            "campaign_id": campaign_id,
+            "campaign_type": campaign_type,
+            "client_id": client["id"],
+            "user_id": current_user["user_id"],
+            "status": "active",
+            "current_step": 0,
+            "start_date": now,
+            "next_send_date": now,  # First message goes immediately
+            "last_sent_date": None,
+            "created_at": now
+        }
+        await db.campaign_enrollments.insert_one(enrollment)
+        enrolled_count += 1
+    
+    # Clean up _id from campaign_doc
+    if "_id" in campaign_doc:
+        del campaign_doc["_id"]
+    
+    return {
+        "campaign_id": campaign_id,
+        "enrolled_count": enrolled_count,
+        "total_clients_matched": len(clients),
+        "message": f"Campaign launched with {enrolled_count} clients enrolled"
+    }
+
+@router.post("/campaigns/{campaign_id}/remove-client/{client_id}")
+async def remove_client_from_campaign(
+    campaign_id: str,
+    client_id: str,
+    current_user: dict = Depends(get_current_user)
+):
+    """Remove a client from an active campaign and change their tag to Responded"""
+    result = await db.campaign_enrollments.update_one(
+        {"campaign_id": campaign_id, "client_id": client_id, "status": "active"},
+        {"$set": {"status": "removed", "removed_at": datetime.now(timezone.utc).isoformat()}}
+    )
+    
+    if result.modified_count == 0:
+        raise HTTPException(status_code=404, detail="Enrollment not found")
+    
+    # Change client tag from campaign target to "Responded"
+    client = await db.clients.find_one({"id": client_id}, {"_id": 0})
+    if client:
+        tags = client.get("tags", [])
+        # Remove campaign-related tags and add "Responded"
+        campaign_tags = ["New Lead", "new_lead"]
+        updated_tags = [t for t in tags if t not in campaign_tags]
+        if "Responded" not in updated_tags:
+            updated_tags.append("Responded")
+        await db.clients.update_one(
+            {"id": client_id},
+            {"$set": {"tags": updated_tags, "updated_at": datetime.now(timezone.utc).isoformat()}}
+        )
+    
+    return {"message": "Client removed from campaign and tagged as Responded"}
+
+@router.get("/campaigns/client/{client_id}/active")
+async def get_active_campaigns_for_client(
+    client_id: str,
+    current_user: dict = Depends(get_current_user)
+):
+    """Check if a client is in any active campaign"""
+    enrollments = await db.campaign_enrollments.find(
+        {"client_id": client_id, "status": "active"},
+        {"_id": 0}
+    ).to_list(100)
+    
+    result = []
+    for enrollment in enrollments:
+        campaign = await db.enhanced_campaigns.find_one(
+            {"id": enrollment["campaign_id"]},
+            {"_id": 0, "name": 1, "id": 1, "campaign_type": 1}
+        )
+        if campaign:
+            result.append({
+                "enrollment_id": enrollment["id"],
+                "campaign_id": enrollment["campaign_id"],
+                "campaign_name": campaign.get("name"),
+                "campaign_type": campaign.get("campaign_type"),
+                "current_step": enrollment.get("current_step", 0),
+                "start_date": enrollment.get("start_date")
+            })
+    
+    return result
+
+@router.post("/campaigns/process-due")
+async def process_due_campaign_messages(current_user: dict = Depends(get_current_user)):
+    """Process and send due campaign messages (called by scheduler or manually)"""
+    now = datetime.now(timezone.utc).isoformat()
+    
+    # Find all active enrollments where next_send_date <= now
+    due_enrollments = await db.campaign_enrollments.find(
+        {"status": "active", "next_send_date": {"$lte": now}},
+        {"_id": 0}
+    ).to_list(1000)
+    
+    sent_count = 0
+    for enrollment in due_enrollments:
+        campaign = await db.enhanced_campaigns.find_one(
+            {"id": enrollment["campaign_id"]},
+            {"_id": 0}
+        )
+        if not campaign or campaign.get("status") != "active":
+            continue
+        
+        steps = campaign.get("steps", [])
+        current_step = enrollment.get("current_step", 0)
+        
+        if current_step >= len(steps):
+            # Campaign completed for this client
+            await db.campaign_enrollments.update_one(
+                {"id": enrollment["id"]},
+                {"$set": {"status": "completed"}}
+            )
+            continue
+        
+        step = steps[current_step]
+        client = await db.clients.find_one({"id": enrollment["client_id"]}, {"_id": 0})
+        if not client:
+            continue
+        
+        # Replace template variables
+        message = step["message"]
+        first_name = (client.get("name") or "").split(" ")[0]
+        amount = client.get("amount_requested")
+        amount_str = f"{amount:,.0f}" if amount else "the amount"
+        company_name = client.get("company") or "your business"
+        
+        message = message.replace("{first_name}", first_name)
+        message = message.replace("${amount_requested}", f"${amount_str}")
+        message = message.replace("{company_name}", company_name)
+        
+        # Store as a scheduled message
+        msg_doc = {
+            "id": str(uuid.uuid4()),
+            "campaign_id": enrollment["campaign_id"],
+            "enrollment_id": enrollment["id"],
+            "client_id": enrollment["client_id"],
+            "user_id": enrollment["user_id"],
+            "message": message,
+            "step_label": step.get("label"),
+            "status": "pending",
+            "created_at": now
+        }
+        await db.campaign_messages.insert_one(msg_doc)
+        
+        # Calculate next send date
+        next_step = current_step + 1
+        if next_step < len(steps):
+            days_diff = steps[next_step]["day"] - steps[current_step]["day"]
+            from datetime import timedelta
+            next_date = datetime.now(timezone.utc) + timedelta(days=days_diff)
+            next_send = next_date.isoformat()
+        else:
+            next_send = None
+        
+        update = {
+            "current_step": next_step,
+            "last_sent_date": now
+        }
+        if next_send:
+            update["next_send_date"] = next_send
+        
+        await db.campaign_enrollments.update_one(
+            {"id": enrollment["id"]},
+            {"$set": update}
+        )
+        sent_count += 1
+    
+    return {"processed": sent_count, "total_due": len(due_enrollments)}

@@ -75,6 +75,14 @@ const DripCampaigns = () => {
   // AI Trigger state
   const [aiTriggerLoading, setAiTriggerLoading] = useState(false);
   
+  // Pre-built campaign state
+  const [prebuiltDialogOpen, setPrebuiltDialogOpen] = useState(false);
+  const [prebuiltCampaigns, setPrebuiltCampaigns] = useState([]);
+  const [selectedPrebuilt, setSelectedPrebuilt] = useState(null);
+  const [prebuiltDetail, setPrebuiltDetail] = useState(null);
+  const [launchLoading, setLaunchLoading] = useState(false);
+  const [prebuiltName, setPrebuiltName] = useState('');
+  
   // Form state
   const [formData, setFormData] = useState({
     name: '',
@@ -91,6 +99,7 @@ const DripCampaigns = () => {
   useEffect(() => {
     fetchCampaigns();
     fetchClients();
+    fetchPrebuiltCampaigns();
   }, []);
 
   const fetchCampaigns = async () => {
@@ -110,6 +119,46 @@ const DripCampaigns = () => {
       setClients(response.data || []);
     } catch (error) {
       console.error('Failed to fetch clients');
+    }
+  };
+
+  const fetchPrebuiltCampaigns = async () => {
+    try {
+      const response = await enhancedCampaignsApi.getPrebuilt();
+      setPrebuiltCampaigns(response.data || []);
+    } catch (error) {
+      console.error('Failed to fetch prebuilt campaigns');
+    }
+  };
+
+  const handleSelectPrebuilt = async (campaign) => {
+    setSelectedPrebuilt(campaign);
+    setPrebuiltName(campaign.name);
+    try {
+      const response = await enhancedCampaignsApi.getPrebuiltDetail(campaign.id);
+      setPrebuiltDetail(response.data);
+    } catch (error) {
+      toast.error('Failed to load campaign details');
+    }
+  };
+
+  const handleLaunchPrebuilt = async () => {
+    if (!selectedPrebuilt) return;
+    setLaunchLoading(true);
+    try {
+      const result = await enhancedCampaignsApi.launchPrebuilt(selectedPrebuilt.id, {
+        name: prebuiltName || selectedPrebuilt.name,
+        tag: selectedPrebuilt.target_tag
+      });
+      toast.success(`Campaign launched! ${result.data.enrolled_count} clients enrolled.`);
+      setPrebuiltDialogOpen(false);
+      setSelectedPrebuilt(null);
+      setPrebuiltDetail(null);
+      fetchCampaigns();
+    } catch (error) {
+      toast.error(error.response?.data?.detail || 'Failed to launch campaign');
+    } finally {
+      setLaunchLoading(false);
     }
   };
 
@@ -426,6 +475,15 @@ const DripCampaigns = () => {
               AI Assistant
             </Button>
             
+            <Button 
+              onClick={() => setPrebuiltDialogOpen(true)} 
+              variant="outline" 
+              className="border-primary text-primary hover:bg-primary/10"
+              data-testid="bulk-campaign-btn"
+            >
+              <Zap className="h-4 w-4 mr-2" />
+              Bulk Templated Campaign
+            </Button>
             <Dialog open={isDialogOpen} onOpenChange={(open) => {
               setIsDialogOpen(open);
               if (!open) {
@@ -1296,6 +1354,120 @@ const DripCampaigns = () => {
             <DialogFooter>
               <Button variant="outline" onClick={() => setAiDialogOpen(false)}>Close</Button>
             </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Bulk Templated Campaign Dialog */}
+        <Dialog open={prebuiltDialogOpen} onOpenChange={(open) => {
+          setPrebuiltDialogOpen(open);
+          if (!open) { setSelectedPrebuilt(null); setPrebuiltDetail(null); }
+        }}>
+          <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle className="font-['Outfit']">Bulk Templated Campaign</DialogTitle>
+              <DialogDescription>
+                Launch a pre-built campaign that auto-enrolls all matching clients
+              </DialogDescription>
+            </DialogHeader>
+            
+            {!selectedPrebuilt ? (
+              <div className="space-y-3">
+                <p className="text-sm text-muted-foreground font-medium">Select a campaign template:</p>
+                {prebuiltCampaigns.map((campaign) => (
+                  <Card 
+                    key={campaign.id}
+                    className="cursor-pointer hover:border-primary/50 transition-colors"
+                    onClick={() => handleSelectPrebuilt(campaign)}
+                    data-testid={`prebuilt-${campaign.id}`}
+                  >
+                    <CardContent className="p-4">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <h4 className="font-semibold">{campaign.name}</h4>
+                          <p className="text-sm text-muted-foreground">{campaign.description}</p>
+                        </div>
+                        <div className="text-right">
+                          <Badge variant="outline">{campaign.total_steps} messages</Badge>
+                          <p className="text-xs text-muted-foreground mt-1">{campaign.total_days} days</p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2 mt-2">
+                        <Badge className="bg-blue-100 text-blue-700">Target: {campaign.target_tag}</Badge>
+                        <span className="text-xs text-muted-foreground">
+                          {clients.filter(c => c.tags?.includes(campaign.target_tag)).length} clients match
+                        </span>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            ) : (
+              <div className="space-y-4">
+                <div className="flex items-center gap-2">
+                  <Button variant="ghost" size="sm" onClick={() => { setSelectedPrebuilt(null); setPrebuiltDetail(null); }}>
+                    <ArrowRight className="h-4 w-4 rotate-180 mr-1" /> Back
+                  </Button>
+                  <h4 className="font-semibold">{selectedPrebuilt.name}</h4>
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Campaign Name</Label>
+                  <Input 
+                    value={prebuiltName}
+                    onChange={(e) => setPrebuiltName(e.target.value)}
+                    placeholder={selectedPrebuilt.name}
+                    data-testid="prebuilt-campaign-name"
+                  />
+                </div>
+
+                <div className="p-3 rounded-lg bg-blue-50 border border-blue-200">
+                  <p className="text-sm font-medium text-blue-800">
+                    Auto-enrolls all clients tagged "{selectedPrebuilt.target_tag}"
+                  </p>
+                  <p className="text-xs text-blue-600 mt-1">
+                    {clients.filter(c => c.tags?.includes(selectedPrebuilt.target_tag)).length} clients will be enrolled
+                  </p>
+                </div>
+
+                {prebuiltDetail && (
+                  <div className="space-y-2">
+                    <Label>Message Preview ({prebuiltDetail.steps?.length} messages)</Label>
+                    <ScrollArea className="h-48 border rounded-lg p-3">
+                      {prebuiltDetail.steps?.slice(0, 10).map((step, i) => (
+                        <div key={i} className="mb-3 pb-3 border-b last:border-0">
+                          <div className="flex items-center gap-2 mb-1">
+                            <Badge variant="outline" className="text-xs">{step.label}</Badge>
+                            <Badge variant="secondary" className="text-xs">{step.phase}</Badge>
+                          </div>
+                          <p className="text-sm text-muted-foreground">{step.message}</p>
+                        </div>
+                      ))}
+                      {prebuiltDetail.steps?.length > 10 && (
+                        <p className="text-xs text-muted-foreground text-center py-2">
+                          ... and {prebuiltDetail.steps.length - 10} more messages
+                        </p>
+                      )}
+                    </ScrollArea>
+                  </div>
+                )}
+
+                <DialogFooter>
+                  <Button variant="outline" onClick={() => setPrebuiltDialogOpen(false)}>Cancel</Button>
+                  <Button 
+                    onClick={handleLaunchPrebuilt} 
+                    disabled={launchLoading}
+                    className="bg-green-600 hover:bg-green-700"
+                    data-testid="launch-prebuilt-btn"
+                  >
+                    {launchLoading ? (
+                      <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Launching...</>
+                    ) : (
+                      <><Play className="h-4 w-4 mr-2" /> Start Campaign</>
+                    )}
+                  </Button>
+                </DialogFooter>
+              </div>
+            )}
           </DialogContent>
         </Dialog>
       </div>

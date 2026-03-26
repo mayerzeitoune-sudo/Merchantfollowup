@@ -97,6 +97,7 @@ class ClientCreate(BaseModel):
     balance: float = 0.0
     tags: List[str] = []
     birthday: Optional[str] = None
+    amount_requested: Optional[float] = None
     # Address fields for gift shop
     address_line1: Optional[str] = None
     address_line2: Optional[str] = None
@@ -115,6 +116,7 @@ class ClientUpdate(BaseModel):
     balance: Optional[float] = None
     tags: Optional[List[str]] = None
     birthday: Optional[str] = None
+    amount_requested: Optional[float] = None
     address_line1: Optional[str] = None
     address_line2: Optional[str] = None
     city: Optional[str] = None
@@ -136,6 +138,7 @@ class ClientResponse(BaseModel):
     tags: List[str] = []
     pipeline_stage: Optional[str] = "new_lead"
     birthday: Optional[str] = None
+    amount_requested: Optional[float] = None
     special_events: List[Dict[str, str]] = []
     address_line1: Optional[str] = None
     address_line2: Optional[str] = None
@@ -910,6 +913,7 @@ async def create_client(data: ClientCreate, current_user: dict = Depends(get_cur
         "balance": data.balance,
         "tags": data.tags,
         "birthday": data.birthday,
+        "amount_requested": data.amount_requested,
         "special_events": [],
         "created_at": now,
         "updated_at": now
@@ -2998,6 +3002,33 @@ async def release_phone_number(phone_id: str, current_user: dict = Depends(get_c
     if result.deleted_count == 0:
         raise HTTPException(status_code=404, detail="Phone number not found")
     return {"message": "Phone number released"}
+
+@api_router.post("/phone-numbers/{phone_id}/request-deletion")
+async def request_phone_number_deletion(phone_id: str, current_user: dict = Depends(get_current_user)):
+    """Request deletion of a phone number - creates a request, doesn't delete immediately"""
+    phone = await db.phone_numbers.find_one({"id": phone_id}, {"_id": 0})
+    if not phone:
+        raise HTTPException(status_code=404, detail="Phone number not found")
+    
+    user = await db.users.find_one({"id": current_user["user_id"]})
+    now = datetime.now(timezone.utc).isoformat()
+    
+    request_doc = {
+        "id": str(uuid.uuid4()),
+        "phone_id": phone_id,
+        "phone_number": phone.get("phone_number"),
+        "requested_by": current_user["user_id"],
+        "requested_by_name": user.get("name") if user else None,
+        "org_id": phone.get("org_id"),
+        "status": "pending",
+        "created_at": now
+    }
+    
+    await db.phone_deletion_requests.insert_one(request_doc)
+    if "_id" in request_doc:
+        del request_doc["_id"]
+    
+    return {"message": "Deletion request submitted. Expect a phone call from the admin within 24 hours."}
 
 @api_router.put("/phone-numbers/{phone_id}/set-default")
 async def set_default_phone_number(phone_id: str, current_user: dict = Depends(get_current_user)):

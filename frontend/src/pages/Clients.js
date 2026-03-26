@@ -31,7 +31,7 @@ import {
   Eye,
   CheckSquare
 } from 'lucide-react';
-import { clientsApi, bulkApi } from '../lib/api';
+import { clientsApi, bulkApi, enhancedCampaignsApi } from '../lib/api';
 import { toast } from 'sonner';
 
 const AVAILABLE_TAGS = [
@@ -118,6 +118,10 @@ const Clients = () => {
   const [clientToDelete, setClientToDelete] = useState(null);
   const [selectedClients, setSelectedClients] = useState([]);
   const [bulkDeleteDialogOpen, setBulkDeleteDialogOpen] = useState(false);
+  const [fundedDialogOpen, setFundedDialogOpen] = useState(false);
+  const [fundedClient, setFundedClient] = useState(null);
+  const [fundedDealType, setFundedDealType] = useState('');
+  const [fundedLaunching, setFundedLaunching] = useState(false);
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -125,6 +129,7 @@ const Clients = () => {
     company: '',
     notes: '',
     balance: 0,
+    amount_requested: '',
     tags: [],
     birthday: '',
     address_line1: '',
@@ -187,6 +192,7 @@ const Clients = () => {
       company: client.company || '',
       notes: client.notes || '',
       balance: client.balance,
+      amount_requested: client.amount_requested || '',
       tags: client.tags || [],
       birthday: client.birthday || '',
       address_line1: client.address_line1 || '',
@@ -274,6 +280,13 @@ const Clients = () => {
       await clientsApi.update(clientId, updateData);
       toast.success(newStage ? `Moved to ${newTag}` : 'Tag updated');
       fetchClients();
+      
+      // If moved to "Funded", prompt for funded deal campaign
+      if (newTag === 'Funded' && !client.tags?.includes('Funded')) {
+        const foundClient = clients.find(c => c.id === clientId);
+        setFundedClient(foundClient || { id: clientId, name: client.name });
+        setFundedDialogOpen(true);
+      }
     } catch (error) {
       toast.error('Failed to update tag');
     }
@@ -288,6 +301,7 @@ const Clients = () => {
       company: '', 
       notes: '', 
       balance: 0, 
+      amount_requested: '',
       tags: [], 
       birthday: '',
       address_line1: '',
@@ -419,6 +433,21 @@ const Clients = () => {
                           placeholder="Acme Inc."
                           className="pl-10"
                           data-testid="client-company-input"
+                        />
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="amount_requested">Amount Requested</Label>
+                      <div className="relative">
+                        <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                        <Input
+                          id="amount_requested"
+                          type="number"
+                          value={formData.amount_requested}
+                          onChange={(e) => setFormData({ ...formData, amount_requested: e.target.value ? parseFloat(e.target.value) : '' })}
+                          placeholder="50000"
+                          className="pl-10"
+                          data-testid="client-amount-requested-input"
                         />
                       </div>
                     </div>
@@ -796,6 +825,69 @@ const Clients = () => {
             </Button>
             <Button variant="destructive" onClick={handleBulkDelete} data-testid="confirm-bulk-delete-btn">
               Delete {selectedClients.length} Clients
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Funded Deal Campaign Dialog */}
+      <Dialog open={fundedDialogOpen} onOpenChange={setFundedDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="font-['Outfit']">Enroll in Funded Campaign</DialogTitle>
+            <DialogDescription>
+              Would you like to put {fundedClient?.name} into a funded deal campaign to keep in touch?
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <p className="text-sm font-medium">Select deal type:</p>
+            <div className="space-y-2">
+              {[
+                { id: 'funded_short', label: 'Short Term (8-12 weeks)', desc: '12 weekly check-ins with early renewal focus' },
+                { id: 'funded_medium', label: 'Medium Term (12-24 weeks)', desc: '24 weekly messages, relationship-first to renewal' },
+                { id: 'funded_long', label: 'Long Term (24-52 weeks)', desc: '52 weekly messages, gradual expansion discussions' }
+              ].map((type) => (
+                <div
+                  key={type.id}
+                  className={`p-3 rounded-lg border cursor-pointer transition-colors ${
+                    fundedDealType === type.id 
+                      ? 'border-primary bg-primary/5' 
+                      : 'hover:border-primary/30'
+                  }`}
+                  onClick={() => setFundedDealType(type.id)}
+                  data-testid={`funded-type-${type.id}`}
+                >
+                  <p className="font-medium text-sm">{type.label}</p>
+                  <p className="text-xs text-muted-foreground">{type.desc}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => { setFundedDialogOpen(false); setFundedDealType(''); }}>
+              Skip
+            </Button>
+            <Button
+              disabled={!fundedDealType || fundedLaunching}
+              onClick={async () => {
+                setFundedLaunching(true);
+                try {
+                  await enhancedCampaignsApi.launchPrebuilt(fundedDealType, {
+                    name: `${fundedClient?.name} - Funded Deal`,
+                    tag: 'Funded'
+                  });
+                  toast.success('Client enrolled in funded deal campaign!');
+                  setFundedDialogOpen(false);
+                  setFundedDealType('');
+                } catch (error) {
+                  toast.error(error.response?.data?.detail || 'Failed to enroll in campaign');
+                } finally {
+                  setFundedLaunching(false);
+                }
+              }}
+              data-testid="confirm-funded-campaign-btn"
+            >
+              {fundedLaunching ? 'Enrolling...' : 'Confirm Campaign'}
             </Button>
           </DialogFooter>
         </DialogContent>

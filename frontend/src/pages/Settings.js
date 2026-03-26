@@ -58,6 +58,9 @@ const Settings = () => {
   });
   const [repMonthlyLimit, setRepMonthlyLimit] = useState(0);
   const [phoneSettingsLoading, setPhoneSettingsLoading] = useState(false);
+  const [ownedNumbers, setOwnedNumbers] = useState([]);
+  const [selectedDeleteNumber, setSelectedDeleteNumber] = useState('');
+  const [deleteRequestSent, setDeleteRequestSent] = useState(false);
   
   const isAdmin = user?.role === 'admin' || user?.role === 'org_admin';
 
@@ -81,6 +84,9 @@ const Settings = () => {
     try {
       const response = await phoneNumbersApi.getSettings();
       setRepMonthlyLimit(response.data.rep_monthly_number_limit || 0);
+      // Also fetch owned numbers for deletion request
+      const numbersRes = await phoneNumbersApi.getOwned();
+      setOwnedNumbers(numbersRes.data || []);
     } catch (error) {
       console.error('Failed to fetch phone settings:', error);
     }
@@ -671,6 +677,76 @@ const Settings = () => {
                 >
                   {phoneSettingsLoading ? 'Saving...' : 'Save Settings'}
                 </Button>
+              </CardContent>
+            </Card>
+
+            {/* Number Deletion Request Card */}
+            <Card className="border-red-200">
+              <CardHeader>
+                <CardTitle className="font-['Outfit'] flex items-center gap-2 text-red-700">
+                  <Trash2 className="h-5 w-5" />
+                  Request Number Deletion
+                </CardTitle>
+                <CardDescription>
+                  Select a phone number to request removal. An admin will contact you within 24 hours to confirm.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {deleteRequestSent ? (
+                  <div className="p-4 rounded-lg bg-amber-50 border border-amber-200 text-amber-800" data-testid="delete-request-confirmation">
+                    <div className="flex items-center gap-2 font-semibold mb-1">
+                      <CheckCircle className="h-5 w-5" />
+                      Request Received
+                    </div>
+                    <p className="text-sm">
+                      Expect a phone call from the admin within 24 hours to confirm the deletion of your number.
+                    </p>
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      className="mt-2"
+                      onClick={() => setDeleteRequestSent(false)}
+                    >
+                      Submit Another Request
+                    </Button>
+                  </div>
+                ) : (
+                  <>
+                    <div className="space-y-2">
+                      <Label>Select Number to Delete</Label>
+                      <Select value={selectedDeleteNumber} onValueChange={setSelectedDeleteNumber}>
+                        <SelectTrigger data-testid="delete-number-select">
+                          <SelectValue placeholder="Choose a phone number..." />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {ownedNumbers.map((num) => (
+                            <SelectItem key={num.id} value={num.id}>
+                              {num.phone_number} {num.friendly_name ? `(${num.friendly_name})` : ''} 
+                              {num.assigned_user_name ? ` — ${num.assigned_user_name}` : ''}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <Button
+                      variant="destructive"
+                      disabled={!selectedDeleteNumber}
+                      onClick={async () => {
+                        try {
+                          await phoneNumbersApi.requestDeletion(selectedDeleteNumber);
+                          setDeleteRequestSent(true);
+                          setSelectedDeleteNumber('');
+                          toast.success('Deletion request submitted');
+                        } catch (error) {
+                          toast.error(error.response?.data?.detail || 'Failed to submit request');
+                        }
+                      }}
+                      data-testid="request-delete-btn"
+                    >
+                      Request Deletion
+                    </Button>
+                  </>
+                )}
               </CardContent>
             </Card>
           </TabsContent>

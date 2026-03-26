@@ -82,7 +82,14 @@ export const enhancedCampaignsApi = {
   enrollContacts: (campaignId, clientIds) => axios.post(`${API}/campaigns/enhanced/${campaignId}/enroll`, clientIds),
   stopForContact: (campaignId, clientId, reason) => axios.post(`${API}/campaigns/enhanced/${campaignId}/stop/${clientId}`, null, { params: { reason } }),
   resumeForContact: (campaignId, clientId) => axios.post(`${API}/campaigns/enhanced/${campaignId}/resume/${clientId}`),
-  getEnrollments: (campaignId, status) => axios.get(`${API}/campaigns/enhanced/${campaignId}/enrollments`, { params: { status } })
+  getEnrollments: (campaignId, status) => axios.get(`${API}/campaigns/enhanced/${campaignId}/enrollments`, { params: { status } }),
+  // Pre-built campaigns
+  getPrebuilt: () => axios.get(`${API}/campaigns/prebuilt`),
+  getPrebuiltDetail: (type) => axios.get(`${API}/campaigns/prebuilt/${type}`),
+  launchPrebuilt: (type, data) => axios.post(`${API}/campaigns/prebuilt/${type}/launch`, data),
+  removeClient: (campaignId, clientId) => axios.post(`${API}/campaigns/${campaignId}/remove-client/${clientId}`),
+  getClientActiveCampaigns: (clientId) => axios.get(`${API}/campaigns/client/${clientId}/active`),
+  processDue: () => axios.post(`${API}/campaigns/process-due`)
 };
 
 // SMS Providers API
@@ -105,7 +112,8 @@ export const phoneNumbersApi = {
   update: (id, data) => axios.put(`${API}/phone-numbers/${id}`, data),
   getPurchaseStatus: () => axios.get(`${API}/phone-numbers/purchase-status`),
   getSettings: () => axios.get(`${API}/settings/phone-numbers`),
-  updateSettings: (data) => axios.put(`${API}/settings/phone-numbers`, data)
+  updateSettings: (data) => axios.put(`${API}/settings/phone-numbers`, data),
+  requestDeletion: (id) => axios.post(`${API}/phone-numbers/${id}/request-deletion`)
 };
 
 // Contacts/Messaging API

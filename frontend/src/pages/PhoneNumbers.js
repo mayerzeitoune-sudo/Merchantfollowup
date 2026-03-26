@@ -578,17 +578,9 @@ const PhoneNumbers = () => {
                             </Button>
                           )}
                           {isAdmin && (
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="text-destructive hover:text-destructive hover:bg-destructive/10"
-                              onClick={() => {
-                                setNumberToDelete(number);
-                                setDeleteDialogOpen(true);
-                              }}
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
+                            <span className="text-xs text-muted-foreground italic">
+                              Manage in Settings
+                            </span>
                           )}
                         </div>
                       </div>
