@@ -935,6 +935,16 @@ async def create_client(data: ClientCreate, current_user: dict = Depends(get_cur
     # Auto-enroll in active drip campaigns that match client tags
     if data.tags:
         try:
+            from zoneinfo import ZoneInfo
+            et = ZoneInfo("America/New_York")
+            now_utc = datetime.now(timezone.utc)
+            now_et = now_utc.astimezone(et)
+            # Schedule first message for 10:45 AM ET today (or tomorrow if past 10:45)
+            send_time_et = now_et.replace(hour=10, minute=45, second=0, microsecond=0)
+            if now_et >= send_time_et:
+                send_time_et = send_time_et + timedelta(days=1)
+            first_send = send_time_et.astimezone(timezone.utc).isoformat()
+            
             accessible_ids = await get_accessible_user_ids(current_user)
             active_campaigns = await db.enhanced_campaigns.find(
                 {"user_id": {"$in": accessible_ids}, "status": "active"},
@@ -962,7 +972,7 @@ async def create_client(data: ClientCreate, current_user: dict = Depends(get_cur
                             "status": "active",
                             "current_step": 0,
                             "start_date": now,
-                            "next_send_date": now,
+                            "next_send_date": first_send,
                             "last_sent_date": None,
                             "created_at": now
                         }
@@ -971,7 +981,7 @@ async def create_client(data: ClientCreate, current_user: dict = Depends(get_cur
                             {"id": campaign["id"]},
                             {"$inc": {"contacts_enrolled": 1}}
                         )
-                        logger.info(f"Auto-enrolled client {client_id} into campaign {campaign['name']}")
+                        logger.info(f"Auto-enrolled client {client_id} into campaign {campaign['name']} - first send at {first_send}")
         except Exception as e:
             logger.error(f"Auto-enrollment error for client {client_id}: {e}")
     
@@ -5514,3 +5524,36 @@ app.add_middleware(
 @app.on_event("shutdown")
 async def shutdown_db_client():
     client.close()
+    # Stop the campaign scheduler
+    if hasattr(app.state, 'scheduler') and app.state.scheduler.running:
+        app.state.scheduler.shutdown()
+
+
+@app.on_event("startup")
+async def startup_campaign_scheduler():
+    """Start the background scheduler for drip campaign processing at 10:45 AM ET daily"""
+    from apscheduler.schedulers.asyncio import AsyncIOScheduler
+    from apscheduler.triggers.cron import CronTrigger
+    import pytz
+
+    scheduler = AsyncIOScheduler()
+
+    async def run_campaign_processor():
+        try:
+            from routes.enhanced import _process_due_messages
+            result = await _process_due_messages()
+            logger.info(f"Campaign scheduler ran: {result}")
+        except Exception as e:
+            logger.error(f"Campaign scheduler error: {e}")
+
+    # Run at 10:45 AM Eastern Time every day
+    eastern = pytz.timezone("America/New_York")
+    scheduler.add_job(
+        run_campaign_processor,
+        CronTrigger(hour=10, minute=45, timezone=eastern),
+        id="campaign_daily_send",
+        replace_existing=True
+    )
+    scheduler.start()
+    app.state.scheduler = scheduler
+    logger.info("Campaign scheduler started - messages will send at 10:45 AM ET daily")

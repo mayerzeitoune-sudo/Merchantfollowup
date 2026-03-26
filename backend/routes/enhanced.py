@@ -1575,6 +1575,16 @@ async def launch_prebuilt_campaign(
         {"_id": 0, "id": 1, "name": 1, "phone": 1}
     ).to_list(10000)
     
+    # Calculate first send at 10:45 AM ET
+    from zoneinfo import ZoneInfo
+    et = ZoneInfo("America/New_York")
+    now_utc = datetime.now(timezone.utc)
+    now_et = now_utc.astimezone(et)
+    send_time_et = now_et.replace(hour=10, minute=45, second=0, microsecond=0)
+    if now_et >= send_time_et:
+        send_time_et = send_time_et + timedelta(days=1)
+    first_send = send_time_et.astimezone(timezone.utc).isoformat()
+    
     enrolled_count = 0
     for client in clients:
         # Check if client is already enrolled in an active campaign of same type
@@ -1595,7 +1605,7 @@ async def launch_prebuilt_campaign(
             "status": "active",
             "current_step": 0,
             "start_date": now,
-            "next_send_date": now,  # First message goes immediately
+            "next_send_date": first_send,  # First message at 10:45 AM ET
             "last_sent_date": None,
             "created_at": now
         }
@@ -1683,14 +1693,24 @@ async def get_active_campaigns_for_client(
 @router.post("/campaigns/process-due")
 async def process_due_campaign_messages(current_user: dict = Depends(get_current_user)):
     """Process and send due campaign messages (called by scheduler or manually)"""
-    now = datetime.now(timezone.utc).isoformat()
-    
+    count = await _process_due_messages()
+    return count
+
+
+async def _process_due_messages():
+    """Internal processor for due campaign messages - targets 10:45 AM ET send time"""
+    from zoneinfo import ZoneInfo
+    et = ZoneInfo("America/New_York")
+    now_utc = datetime.now(timezone.utc)
+    now_et = now_utc.astimezone(et)
+    now_iso = now_utc.isoformat()
+
     # Find all active enrollments where next_send_date <= now
     due_enrollments = await db.campaign_enrollments.find(
-        {"status": "active", "next_send_date": {"$lte": now}},
+        {"status": "active", "next_send_date": {"$lte": now_iso}},
         {"_id": 0}
     ).to_list(1000)
-    
+
     sent_count = 0
     for enrollment in due_enrollments:
         campaign = await db.enhanced_campaigns.find_one(
@@ -1699,34 +1719,33 @@ async def process_due_campaign_messages(current_user: dict = Depends(get_current
         )
         if not campaign or campaign.get("status") != "active":
             continue
-        
+
         steps = campaign.get("steps", [])
         current_step = enrollment.get("current_step", 0)
-        
+
         if current_step >= len(steps):
-            # Campaign completed for this client
             await db.campaign_enrollments.update_one(
                 {"id": enrollment["id"]},
                 {"$set": {"status": "completed"}}
             )
             continue
-        
+
         step = steps[current_step]
         client = await db.clients.find_one({"id": enrollment["client_id"]}, {"_id": 0})
         if not client:
             continue
-        
+
         # Replace template variables
         message = step["message"]
         first_name = (client.get("name") or "").split(" ")[0]
         amount = client.get("amount_requested")
         amount_str = f"{amount:,.0f}" if amount else "the amount"
         company_name = client.get("company") or "your business"
-        
+
         message = message.replace("{first_name}", first_name)
         message = message.replace("${amount_requested}", f"${amount_str}")
         message = message.replace("{company_name}", company_name)
-        
+
         # Store as a scheduled message
         msg_doc = {
             "id": str(uuid.uuid4()),
@@ -1737,23 +1756,23 @@ async def process_due_campaign_messages(current_user: dict = Depends(get_current
             "message": message,
             "step_label": step.get("label"),
             "status": "pending",
-            "created_at": now
+            "created_at": now_iso
         }
         await db.campaign_messages.insert_one(msg_doc)
-        
-        # Calculate next send date
+
+        # Calculate next send date at 10:45 AM ET
         next_step = current_step + 1
         if next_step < len(steps):
             days_diff = steps[next_step]["day"] - steps[current_step]["day"]
-            from datetime import timedelta
-            next_date = datetime.now(timezone.utc) + timedelta(days=days_diff)
-            next_send = next_date.isoformat()
+            next_day_et = now_et + timedelta(days=days_diff)
+            next_send_et = next_day_et.replace(hour=10, minute=45, second=0, microsecond=0)
+            next_send = next_send_et.astimezone(timezone.utc).isoformat()
         else:
             next_send = None
-        
+
         update = {
             "current_step": next_step,
-            "last_sent_date": now
+            "last_sent_date": now_iso
         }
         if next_send:
             update["next_send_date"] = next_send
@@ -1763,5 +1782,11 @@ async def process_due_campaign_messages(current_user: dict = Depends(get_current
             {"$set": update}
         )
         sent_count += 1
-    
+        
+        # Update campaign stats
+        await db.enhanced_campaigns.update_one(
+            {"id": enrollment["campaign_id"]},
+            {"$inc": {"total_messages_sent": 1}}
+        )
+
     return {"processed": sent_count, "total_due": len(due_enrollments)}
