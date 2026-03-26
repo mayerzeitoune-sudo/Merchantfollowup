@@ -1429,6 +1429,60 @@ const DripCampaigns = () => {
                   </p>
                 </div>
 
+                {/* Estimated Costs & Projected Returns Panel */}
+                {(() => {
+                  const matchingClients = clients.filter(c => c.tags?.includes(selectedPrebuilt.target_tag)).length;
+                  const totalMsgs = prebuiltDetail?.steps?.length || selectedPrebuilt.total_steps || 0;
+                  const costPerText = 0.0632; // 8x Twilio rate
+                  const totalTexts = matchingClients * totalMsgs;
+                  const totalCost = totalTexts * costPerText;
+                  const convLow = Math.round(matchingClients * 0.01);
+                  const convHigh = Math.round(matchingClients * 0.12);
+                  const revLow = convLow * 50;
+                  const revHigh = convHigh * 600;
+                  const netLow = revLow - totalCost;
+                  const netHigh = revHigh - totalCost;
+                  return (
+                    <div className="rounded-lg border border-zinc-800 bg-zinc-950 p-4 space-y-3" data-testid="campaign-cost-preview">
+                      <div className="flex items-center gap-2">
+                        <BarChart3 className="h-4 w-4 text-emerald-400" />
+                        <h4 className="text-sm font-semibold text-zinc-100">Estimated Costs & Projected Returns</h4>
+                      </div>
+                      <div className="grid grid-cols-2 gap-2">
+                        <div className="rounded bg-zinc-900 border border-zinc-800 p-3">
+                          <p className="text-[10px] text-zinc-500 uppercase tracking-wider">Total Texts</p>
+                          <p className="text-lg font-bold text-zinc-100 font-mono">{totalTexts.toLocaleString()}</p>
+                          <p className="text-[10px] text-zinc-600">{matchingClients} leads x {totalMsgs} msgs</p>
+                        </div>
+                        <div className="rounded bg-zinc-900 border border-zinc-800 p-3">
+                          <p className="text-[10px] text-zinc-500 uppercase tracking-wider">Campaign Cost</p>
+                          <p className="text-lg font-bold text-red-400 font-mono">${totalCost.toFixed(2)}</p>
+                          <p className="text-[10px] text-zinc-600">${costPerText}/text (8x Twilio)</p>
+                        </div>
+                        <div className="rounded bg-zinc-900 border border-zinc-800 p-3">
+                          <p className="text-[10px] text-zinc-500 uppercase tracking-wider">Est. Conversions</p>
+                          <p className="text-lg font-bold text-amber-400 font-mono">{convLow} <span className="text-xs font-normal text-zinc-600">to</span> {convHigh}</p>
+                          <p className="text-[10px] text-zinc-600">1% - 12% conversion rate</p>
+                        </div>
+                        <div className="rounded bg-zinc-900 border border-zinc-800 p-3">
+                          <p className="text-[10px] text-zinc-500 uppercase tracking-wider">Projected Revenue</p>
+                          <p className="text-lg font-bold text-emerald-400 font-mono">${revLow.toLocaleString()} <span className="text-xs font-normal text-zinc-600">to</span> ${revHigh.toLocaleString()}</p>
+                          <p className="text-[10px] text-zinc-600">$50 - $600 per converted lead</p>
+                        </div>
+                      </div>
+                      <div className="flex items-center justify-between rounded bg-zinc-900/60 border border-emerald-900/30 p-3">
+                        <div>
+                          <p className="text-[10px] text-zinc-500 uppercase tracking-wider">Estimated Net Return</p>
+                          <p className="text-[10px] text-zinc-600 mt-0.5">Revenue minus campaign text cost</p>
+                        </div>
+                        <p className="text-xl font-bold text-green-400 font-mono">
+                          ${Math.max(0, netLow).toLocaleString()} <span className="text-xs font-normal text-zinc-600">to</span> ${Math.max(0, netHigh).toLocaleString()}
+                        </p>
+                      </div>
+                    </div>
+                  );
+                })()}
+
                 {prebuiltDetail && (
                   <div className="space-y-2">
                     <Label>Message Preview ({prebuiltDetail.steps?.length} messages)</Label>

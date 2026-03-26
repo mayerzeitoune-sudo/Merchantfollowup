@@ -217,8 +217,9 @@ const FundedDeals = () => {
   const activeEnrollments = projections?.active_enrollments || 0;
 
   // Per-message cost projections (54 messages per new lead campaign)
+  // Pricing: 8x Twilio base rate ($0.0079) = $0.0632 per text
   const avgMsgsPerLead = 54;
-  const textCost = 0.0083;
+  const textCost = 0.0632;
   const totalTextCostLow = convLow * avgMsgsPerLead * textCost;
   const totalTextCostHigh = convHigh * avgMsgsPerLead * textCost;
   const netProfitLow = profitLow - totalTextCostHigh;
@@ -407,7 +408,7 @@ const FundedDeals = () => {
               <div className="space-y-2">
                 <div className="flex justify-between text-sm">
                   <span className="text-zinc-400">Cost per text</span>
-                  <span className="text-zinc-200 font-mono">$0.0083</span>
+                  <span className="text-zinc-200 font-mono">$0.0632</span>
                 </div>
                 <div className="flex justify-between text-sm">
                   <span className="text-zinc-400">Avg texts per campaign</span>
@@ -480,7 +481,7 @@ const FundedDeals = () => {
           <div className="flex items-center gap-2 pt-1">
             <BarChart3 className="h-3.5 w-3.5 text-zinc-600" />
             <p className="text-[11px] text-zinc-600">
-              Revenue = Conversions (1%-12%) x Net Profit ($50-$600/lead) &mdash; Text Cost ($0.0083/msg x {avgMsgsPerLead} msgs)
+              Revenue = Conversions (1%-12%) x Net Profit ($50-$600/lead) &mdash; Text Cost ($0.0632/msg x {avgMsgsPerLead} msgs)
             </p>
           </div>
         </div>
