@@ -14,28 +14,11 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '../components/ui/alert-dialog';
 import { Checkbox } from '../components/ui/checkbox';
 import { 
-  DollarSign, 
-  TrendingUp, 
-  AlertTriangle,
-  CheckCircle2,
-  Clock,
-  Users,
-  Calendar,
-  FileText,
-  Plus,
-  Search,
-  Filter,
-  BarChart3,
-  ArrowRight,
-  Bell,
-  MessageSquare,
-  ExternalLink,
-  Award,
-  Trash2,
-  Edit,
-  MoreHorizontal
+  DollarSign, TrendingUp, AlertTriangle, CheckCircle2, Clock, Users, Calendar,
+  FileText, Plus, Search, Filter, BarChart3, ArrowRight, Bell, MessageSquare,
+  ExternalLink, Award, Trash2, Edit, MoreHorizontal, Target, Zap, TrendingDown
 } from 'lucide-react';
-import { fundedApi, clientsApi, teamApi } from '../lib/api';
+import { fundedApi, clientsApi, teamApi, enhancedCampaignsApi } from '../lib/api';
 import { toast } from 'sonner';
 
 const DEAL_TYPES = ["MCA", "Term Loan", "Line of Credit", "Equipment Financing", "Revenue Based", "Invoice Factoring"];
@@ -59,6 +42,9 @@ const getStatusColor = (status) => {
   return colors[status] || "bg-gray-100 text-gray-700";
 };
 
+const fmt = (n) => n >= 1000 ? `$${(n/1000).toFixed(n >= 10000 ? 0 : 1)}k` : `$${n.toLocaleString()}`;
+const fmtFull = (n) => `$${n.toLocaleString(undefined, {minimumFractionDigits: 0, maximumFractionDigits: 0})}`;
+
 const FundedDeals = () => {
   const [deals, setDeals] = useState([]);
   const [stats, setStats] = useState(null);
@@ -75,44 +61,27 @@ const FundedDeals = () => {
   const [dealToDelete, setDealToDelete] = useState(null);
   const [selectedDeals, setSelectedDeals] = useState([]);
   const [bulkDeleteDialogOpen, setBulkDeleteDialogOpen] = useState(false);
-  const [statDetailOpen, setStatDetailOpen] = useState(false);
-  const [selectedStat, setSelectedStat] = useState(null);
   
+  // Projections state
+  const [projections, setProjections] = useState(null);
+
   const [newDeal, setNewDeal] = useState({
-    client_id: '',
-    client_name: '',
-    business_name: '',
-    deal_type: 'MCA',
-    funded_amount: '',
-    rate_percent: '',
-    funding_date: new Date().toISOString().split('T')[0],
-    payback_amount: '',
-    payment_frequency: 'weekly',
-    num_payments: '',
-    payment_amount: '',
-    start_date: new Date().toISOString().split('T')[0],
-    assigned_rep: '',
-    notes: '',
-    auto_calculate: true
+    client_id: '', client_name: '', business_name: '', deal_type: 'MCA',
+    funded_amount: '', rate_percent: '', funding_date: new Date().toISOString().split('T')[0],
+    payback_amount: '', payment_frequency: 'weekly', num_payments: '', payment_amount: '',
+    start_date: new Date().toISOString().split('T')[0], assigned_rep: '', notes: '', auto_calculate: true
   });
 
-  // Auto-calculate payback and payment amounts
   const handleFundedAmountChange = (value) => {
     const fundedAmount = parseFloat(value) || 0;
     const ratePercent = parseFloat(newDeal.rate_percent) || 0;
     const numPayments = parseInt(newDeal.num_payments) || 0;
-    
     let updates = { funded_amount: value };
-    
     if (newDeal.auto_calculate && ratePercent > 0) {
       const paybackAmount = fundedAmount * (1 + ratePercent / 100);
       updates.payback_amount = paybackAmount.toFixed(2);
-      
-      if (numPayments > 0) {
-        updates.payment_amount = (paybackAmount / numPayments).toFixed(2);
-      }
+      if (numPayments > 0) updates.payment_amount = (paybackAmount / numPayments).toFixed(2);
     }
-    
     setNewDeal({ ...newDeal, ...updates });
   };
 
@@ -120,64 +89,48 @@ const FundedDeals = () => {
     const fundedAmount = parseFloat(newDeal.funded_amount) || 0;
     const ratePercent = parseFloat(value) || 0;
     const numPayments = parseInt(newDeal.num_payments) || 0;
-    
     let updates = { rate_percent: value };
-    
     if (newDeal.auto_calculate && fundedAmount > 0) {
       const paybackAmount = fundedAmount * (1 + ratePercent / 100);
       updates.payback_amount = paybackAmount.toFixed(2);
-      
-      if (numPayments > 0) {
-        updates.payment_amount = (paybackAmount / numPayments).toFixed(2);
-      }
+      if (numPayments > 0) updates.payment_amount = (paybackAmount / numPayments).toFixed(2);
     }
-    
     setNewDeal({ ...newDeal, ...updates });
   };
 
   const handleNumPaymentsChange = (value) => {
     const numPayments = parseInt(value) || 0;
     const paybackAmount = parseFloat(newDeal.payback_amount) || 0;
-    
     let updates = { num_payments: value };
-    
-    if (newDeal.auto_calculate && paybackAmount > 0 && numPayments > 0) {
+    if (newDeal.auto_calculate && paybackAmount > 0 && numPayments > 0)
       updates.payment_amount = (paybackAmount / numPayments).toFixed(2);
-    }
-    
     setNewDeal({ ...newDeal, ...updates });
   };
 
   const handlePaybackChange = (value) => {
     const paybackAmount = parseFloat(value) || 0;
     const numPayments = parseInt(newDeal.num_payments) || 0;
-    
     let updates = { payback_amount: value, auto_calculate: false };
-    
-    if (numPayments > 0 && paybackAmount > 0) {
+    if (numPayments > 0 && paybackAmount > 0)
       updates.payment_amount = (paybackAmount / numPayments).toFixed(2);
-    }
-    
     setNewDeal({ ...newDeal, ...updates });
   };
 
-  useEffect(() => {
-    fetchData();
-  }, [filters]);
+  useEffect(() => { fetchData(); }, [filters]);
 
   const fetchData = async () => {
     setLoading(true);
     try {
-      const [dealsRes, statsRes, queueRes, recentRes, milestonesRes, clientsRes, teamRes] = await Promise.all([
+      const [dealsRes, statsRes, queueRes, recentRes, milestonesRes, clientsRes, teamRes, projectionsRes] = await Promise.all([
         fundedApi.getAll(filters),
         fundedApi.getStats(),
         fundedApi.getCollectionsQueue(),
         fundedApi.getRecent(),
         fundedApi.getMilestones(),
         clientsApi.getAll(),
-        teamApi.getMembers().catch(() => ({ data: [] }))
+        teamApi.getMembers().catch(() => ({ data: [] })),
+        enhancedCampaignsApi.getSystemProjections().catch(() => ({ data: null }))
       ]);
-      
       setDeals(dealsRes.data || []);
       setStats(statsRes.data || {});
       setCollectionsQueue(queueRes.data || []);
@@ -185,9 +138,10 @@ const FundedDeals = () => {
       setMilestones(milestonesRes.data || []);
       setClients(clientsRes.data || []);
       setTeamMembers(teamRes.data || []);
+      setProjections(projectionsRes.data);
     } catch (error) {
       console.error('Error fetching data:', error);
-      toast.error('Failed to load funded deals');
+      toast.error('Failed to load data');
     } finally {
       setLoading(false);
     }
@@ -198,52 +152,26 @@ const FundedDeals = () => {
       toast.error('Please fill in required fields');
       return;
     }
-    
     try {
-      // Find client name
       const client = clients.find(c => c.id === newDeal.client_id);
       const rep = teamMembers.find(m => m.id === newDeal.assigned_rep);
-      
       await fundedApi.create({
-        ...newDeal,
-        client_name: client?.name || '',
-        funded_amount: parseFloat(newDeal.funded_amount),
-        payback_amount: parseFloat(newDeal.payback_amount),
-        num_payments: parseInt(newDeal.num_payments),
-        payment_amount: parseFloat(newDeal.payment_amount),
+        ...newDeal, client_name: client?.name || '',
+        funded_amount: parseFloat(newDeal.funded_amount), payback_amount: parseFloat(newDeal.payback_amount),
+        num_payments: parseInt(newDeal.num_payments), payment_amount: parseFloat(newDeal.payment_amount),
         assigned_rep_name: rep?.name || ''
       });
-      
       toast.success('Funded deal created!');
       setShowNewDealDialog(false);
       setNewDeal({
-        client_id: '',
-        client_name: '',
-        business_name: '',
-        deal_type: 'MCA',
-        funded_amount: '',
-        funding_date: new Date().toISOString().split('T')[0],
-        payback_amount: '',
-        payment_frequency: 'weekly',
-        num_payments: '',
-        payment_amount: '',
-        start_date: new Date().toISOString().split('T')[0],
-        assigned_rep: '',
-        notes: ''
+        client_id: '', client_name: '', business_name: '', deal_type: 'MCA',
+        funded_amount: '', funding_date: new Date().toISOString().split('T')[0],
+        payback_amount: '', payment_frequency: 'weekly', num_payments: '', payment_amount: '',
+        start_date: new Date().toISOString().split('T')[0], assigned_rep: '', notes: ''
       });
       fetchData();
     } catch (error) {
       toast.error(error.response?.data?.detail || 'Failed to create deal');
-    }
-  };
-
-  const handleAcknowledgeMilestone = async (dealId) => {
-    try {
-      await fundedApi.acknowledgeMilestone(dealId);
-      toast.success('Milestone acknowledged');
-      fetchData();
-    } catch (error) {
-      toast.error('Failed to acknowledge milestone');
     }
   };
 
@@ -255,9 +183,7 @@ const FundedDeals = () => {
       setDeleteDialogOpen(false);
       setDealToDelete(null);
       fetchData();
-    } catch (error) {
-      toast.error('Failed to delete deal');
-    }
+    } catch (error) { toast.error('Failed to delete deal'); }
   };
 
   const handleBulkDelete = async () => {
@@ -268,25 +194,11 @@ const FundedDeals = () => {
       setBulkDeleteDialogOpen(false);
       setSelectedDeals([]);
       fetchData();
-    } catch (error) {
-      toast.error('Failed to delete some deals');
-    }
+    } catch (error) { toast.error('Failed to delete some deals'); }
   };
 
   const toggleSelectDeal = (dealId) => {
-    setSelectedDeals(prev => 
-      prev.includes(dealId) 
-        ? prev.filter(id => id !== dealId)
-        : [...prev, dealId]
-    );
-  };
-
-  const toggleSelectAll = () => {
-    if (selectedDeals.length === filteredDeals.length) {
-      setSelectedDeals([]);
-    } else {
-      setSelectedDeals(filteredDeals.map(d => d.id));
-    }
+    setSelectedDeals(prev => prev.includes(dealId) ? prev.filter(id => id !== dealId) : [...prev, dealId]);
   };
 
   const filteredDeals = deals.filter(deal =>
@@ -295,14 +207,31 @@ const FundedDeals = () => {
     deal.business_name?.toLowerCase().includes(search.toLowerCase())
   );
 
+  // Projection calculations
+  const totalLeads = projections?.total_leads || 0;
+  const convLow = Math.round(totalLeads * 0.01);
+  const convHigh = Math.round(totalLeads * 0.12);
+  const profitLow = convLow * 50;
+  const profitHigh = convHigh * 600;
+  const activeCampaigns = projections?.active_campaigns || 0;
+  const activeEnrollments = projections?.active_enrollments || 0;
+
+  // Per-message cost projections (54 messages per new lead campaign)
+  const avgMsgsPerLead = 54;
+  const textCost = 0.0083;
+  const totalTextCostLow = convLow * avgMsgsPerLead * textCost;
+  const totalTextCostHigh = convHigh * avgMsgsPerLead * textCost;
+  const netProfitLow = profitLow - totalTextCostHigh;
+  const netProfitHigh = profitHigh - totalTextCostLow;
+
   return (
     <DashboardLayout>
       <div className="space-y-6" data-testid="funded-deals-page">
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
-            <h1 className="text-3xl font-bold font-['Outfit']">Deals & Projected Value</h1>
-            <p className="text-muted-foreground mt-1">Track closed revenue, collections, and payment status</p>
+            <h1 className="text-3xl font-bold font-['Outfit']" data-testid="projections-title">Projections</h1>
+            <p className="text-muted-foreground mt-1">System-wide earnings forecast & deal tracking</p>
           </div>
           <Dialog open={showNewDealDialog} onOpenChange={setShowNewDealDialog}>
             <DialogTrigger asChild>
@@ -316,157 +245,86 @@ const FundedDeals = () => {
                 <DialogTitle>Create Deal</DialogTitle>
                 <DialogDescription>Record a new deal to track payments</DialogDescription>
               </DialogHeader>
-              
               <div className="grid grid-cols-2 gap-4 mt-4">
                 <div className="col-span-2 space-y-2">
                   <Label>Client *</Label>
                   <Select value={newDeal.client_id} onValueChange={(v) => setNewDeal({...newDeal, client_id: v})}>
                     <SelectTrigger><SelectValue placeholder="Select client" /></SelectTrigger>
                     <SelectContent>
-                      {clients.map(c => (
-                        <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
-                      ))}
+                      {clients.map(c => (<SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>))}
                     </SelectContent>
                   </Select>
                 </div>
-                
                 <div className="space-y-2">
                   <Label>Business Name</Label>
                   <Input value={newDeal.business_name} onChange={(e) => setNewDeal({...newDeal, business_name: e.target.value})} />
                 </div>
-                
                 <div className="space-y-2">
                   <Label>Deal Type *</Label>
                   <Select value={newDeal.deal_type} onValueChange={(v) => setNewDeal({...newDeal, deal_type: v})}>
                     <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      {DEAL_TYPES.map(t => (
-                        <SelectItem key={t} value={t}>{t}</SelectItem>
-                      ))}
-                    </SelectContent>
+                    <SelectContent>{DEAL_TYPES.map(t => (<SelectItem key={t} value={t}>{t}</SelectItem>))}</SelectContent>
                   </Select>
                 </div>
-                
                 <div className="space-y-2">
                   <Label>Funded Amount *</Label>
                   <div className="relative">
                     <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">$</span>
-                    <Input 
-                      type="number" 
-                      value={newDeal.funded_amount} 
-                      onChange={(e) => handleFundedAmountChange(e.target.value)} 
-                      placeholder="100,000"
-                      className="pl-7"
-                    />
+                    <Input type="number" value={newDeal.funded_amount} onChange={(e) => handleFundedAmountChange(e.target.value)} placeholder="100,000" className="pl-7" />
                   </div>
                 </div>
-
                 <div className="space-y-2">
                   <Label>Rate (Factor) %</Label>
                   <div className="relative">
-                    <Input 
-                      type="number" 
-                      value={newDeal.rate_percent} 
-                      onChange={(e) => handleRateChange(e.target.value)} 
-                      placeholder="50"
-                      className="pr-7"
-                    />
+                    <Input type="number" value={newDeal.rate_percent} onChange={(e) => handleRateChange(e.target.value)} placeholder="50" className="pr-7" />
                     <span className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground">%</span>
                   </div>
-                  <p className="text-xs text-muted-foreground">
-                    e.g., 50% = 1.5 factor (payback is 150% of funded)
-                  </p>
                 </div>
-                
                 <div className="space-y-2">
                   <Label>Funding Date *</Label>
                   <Input type="date" value={newDeal.funding_date} onChange={(e) => setNewDeal({...newDeal, funding_date: e.target.value})} />
                 </div>
-                
                 <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <Label>Total Payback Amount *</Label>
-                    {!newDeal.auto_calculate && (
-                      <Badge variant="outline" className="text-xs">Manual</Badge>
-                    )}
-                  </div>
+                  <Label>Total Payback Amount *</Label>
                   <div className="relative">
                     <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">$</span>
-                    <Input 
-                      type="number" 
-                      value={newDeal.payback_amount} 
-                      onChange={(e) => handlePaybackChange(e.target.value)} 
-                      placeholder="150,000"
-                      className={`pl-7 ${newDeal.auto_calculate ? 'bg-muted/50' : ''}`}
-                    />
+                    <Input type="number" value={newDeal.payback_amount} onChange={(e) => handlePaybackChange(e.target.value)} placeholder="150,000" className={`pl-7 ${newDeal.auto_calculate ? 'bg-muted/50' : ''}`} />
                   </div>
                 </div>
-                
                 <div className="space-y-2">
                   <Label>Payment Frequency *</Label>
                   <Select value={newDeal.payment_frequency} onValueChange={(v) => setNewDeal({...newDeal, payment_frequency: v})}>
                     <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      {PAYMENT_FREQUENCIES.map(f => (
-                        <SelectItem key={f.value} value={f.value}>{f.label}</SelectItem>
-                      ))}
-                    </SelectContent>
+                    <SelectContent>{PAYMENT_FREQUENCIES.map(f => (<SelectItem key={f.value} value={f.value}>{f.label}</SelectItem>))}</SelectContent>
                   </Select>
                 </div>
-                
                 <div className="space-y-2">
-                  <Label>Number of Payments (Term) *</Label>
-                  <Input 
-                    type="number" 
-                    value={newDeal.num_payments} 
-                    onChange={(e) => handleNumPaymentsChange(e.target.value)}
-                    placeholder="e.g., 52 for weekly"
-                  />
+                  <Label>Number of Payments *</Label>
+                  <Input type="number" value={newDeal.num_payments} onChange={(e) => handleNumPaymentsChange(e.target.value)} placeholder="e.g., 52" />
                 </div>
-                
                 <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <Label>Payment Amount *</Label>
-                    <Badge variant="outline" className="text-xs">Auto-calculated</Badge>
-                  </div>
+                  <Label>Payment Amount *</Label>
                   <div className="relative">
                     <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">$</span>
-                    <Input 
-                      type="number" 
-                      value={newDeal.payment_amount} 
-                      onChange={(e) => setNewDeal({...newDeal, payment_amount: e.target.value})} 
-                      placeholder="Payback ÷ Term"
-                      className="pl-7 bg-muted/50"
-                    />
+                    <Input type="number" value={newDeal.payment_amount} onChange={(e) => setNewDeal({...newDeal, payment_amount: e.target.value})} className="pl-7 bg-muted/50" />
                   </div>
-                  <p className="text-xs text-muted-foreground">
-                    = ${newDeal.payback_amount || '0'} ÷ {newDeal.num_payments || '0'} payments
-                  </p>
                 </div>
-                
                 <div className="space-y-2">
                   <Label>First Payment Date *</Label>
                   <Input type="date" value={newDeal.start_date} onChange={(e) => setNewDeal({...newDeal, start_date: e.target.value})} />
                 </div>
-                
                 <div className="space-y-2">
                   <Label>Assigned Rep</Label>
                   <Select value={newDeal.assigned_rep} onValueChange={(v) => setNewDeal({...newDeal, assigned_rep: v})}>
                     <SelectTrigger><SelectValue placeholder="Select rep" /></SelectTrigger>
-                    <SelectContent>
-                      {teamMembers.map(m => (
-                        <SelectItem key={m.id} value={m.id}>{m.name || m.email}</SelectItem>
-                      ))}
-                    </SelectContent>
+                    <SelectContent>{teamMembers.map(m => (<SelectItem key={m.id} value={m.id}>{m.name || m.email}</SelectItem>))}</SelectContent>
                   </Select>
                 </div>
-                
                 <div className="col-span-2 space-y-2">
                   <Label>Notes</Label>
                   <Input value={newDeal.notes} onChange={(e) => setNewDeal({...newDeal, notes: e.target.value})} />
                 </div>
               </div>
-              
               <DialogFooter className="mt-4">
                 <Button variant="outline" onClick={() => setShowNewDealDialog(false)}>Cancel</Button>
                 <Button onClick={handleCreateDeal}>Create Deal</Button>
@@ -475,13 +333,162 @@ const FundedDeals = () => {
           </Dialog>
         </div>
 
-        {/* Stats Grid - Clickable Cards */}
+        {/* System-Wide Projections Panel */}
+        <div className="rounded-xl border border-zinc-800 bg-zinc-950 p-6 space-y-5" data-testid="projections-panel">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="h-10 w-10 rounded-lg bg-emerald-500/10 flex items-center justify-center">
+                <TrendingUp className="h-5 w-5 text-emerald-400" />
+              </div>
+              <div>
+                <h2 className="text-lg font-semibold text-zinc-100 font-['Outfit']">Earning Projections</h2>
+                <p className="text-xs text-zinc-500">Based on {totalLeads} total leads in your system</p>
+              </div>
+            </div>
+            <Badge className="bg-emerald-500/10 text-emerald-400 border-emerald-500/20 hover:bg-emerald-500/10">
+              Live
+            </Badge>
+          </div>
+
+          {/* KPI Cards Row */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            {/* Total Leads */}
+            <div className="rounded-lg bg-zinc-900/80 border border-zinc-800 p-4" data-testid="kpi-total-leads">
+              <div className="flex items-center gap-2 mb-2">
+                <Users className="h-4 w-4 text-blue-400" />
+                <span className="text-xs text-zinc-500 uppercase tracking-wider">Total Leads</span>
+              </div>
+              <p className="text-2xl font-bold text-zinc-100 font-['Outfit']">{totalLeads.toLocaleString()}</p>
+              <p className="text-xs text-zinc-600 mt-1">System-wide pipeline</p>
+            </div>
+
+            {/* Estimated Conversions */}
+            <div className="rounded-lg bg-zinc-900/80 border border-zinc-800 p-4" data-testid="kpi-est-conversions">
+              <div className="flex items-center gap-2 mb-2">
+                <Target className="h-4 w-4 text-amber-400" />
+                <span className="text-xs text-zinc-500 uppercase tracking-wider">Est. Conversions</span>
+              </div>
+              <p className="text-2xl font-bold text-zinc-100 font-['Outfit']">
+                {convLow} <span className="text-sm font-normal text-zinc-600">to</span> {convHigh}
+              </p>
+              <p className="text-xs text-zinc-600 mt-1">1% - 12% conversion rate</p>
+            </div>
+
+            {/* Projected Revenue */}
+            <div className="rounded-lg bg-zinc-900/80 border border-zinc-800 p-4" data-testid="kpi-projected-revenue">
+              <div className="flex items-center gap-2 mb-2">
+                <DollarSign className="h-4 w-4 text-emerald-400" />
+                <span className="text-xs text-zinc-500 uppercase tracking-wider">Projected Revenue</span>
+              </div>
+              <p className="text-2xl font-bold text-emerald-400 font-['Outfit']">
+                {fmt(profitLow)} <span className="text-sm font-normal text-zinc-600">to</span> {fmt(profitHigh)}
+              </p>
+              <p className="text-xs text-zinc-600 mt-1">$50 - $600 per converted lead</p>
+            </div>
+
+            {/* Net Profit (after text costs) */}
+            <div className="rounded-lg bg-zinc-900/80 border border-zinc-800 p-4" data-testid="kpi-net-profit">
+              <div className="flex items-center gap-2 mb-2">
+                <Zap className="h-4 w-4 text-green-400" />
+                <span className="text-xs text-zinc-500 uppercase tracking-wider">Net Profit</span>
+              </div>
+              <p className="text-2xl font-bold text-green-400 font-['Outfit']">
+                {fmt(Math.max(0, netProfitLow))} <span className="text-sm font-normal text-zinc-600">to</span> {fmt(Math.max(0, netProfitHigh))}
+              </p>
+              <p className="text-xs text-zinc-600 mt-1">After messaging costs</p>
+            </div>
+          </div>
+
+          {/* Detailed Breakdown */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+            {/* Cost Breakdown */}
+            <div className="rounded-lg bg-zinc-900/60 border border-zinc-800/60 p-4">
+              <h3 className="text-xs text-zinc-500 uppercase tracking-wider mb-3">Cost Breakdown</h3>
+              <div className="space-y-2">
+                <div className="flex justify-between text-sm">
+                  <span className="text-zinc-400">Cost per text</span>
+                  <span className="text-zinc-200 font-mono">$0.0083</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-zinc-400">Avg texts per campaign</span>
+                  <span className="text-zinc-200 font-mono">{avgMsgsPerLead}</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-zinc-400">Cost per lead contacted</span>
+                  <span className="text-zinc-200 font-mono">${(avgMsgsPerLead * textCost).toFixed(2)}</span>
+                </div>
+                <div className="border-t border-zinc-800 pt-2 flex justify-between text-sm">
+                  <span className="text-zinc-400">Total text spend range</span>
+                  <span className="text-red-400 font-mono">${totalTextCostLow.toFixed(0)} - ${totalTextCostHigh.toFixed(0)}</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Pipeline Summary */}
+            <div className="rounded-lg bg-zinc-900/60 border border-zinc-800/60 p-4">
+              <h3 className="text-xs text-zinc-500 uppercase tracking-wider mb-3">Pipeline Summary</h3>
+              <div className="space-y-2">
+                {projections?.pipeline_stages && Object.entries(projections.pipeline_stages)
+                  .sort((a, b) => b[1] - a[1])
+                  .map(([stage, count]) => (
+                    <div key={stage} className="flex items-center justify-between text-sm">
+                      <span className="text-zinc-400 capitalize">{stage.replace(/_/g, ' ')}</span>
+                      <div className="flex items-center gap-2">
+                        <div className="h-1.5 rounded-full bg-zinc-800 w-16">
+                          <div
+                            className="h-1.5 rounded-full bg-emerald-500/60"
+                            style={{ width: `${Math.min(100, (count / totalLeads) * 100)}%` }}
+                          />
+                        </div>
+                        <span className="text-zinc-200 font-mono w-6 text-right">{count}</span>
+                      </div>
+                    </div>
+                  ))}
+                {(!projections?.pipeline_stages || Object.keys(projections.pipeline_stages).length === 0) && (
+                  <p className="text-zinc-600 text-sm">No pipeline data yet</p>
+                )}
+              </div>
+            </div>
+
+            {/* Campaign Activity */}
+            <div className="rounded-lg bg-zinc-900/60 border border-zinc-800/60 p-4">
+              <h3 className="text-xs text-zinc-500 uppercase tracking-wider mb-3">Campaign Activity</h3>
+              <div className="space-y-2">
+                <div className="flex justify-between text-sm">
+                  <span className="text-zinc-400">Active campaigns</span>
+                  <span className="text-zinc-200 font-mono">{activeCampaigns}</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-zinc-400">Leads in campaigns</span>
+                  <span className="text-zinc-200 font-mono">{activeEnrollments}</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-zinc-400">Campaign coverage</span>
+                  <span className="text-emerald-400 font-mono">
+                    {totalLeads > 0 ? ((activeEnrollments / totalLeads) * 100).toFixed(0) : 0}%
+                  </span>
+                </div>
+                <div className="border-t border-zinc-800 pt-2 flex justify-between text-sm">
+                  <span className="text-zinc-400">Funded deals</span>
+                  <span className="text-emerald-400 font-mono">{projections?.funded_count || 0}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Bottom Formula Footnote */}
+          <div className="flex items-center gap-2 pt-1">
+            <BarChart3 className="h-3.5 w-3.5 text-zinc-600" />
+            <p className="text-[11px] text-zinc-600">
+              Revenue = Conversions (1%-12%) x Net Profit ($50-$600/lead) &mdash; Text Cost ($0.0083/msg x {avgMsgsPerLead} msgs)
+            </p>
+          </div>
+        </div>
+
+        {/* Deal Stats Grid */}
         {stats && (
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-            <Card 
-              className="cursor-pointer hover:shadow-md hover:border-green-300 transition-all"
-              onClick={() => { setSelectedStat({ title: 'Projected Volume', value: stats.total_funded_volume || 0, type: 'currency', icon: DollarSign, color: 'green', description: 'Total projected deal volume', deals: deals }); setStatDetailOpen(true); }}
-            >
+            <Card className="hover:shadow-md hover:border-green-300 transition-all" data-testid="stat-projected-volume">
               <CardContent className="pt-4">
                 <div className="flex items-center gap-2">
                   <DollarSign className="h-5 w-5 text-green-600" />
@@ -492,10 +499,7 @@ const FundedDeals = () => {
                 </div>
               </CardContent>
             </Card>
-            <Card 
-              className="cursor-pointer hover:shadow-md hover:border-blue-300 transition-all"
-              onClick={() => { setSelectedStat({ title: 'Active Deals', value: stats.active_deals || 0, type: 'number', icon: FileText, color: 'blue', description: 'Currently active deals', deals: deals.filter(d => d.status === 'active') }); setStatDetailOpen(true); }}
-            >
+            <Card className="hover:shadow-md hover:border-blue-300 transition-all" data-testid="stat-active-deals">
               <CardContent className="pt-4">
                 <div className="flex items-center gap-2">
                   <FileText className="h-5 w-5 text-blue-600" />
@@ -506,10 +510,7 @@ const FundedDeals = () => {
                 </div>
               </CardContent>
             </Card>
-            <Card 
-              className="cursor-pointer hover:shadow-md hover:border-purple-300 transition-all"
-              onClick={() => { setSelectedStat({ title: 'Outstanding', value: stats.total_outstanding || 0, type: 'currency', icon: TrendingUp, color: 'purple', description: 'Total amount still owed', deals: deals.filter(d => d.status === 'active') }); setStatDetailOpen(true); }}
-            >
+            <Card className="hover:shadow-md hover:border-purple-300 transition-all" data-testid="stat-outstanding">
               <CardContent className="pt-4">
                 <div className="flex items-center gap-2">
                   <TrendingUp className="h-5 w-5 text-purple-600" />
@@ -520,10 +521,7 @@ const FundedDeals = () => {
                 </div>
               </CardContent>
             </Card>
-            <Card 
-              className="cursor-pointer hover:shadow-md hover:border-emerald-300 transition-all"
-              onClick={() => { setSelectedStat({ title: 'Collected', value: stats.total_collected || 0, type: 'currency', icon: CheckCircle2, color: 'emerald', description: 'Total payments collected', deals: deals }); setStatDetailOpen(true); }}
-            >
+            <Card className="hover:shadow-md hover:border-emerald-300 transition-all" data-testid="stat-collected">
               <CardContent className="pt-4">
                 <div className="flex items-center gap-2">
                   <CheckCircle2 className="h-5 w-5 text-emerald-600" />
@@ -534,10 +532,7 @@ const FundedDeals = () => {
                 </div>
               </CardContent>
             </Card>
-            <Card 
-              className="cursor-pointer hover:shadow-md hover:border-orange-300 transition-all"
-              onClick={() => { setSelectedStat({ title: 'Late Accounts', value: stats.late_accounts || 0, type: 'number', icon: AlertTriangle, color: 'orange', description: 'Accounts with overdue payments', deals: deals.filter(d => d.status === 'late' || d.status === 'delinquent') }); setStatDetailOpen(true); }}
-            >
+            <Card className="hover:shadow-md hover:border-orange-300 transition-all" data-testid="stat-late">
               <CardContent className="pt-4">
                 <div className="flex items-center gap-2">
                   <AlertTriangle className="h-5 w-5 text-orange-600" />
@@ -548,10 +543,7 @@ const FundedDeals = () => {
                 </div>
               </CardContent>
             </Card>
-            <Card 
-              className="cursor-pointer hover:shadow-md hover:border-cyan-300 transition-all"
-              onClick={() => { setSelectedStat({ title: 'Avg Deal Size', value: stats.average_deal_size || 0, type: 'currency', icon: BarChart3, color: 'cyan', description: 'Average projected deal size', deals: deals }); setStatDetailOpen(true); }}
-            >
+            <Card className="hover:shadow-md hover:border-cyan-300 transition-all" data-testid="stat-avg-deal">
               <CardContent className="pt-4">
                 <div className="flex items-center gap-2">
                   <BarChart3 className="h-5 w-5 text-cyan-600" />
@@ -565,48 +557,6 @@ const FundedDeals = () => {
           </div>
         )}
 
-        {/* Stat Detail Dialog */}
-        <Dialog open={statDetailOpen} onOpenChange={setStatDetailOpen}>
-          <DialogContent className="max-w-2xl">
-            <DialogHeader>
-              <DialogTitle className="flex items-center gap-2">
-                {selectedStat && React.createElement(selectedStat.icon, { className: `h-5 w-5 text-${selectedStat.color}-600` })}
-                {selectedStat?.title}
-              </DialogTitle>
-              <DialogDescription>{selectedStat?.description}</DialogDescription>
-            </DialogHeader>
-            <div className="space-y-4">
-              <div className="text-center p-6 bg-secondary/50 rounded-lg">
-                <p className="text-4xl font-bold">
-                  {selectedStat?.type === 'currency' ? `$${(selectedStat?.value || 0).toLocaleString()}` : selectedStat?.value}
-                </p>
-              </div>
-              
-              {selectedStat?.deals?.length > 0 && (
-                <div className="space-y-2">
-                  <p className="font-medium text-sm">Related Deals ({selectedStat.deals.length})</p>
-                  <ScrollArea className="h-48">
-                    <div className="space-y-2">
-                      {selectedStat.deals.slice(0, 10).map(deal => (
-                        <div key={deal.id} className="flex justify-between items-center p-2 bg-secondary/30 rounded">
-                          <div>
-                            <p className="font-medium text-sm">{deal.client_name || deal.business_name}</p>
-                            <p className="text-xs text-muted-foreground">{deal.deal_type}</p>
-                          </div>
-                          <div className="text-right">
-                            <p className="font-medium text-sm">${(deal.funded_amount || 0).toLocaleString()}</p>
-                            <Badge variant="outline" className="text-xs">{deal.status}</Badge>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </ScrollArea>
-                </div>
-              )}
-            </div>
-          </DialogContent>
-        </Dialog>
-
         {/* Milestones Alert */}
         {milestones.length > 0 && (
           <Card className="border-yellow-200 bg-yellow-50">
@@ -615,15 +565,11 @@ const FundedDeals = () => {
                 <Award className="h-6 w-6 text-yellow-600" />
                 <div className="flex-1">
                   <p className="font-medium text-yellow-800">50% Paid Milestones</p>
-                  <p className="text-sm text-yellow-700">
-                    {milestones.length} deal(s) have reached 50% paid
-                  </p>
+                  <p className="text-sm text-yellow-700">{milestones.length} deal(s) have reached 50% paid</p>
                 </div>
                 <div className="flex gap-2">
                   {milestones.slice(0, 2).map(m => (
-                    <Badge key={m.deal_id} className="bg-yellow-200 text-yellow-800">
-                      {m.client_name} - ${m.total_collected.toLocaleString()}
-                    </Badge>
+                    <Badge key={m.deal_id} className="bg-yellow-200 text-yellow-800">{m.client_name} - ${m.total_collected.toLocaleString()}</Badge>
                   ))}
                 </div>
               </div>
@@ -642,13 +588,9 @@ const FundedDeals = () => {
           {/* Overview Tab */}
           <TabsContent value="overview" className="space-y-6">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {/* Collections Queue */}
               <Card>
                 <CardHeader>
-                  <CardTitle className="font-['Outfit'] flex items-center gap-2">
-                    <Bell className="h-5 w-5" />
-                    Collections Queue
-                  </CardTitle>
+                  <CardTitle className="font-['Outfit'] flex items-center gap-2"><Bell className="h-5 w-5" />Collections Queue</CardTitle>
                   <CardDescription>Payments due soon or overdue</CardDescription>
                 </CardHeader>
                 <CardContent>
@@ -669,15 +611,11 @@ const FundedDeals = () => {
                             <div className="text-right">
                               <p className="font-bold">${item.amount.toLocaleString()}</p>
                               <Badge className={getStatusColor(item.status)}>
-                                {item.days_diff < 0 ? `${Math.abs(item.days_diff)} days late` : 
-                                 item.days_diff === 0 ? 'Due today' : 
-                                 `Due in ${item.days_diff} days`}
+                                {item.days_diff < 0 ? `${Math.abs(item.days_diff)} days late` : item.days_diff === 0 ? 'Due today' : `Due in ${item.days_diff} days`}
                               </Badge>
                             </div>
                             <Link to={`/funded/${item.deal_id}`}>
-                              <Button variant="ghost" size="sm">
-                                <ArrowRight className="h-4 w-4" />
-                              </Button>
+                              <Button variant="ghost" size="sm"><ArrowRight className="h-4 w-4" /></Button>
                             </Link>
                           </div>
                         ))}
@@ -687,20 +625,15 @@ const FundedDeals = () => {
                 </CardContent>
               </Card>
 
-              {/* Recent Funded */}
               <Card>
                 <CardHeader>
-                  <CardTitle className="font-['Outfit'] flex items-center gap-2">
-                    <TrendingUp className="h-5 w-5" />
-                    Recent Funded Deals
-                  </CardTitle>
+                  <CardTitle className="font-['Outfit'] flex items-center gap-2"><TrendingUp className="h-5 w-5" />Recent Funded Deals</CardTitle>
                   <CardDescription>Latest deals that funded</CardDescription>
                 </CardHeader>
                 <CardContent>
                   {recentDeals.length === 0 ? (
                     <div className="text-center py-8 text-muted-foreground">
-                      <FileText className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                      <p>No funded deals yet</p>
+                      <FileText className="h-8 w-8 mx-auto mb-2 opacity-50" /><p>No funded deals yet</p>
                     </div>
                   ) : (
                     <ScrollArea className="h-[300px]">
@@ -725,17 +658,12 @@ const FundedDeals = () => {
             </div>
           </TabsContent>
 
-          {/* Funded Deals Tab */}
+          {/* Deals Tab */}
           <TabsContent value="deals" className="space-y-4">
             <div className="flex items-center gap-4">
               <div className="relative flex-1 max-w-md">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder="Search deals..."
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  className="pl-10"
-                />
+                <Input placeholder="Search deals..." value={search} onChange={(e) => setSearch(e.target.value)} className="pl-10" />
               </div>
             </div>
 
@@ -753,19 +681,11 @@ const FundedDeals = () => {
               </Card>
             ) : (
               <div className="overflow-x-auto">
-                {/* Bulk Actions Bar */}
                 {selectedDeals.length > 0 && (
                   <div className="flex items-center justify-between p-3 bg-muted/50 border-b">
-                    <span className="text-sm font-medium">
-                      {selectedDeals.length} deal(s) selected
-                    </span>
-                    <Button 
-                      variant="destructive" 
-                      size="sm"
-                      onClick={() => setBulkDeleteDialogOpen(true)}
-                    >
-                      <Trash2 className="h-4 w-4 mr-2" />
-                      Delete Selected
+                    <span className="text-sm font-medium">{selectedDeals.length} deal(s) selected</span>
+                    <Button variant="destructive" size="sm" onClick={() => setBulkDeleteDialogOpen(true)}>
+                      <Trash2 className="h-4 w-4 mr-2" />Delete Selected
                     </Button>
                   </div>
                 )}
@@ -773,10 +693,7 @@ const FundedDeals = () => {
                   <thead>
                     <tr className="border-b bg-muted/50">
                       <th className="p-3 w-10">
-                        <Checkbox
-                          checked={selectedDeals.length === filteredDeals.length && filteredDeals.length > 0}
-                          onCheckedChange={toggleSelectAll}
-                        />
+                        <Checkbox checked={selectedDeals.length === filteredDeals.length && filteredDeals.length > 0} onCheckedChange={() => setSelectedDeals(prev => prev.length === filteredDeals.length ? [] : filteredDeals.map(d => d.id))} />
                       </th>
                       <th className="text-left p-3 font-medium">Client</th>
                       <th className="text-left p-3 font-medium">Deal Type</th>
@@ -792,63 +709,24 @@ const FundedDeals = () => {
                   <tbody>
                     {filteredDeals.map((deal) => (
                       <tr key={deal.id} className={`border-b hover:bg-muted/30 ${selectedDeals.includes(deal.id) ? 'bg-primary/5' : ''}`}>
-                        <td className="p-3">
-                          <Checkbox
-                            checked={selectedDeals.includes(deal.id)}
-                            onCheckedChange={() => toggleSelectDeal(deal.id)}
-                          />
-                        </td>
-                        <td className="p-3">
-                          <div>
-                            <p className="font-medium">{deal.client_name}</p>
-                            <p className="text-xs text-muted-foreground">{deal.business_name}</p>
-                          </div>
-                        </td>
+                        <td className="p-3"><Checkbox checked={selectedDeals.includes(deal.id)} onCheckedChange={() => toggleSelectDeal(deal.id)} /></td>
+                        <td className="p-3"><p className="font-medium">{deal.client_name}</p><p className="text-xs text-muted-foreground">{deal.business_name}</p></td>
                         <td className="p-3">{deal.deal_type}</td>
                         <td className="p-3 text-right font-medium">${deal.funded_amount?.toLocaleString()}</td>
                         <td className="p-3 text-right">${deal.payback_amount?.toLocaleString()}</td>
                         <td className="p-3 text-right text-green-600">${deal.total_collected?.toLocaleString()}</td>
-                        <td className="p-3 text-center">
-                          <Badge className={deal.percent_paid >= 50 ? "bg-green-100 text-green-700" : "bg-gray-100"}>
-                            {deal.percent_paid}%
-                          </Badge>
-                        </td>
-                        <td className="p-3 text-center">
-                          <Badge className={getStatusColor(deal.payment_status)}>
-                            {deal.payment_status}
-                          </Badge>
-                        </td>
+                        <td className="p-3 text-center"><Badge className={deal.percent_paid >= 50 ? "bg-green-100 text-green-700" : "bg-gray-100"}>{deal.percent_paid}%</Badge></td>
+                        <td className="p-3 text-center"><Badge className={getStatusColor(deal.payment_status)}>{deal.payment_status}</Badge></td>
                         <td className="p-3">{deal.assigned_rep_name || '-'}</td>
                         <td className="p-3">
                           <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button variant="ghost" size="sm">
-                                <MoreHorizontal className="h-4 w-4" />
-                              </Button>
-                            </DropdownMenuTrigger>
+                            <DropdownMenuTrigger asChild><Button variant="ghost" size="sm"><MoreHorizontal className="h-4 w-4" /></Button></DropdownMenuTrigger>
                             <DropdownMenuContent align="end">
-                              <Link to={`/funded/${deal.id}`}>
-                                <DropdownMenuItem>
-                                  <ExternalLink className="h-4 w-4 mr-2" />
-                                  View Details
-                                </DropdownMenuItem>
-                              </Link>
-                              <Link to={`/funded/${deal.id}`}>
-                                <DropdownMenuItem>
-                                  <Edit className="h-4 w-4 mr-2" />
-                                  Edit Deal
-                                </DropdownMenuItem>
-                              </Link>
+                              <Link to={`/funded/${deal.id}`}><DropdownMenuItem><ExternalLink className="h-4 w-4 mr-2" />View Details</DropdownMenuItem></Link>
+                              <Link to={`/funded/${deal.id}`}><DropdownMenuItem><Edit className="h-4 w-4 mr-2" />Edit Deal</DropdownMenuItem></Link>
                               <DropdownMenuSeparator />
-                              <DropdownMenuItem 
-                                onSelect={() => {
-                                  setDealToDelete(deal);
-                                  setDeleteDialogOpen(true);
-                                }}
-                                className="text-destructive cursor-pointer"
-                              >
-                                <Trash2 className="h-4 w-4 mr-2" />
-                                Delete Deal
+                              <DropdownMenuItem onSelect={() => { setDealToDelete(deal); setDeleteDialogOpen(true); }} className="text-destructive cursor-pointer">
+                                <Trash2 className="h-4 w-4 mr-2" />Delete Deal
                               </DropdownMenuItem>
                             </DropdownMenuContent>
                           </DropdownMenu>
@@ -864,35 +742,14 @@ const FundedDeals = () => {
           {/* Collections Tab */}
           <TabsContent value="collections" className="space-y-4">
             <Card>
-              <CardHeader>
-                <CardTitle>Collections Summary</CardTitle>
-              </CardHeader>
+              <CardHeader><CardTitle>Collections Summary</CardTitle></CardHeader>
               <CardContent>
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-                  <div className="p-4 rounded-lg bg-blue-50">
-                    <p className="text-sm text-blue-600">Auto-Cleared Today</p>
-                    <p className="text-2xl font-bold text-blue-700">
-                      {collectionsQueue.filter(q => q.status === 'cleared').length}
-                    </p>
-                  </div>
-                  <div className="p-4 rounded-lg bg-red-50">
-                    <p className="text-sm text-red-600">Payments Overdue</p>
-                    <p className="text-2xl font-bold text-red-700">
-                      {collectionsQueue.filter(q => q.days_diff < 0).length}
-                    </p>
-                  </div>
-                  <div className="p-4 rounded-lg bg-yellow-50">
-                    <p className="text-sm text-yellow-600">Due Today</p>
-                    <p className="text-2xl font-bold text-yellow-700">
-                      {collectionsQueue.filter(q => q.days_diff === 0).length}
-                    </p>
-                  </div>
-                  <div className="p-4 rounded-lg bg-green-50">
-                    <p className="text-sm text-green-600">50% Milestones</p>
-                    <p className="text-2xl font-bold text-green-700">{milestones.length}</p>
-                  </div>
+                  <div className="p-4 rounded-lg bg-blue-50"><p className="text-sm text-blue-600">Auto-Cleared Today</p><p className="text-2xl font-bold text-blue-700">{collectionsQueue.filter(q => q.status === 'cleared').length}</p></div>
+                  <div className="p-4 rounded-lg bg-red-50"><p className="text-sm text-red-600">Payments Overdue</p><p className="text-2xl font-bold text-red-700">{collectionsQueue.filter(q => q.days_diff < 0).length}</p></div>
+                  <div className="p-4 rounded-lg bg-yellow-50"><p className="text-sm text-yellow-600">Due Today</p><p className="text-2xl font-bold text-yellow-700">{collectionsQueue.filter(q => q.days_diff === 0).length}</p></div>
+                  <div className="p-4 rounded-lg bg-green-50"><p className="text-sm text-green-600">50% Milestones</p><p className="text-2xl font-bold text-green-700">{milestones.length}</p></div>
                 </div>
-
                 <h3 className="font-medium mb-3">Action Required</h3>
                 {collectionsQueue.length === 0 ? (
                   <p className="text-muted-foreground text-center py-8">No collections actions needed</p>
@@ -902,23 +759,14 @@ const FundedDeals = () => {
                       <div key={i} className="flex items-center justify-between p-3 rounded-lg border">
                         <div className="flex items-center gap-3">
                           <div className={`h-2 w-2 rounded-full ${item.days_diff < 0 ? 'bg-red-500' : item.days_diff === 0 ? 'bg-yellow-500' : 'bg-blue-500'}`} />
-                          <div>
-                            <p className="font-medium">{item.client_name}</p>
-                            <p className="text-sm text-muted-foreground">
-                              ${item.amount.toLocaleString()} • Payment #{item.payment_number}
-                            </p>
-                          </div>
+                          <div><p className="font-medium">{item.client_name}</p><p className="text-sm text-muted-foreground">${item.amount.toLocaleString()} - Payment #{item.payment_number}</p></div>
                         </div>
                         <div className="flex items-center gap-2">
                           <Badge className={getStatusColor(item.status)}>
-                            {item.days_diff < 0 ? `${Math.abs(item.days_diff)} days late` : 
-                             item.days_diff === 0 ? 'Due today' : 
-                             `Due in ${item.days_diff} days`}
+                            {item.days_diff < 0 ? `${Math.abs(item.days_diff)} days late` : item.days_diff === 0 ? 'Due today' : `Due in ${item.days_diff} days`}
                           </Badge>
                           <Button variant="outline" size="sm">Send Reminder</Button>
-                          <Link to={`/funded/${item.deal_id}`}>
-                            <Button variant="ghost" size="sm">View</Button>
-                          </Link>
+                          <Link to={`/funded/${item.deal_id}`}><Button variant="ghost" size="sm">View</Button></Link>
                         </div>
                       </div>
                     ))}
@@ -931,9 +779,7 @@ const FundedDeals = () => {
           {/* Analytics Tab */}
           <TabsContent value="analytics" className="space-y-4">
             <Card>
-              <CardHeader>
-                <CardTitle>Book Value Summary</CardTitle>
-              </CardHeader>
+              <CardHeader><CardTitle>Book Value Summary</CardTitle></CardHeader>
               <CardContent>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                   <div className="p-6 rounded-lg bg-gradient-to-br from-green-50 to-emerald-50 border border-green-200">
@@ -964,34 +810,28 @@ const FundedDeals = () => {
           <AlertDialogHeader>
             <AlertDialogTitle>Delete Funded Deal</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to delete this funded deal for <strong>{dealToDelete?.client_name}</strong>? 
-              This will permanently remove all payment records and cannot be undone.
+              Are you sure you want to delete this funded deal for <strong>{dealToDelete?.client_name}</strong>? This will permanently remove all payment records and cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel onClick={() => setDealToDelete(null)}>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDeleteDeal} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-              Delete
-            </AlertDialogAction>
+            <AlertDialogAction onClick={handleDeleteDeal} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">Delete</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* Bulk Delete Confirmation Dialog */}
+      {/* Bulk Delete Dialog */}
       <AlertDialog open={bulkDeleteDialogOpen} onOpenChange={setBulkDeleteDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Delete {selectedDeals.length} Funded Deal(s)</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to delete {selectedDeals.length} funded deal(s)? 
-              This will permanently remove all payment records and cannot be undone.
+              Are you sure you want to delete {selectedDeals.length} funded deal(s)? This cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleBulkDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-              Delete {selectedDeals.length} Deal(s)
-            </AlertDialogAction>
+            <AlertDialogAction onClick={handleBulkDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">Delete {selectedDeals.length} Deal(s)</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

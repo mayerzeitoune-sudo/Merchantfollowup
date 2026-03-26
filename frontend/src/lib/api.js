@@ -89,7 +89,8 @@ export const enhancedCampaignsApi = {
   launchPrebuilt: (type, data) => axios.post(`${API}/campaigns/prebuilt/${type}/launch`, data),
   removeClient: (campaignId, clientId) => axios.post(`${API}/campaigns/${campaignId}/remove-client/${clientId}`),
   getClientActiveCampaigns: (clientId) => axios.get(`${API}/campaigns/client/${clientId}/active`),
-  processDue: () => axios.post(`${API}/campaigns/process-due`)
+  processDue: () => axios.post(`${API}/campaigns/process-due`),
+  getSystemProjections: () => axios.get(`${API}/projections/system`)
 };
 
 // SMS Providers API

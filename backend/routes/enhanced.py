@@ -1455,6 +1455,48 @@ async def update_client_pipeline(
 
 from campaign_templates import ALL_PREBUILT_CAMPAIGNS
 
+# ============== SYSTEM-WIDE PROJECTIONS ==============
+
+@router.get("/projections/system")
+async def get_system_projections(current_user: dict = Depends(get_current_user)):
+    """Get system-wide projection data based on total leads in the system"""
+    from server import get_accessible_user_ids
+    accessible_ids = await get_accessible_user_ids(current_user)
+    
+    total_leads = await db.clients.count_documents({"user_id": {"$in": accessible_ids}})
+    
+    # Pipeline stage breakdown
+    pipeline_stages = {}
+    cursor = db.clients.aggregate([
+        {"$match": {"user_id": {"$in": accessible_ids}}},
+        {"$group": {"_id": "$pipeline_stage", "count": {"$sum": 1}}}
+    ])
+    async for doc in cursor:
+        pipeline_stages[doc["_id"] or "unknown"] = doc["count"]
+    
+    # Active campaigns count
+    active_campaigns = await db.enhanced_campaigns.count_documents({
+        "user_id": {"$in": accessible_ids},
+        "status": "active"
+    })
+    
+    # Total enrolled in active campaigns
+    active_enrollments = await db.campaign_enrollments.count_documents({
+        "user_id": {"$in": accessible_ids},
+        "status": "active"
+    })
+    
+    # Funded deals stats
+    funded_count = pipeline_stages.get("funded", 0)
+    
+    return {
+        "total_leads": total_leads,
+        "pipeline_stages": pipeline_stages,
+        "active_campaigns": active_campaigns,
+        "active_enrollments": active_enrollments,
+        "funded_count": funded_count
+    }
+
 @router.get("/campaigns/prebuilt")
 async def get_prebuilt_campaigns(current_user: dict = Depends(get_current_user)):
     """List all available pre-built campaign templates"""
@@ -1509,8 +1551,18 @@ async def launch_prebuilt_campaign(
         "type": "prebuilt",
         "target_tag": template["target_tag"],
         "steps": template["steps"],
+        "triggers": [],
+        "stop_on_reply": True,
+        "target_tags": [template["target_tag"]],
         "status": "active",
+        "duration_days": 365,
+        "use_funded_term": False,
+        "contacts_enrolled": 0,
+        "contacts_completed": 0,
+        "total_messages_sent": 0,
+        "total_replies": 0,
         "created_at": now,
+        "updated_at": now,
         "started_at": now
     }
     
@@ -1549,6 +1601,13 @@ async def launch_prebuilt_campaign(
         }
         await db.campaign_enrollments.insert_one(enrollment)
         enrolled_count += 1
+    
+    # Update enrolled count on the campaign
+    if enrolled_count > 0:
+        await db.enhanced_campaigns.update_one(
+            {"id": campaign_id},
+            {"$set": {"contacts_enrolled": enrolled_count}}
+        )
     
     # Clean up _id from campaign_doc
     if "_id" in campaign_doc:
