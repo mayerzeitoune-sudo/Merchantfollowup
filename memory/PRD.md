@@ -2,7 +2,28 @@
 
 ## Implementation Status - March 26, 2026
 
-### COMPLETED (This Session)
+### COMPLETED (This Session - Fork 2)
+
+#### Bug Fix: Launched Bulk Campaigns Not Showing as "Live" (P0)
+- **Root cause**: `launch_prebuilt_campaign` in `backend/routes/enhanced.py` was creating campaign documents missing `updated_at`, `triggers`, `stop_on_reply`, `target_tags`, `contacts_enrolled`, `contacts_completed`, `total_messages_sent`, `total_replies` fields
+- **Impact**: `EnhancedCampaignResponse` Pydantic model required `updated_at` (no default), causing 500 validation error on `GET /api/campaigns/enhanced` — breaking the entire campaigns list
+- **Fix**: Added all required fields to the launch endpoint; patched existing broken documents in MongoDB
+- **Status**: VERIFIED by testing agent (iteration_14.json) — 100% pass rate
+
+#### Projections Page Overhaul (P0)
+- Updated `FundedDeals.js` (route `/funded`, sidebar label "Projections") with premium dark financial panel
+- System-wide Earning Projections panel shows:
+  - Total Leads (system-wide pipeline count)
+  - Estimated Conversions (L × 1% to L × 12%)
+  - Projected Revenue (conversions × $50 to $600 per lead)
+  - Net Profit (revenue minus messaging costs)
+- Detailed breakdown cards: Cost Breakdown ($0.0083/text, 54 avg msgs, $0.45/lead), Pipeline Summary, Campaign Activity
+- Formula footnote at bottom of panel
+- New backend endpoint: `GET /api/projections/system` in `backend/routes/enhanced.py`
+- New API call: `enhancedCampaignsApi.getSystemProjections()` in `frontend/src/lib/api.js`
+- **Status**: VERIFIED by testing agent (iteration_14.json) — 100% pass rate
+
+### COMPLETED (Previous Session)
 
 #### Drip Campaign System — New Lead (54 messages)
 - Daily (Days 1-30) → Every other day (10 msgs) → Weekly (8 msgs) → Monthly (6 msgs)
@@ -13,33 +34,23 @@
 - Reply detection: popup in Inbox "Response recorded, remove from campaign?" → changes tag to "Responded"
 
 #### Drip Campaign System — Funded Deals (3 campaigns)
-- **Short Term (8-12 weeks)**: 12 weekly messages, uses `{first_name}` and `{company_name}`
+- **Short Term (8-12 weeks)**: 12 weekly messages
 - **Medium Term (12-24 weeks)**: 24 weekly messages
 - **Long Term (24-52 weeks)**: 52 weekly messages
-- Prompt when deal moves to "Funded": select deal type → confirm → enrolled
 
 #### Phone Number Deletion Overhaul
-- Delete button removed from Phone Numbers page
 - Moved to Settings > Phone Numbers tab with "Request Number Deletion" flow
-- Select number → Request Deletion → "Expect admin call within 24 hours"
 
 #### Auto-Suggest Buy Number by Area Code
-- When selecting a client in Inbox whose area code doesn't match any owned number
-- Popup suggests buying a local number with pricing
+- Popup suggests buying a local number when client area code doesn't match owned numbers
 
 #### Added `amount_requested` Field to Client Model
-- Available in create/update/display
-- Used in New Lead drip campaign templates
 
 #### Removed Lead Revival Page
-- Removed from navigation sidebar and App routes
 
-### Previous Session Completed
-- Phone number assignment bug fix (org_id propagation, unassignment, admin visibility)
-- "You don't own this phone number" SMS error fix
-- Phone number purchasing for all roles (admin + agent)
-- Org admin toggle for allow_rep_purchases + monthly limit
-- Registration form made fully optional
+#### Phone number assignment bug fix, SMS ownership fix, purchasing for all roles
+#### Registration form made fully optional
+#### Org admin toggle for allow_rep_purchases + monthly limit
 
 ### Technical Stack
 - **Backend**: FastAPI + MongoDB (Motor async driver)
@@ -47,21 +58,24 @@
 - **Auth**: JWT with role-based access (org_admin, admin, team_leader, agent)
 
 ### Key Files
+- `backend/routes/enhanced.py`: Campaigns, projections, analytics endpoints
 - `backend/campaign_templates.py`: All 54+88 pre-built campaign templates
-- `backend/routes/enhanced.py`: Campaign launch, enrollment, removal endpoints
-- `frontend/src/pages/DripCampaigns.js`: Bulk Templated Campaign UI
+- `frontend/src/pages/FundedDeals.js`: Projections page with system-wide earning forecasts
+- `frontend/src/pages/DripCampaigns.js`: Campaign management, bulk launch
 - `frontend/src/pages/Inbox.js`: Campaign reply popup + area code suggestion
+- `frontend/src/lib/api.js`: All API definitions
 
 ### Prioritized Backlog
 
 **P0 - Critical**
 - Configure live Twilio credentials for real SMS delivery
 - Campaign message scheduler (background worker to send messages on schedule)
-- Refactor `server.py` monolith into modular route files
+- Refactor `server.py` monolith into modular route files (~5400 lines)
 
 **P1 - Important**
-- Support Email UI
+- Support Email UI on Settings page
 - Email service integration for OTPs
+- Twilio Voice call functionality
 - Twilio A2P 10DLC registration
 - Bulk User Upload
 - Real-time notifications (WebSocket)
@@ -73,4 +87,7 @@
 ### Known Issues
 - **SMS Sending**: MOCKED — Twilio credentials not configured
 - **Campaign Scheduler**: Messages stored but background sending not active yet
-- **Monolithic server.py**: ~5000 lines, needs refactoring
+- **Monolithic server.py**: ~5400 lines, needs refactoring
+
+### Test Reports
+- `/app/test_reports/iteration_14.json` — All tests passed (7/7 backend, all frontend features verified)
