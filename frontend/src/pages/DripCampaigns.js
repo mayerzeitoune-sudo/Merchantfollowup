@@ -1082,13 +1082,17 @@ const DripCampaigns = () => {
                         <div>
                           <h4 className="font-medium mb-4">Campaign Steps</h4>
                           <div className="relative">
-                            {campaign.steps?.map((step, index) => (
+                            {campaign.steps?.map((step, index) => {
+                              const ch = step.channel || 'sms';
+                              const dayNum = step.delay_days ?? step.day ?? 0;
+                              const label = step.label || `Day ${dayNum}`;
+                              return (
                               <div key={index} className="flex gap-4 mb-4 last:mb-0">
                                 <div className="flex flex-col items-center">
                                   <div className={`h-8 w-8 rounded-full flex items-center justify-center ${
-                                    step.channel === 'sms' ? 'bg-green-100' : 'bg-purple-100'
+                                    ch === 'sms' ? 'bg-green-100' : 'bg-purple-100'
                                   }`}>
-                                    {step.channel === 'sms' ? (
+                                    {ch === 'sms' ? (
                                       <MessageSquare className="h-4 w-4 text-green-600" />
                                     ) : (
                                       <Mail className="h-4 w-4 text-purple-600" />
@@ -1100,15 +1104,17 @@ const DripCampaigns = () => {
                                 </div>
                                 <div className="flex-1 pb-4">
                                   <div className="flex items-center gap-2 mb-1">
-                                    <Badge variant="outline">Day {step.delay_days}</Badge>
+                                    <Badge variant="outline">{label}</Badge>
                                     <span className="text-sm text-muted-foreground">
-                                      {step.channel.toUpperCase()}
+                                      {ch.toUpperCase()}
                                     </span>
+                                    {step.phase && <Badge variant="secondary" className="text-xs">{step.phase}</Badge>}
                                   </div>
                                   <p className="text-sm">{step.message || 'No message set'}</p>
                                 </div>
                               </div>
-                            ))}
+                              );
+                            })}
                           </div>
                         </div>
                         
@@ -1443,40 +1449,40 @@ const DripCampaigns = () => {
                   const netLow = revLow - totalCost;
                   const netHigh = revHigh - totalCost;
                   return (
-                    <div className="rounded-lg border border-zinc-800 bg-zinc-950 p-4 space-y-3" data-testid="campaign-cost-preview">
+                    <div className="rounded-lg border border-zinc-200 bg-white p-4 space-y-3 shadow-sm" data-testid="campaign-cost-preview">
                       <div className="flex items-center gap-2">
-                        <BarChart3 className="h-4 w-4 text-emerald-400" />
-                        <h4 className="text-sm font-semibold text-zinc-100">Estimated Costs & Projected Returns</h4>
+                        <BarChart3 className="h-4 w-4 text-emerald-600" />
+                        <h4 className="text-sm font-semibold text-zinc-900">Estimated Costs & Projected Returns</h4>
                       </div>
                       <div className="grid grid-cols-2 gap-2">
-                        <div className="rounded bg-zinc-900 border border-zinc-800 p-3">
+                        <div className="rounded bg-zinc-50 border border-zinc-200 p-3">
                           <p className="text-[10px] text-zinc-500 uppercase tracking-wider">Total Texts</p>
-                          <p className="text-lg font-bold text-zinc-100 font-mono">{totalTexts.toLocaleString()}</p>
-                          <p className="text-[10px] text-zinc-600">{matchingClients} leads x {totalMsgs} msgs</p>
+                          <p className="text-lg font-bold text-zinc-900 font-mono">{totalTexts.toLocaleString()}</p>
+                          <p className="text-[10px] text-zinc-400">{matchingClients} leads x {totalMsgs} msgs</p>
                         </div>
-                        <div className="rounded bg-zinc-900 border border-zinc-800 p-3">
+                        <div className="rounded bg-zinc-50 border border-zinc-200 p-3">
                           <p className="text-[10px] text-zinc-500 uppercase tracking-wider">Campaign Cost</p>
-                          <p className="text-lg font-bold text-red-400 font-mono">${totalCost.toFixed(2)}</p>
-                          <p className="text-[10px] text-zinc-600">${costPerText}/text (8x Twilio)</p>
+                          <p className="text-lg font-bold text-red-500 font-mono">${totalCost.toFixed(2)}</p>
+                          <p className="text-[10px] text-zinc-400">${costPerText}/text (8x Twilio)</p>
                         </div>
-                        <div className="rounded bg-zinc-900 border border-zinc-800 p-3">
+                        <div className="rounded bg-zinc-50 border border-zinc-200 p-3">
                           <p className="text-[10px] text-zinc-500 uppercase tracking-wider">Est. Conversions</p>
-                          <p className="text-lg font-bold text-amber-400 font-mono">{convLow} <span className="text-xs font-normal text-zinc-600">to</span> {convHigh}</p>
-                          <p className="text-[10px] text-zinc-600">1% - 12% conversion rate</p>
+                          <p className="text-lg font-bold text-amber-600 font-mono">{convLow} <span className="text-xs font-normal text-zinc-400">to</span> {convHigh}</p>
+                          <p className="text-[10px] text-zinc-400">1% - 12% conversion rate</p>
                         </div>
-                        <div className="rounded bg-zinc-900 border border-zinc-800 p-3">
+                        <div className="rounded bg-zinc-50 border border-zinc-200 p-3">
                           <p className="text-[10px] text-zinc-500 uppercase tracking-wider">Projected Revenue</p>
-                          <p className="text-lg font-bold text-emerald-400 font-mono">${revLow.toLocaleString()} <span className="text-xs font-normal text-zinc-600">to</span> ${revHigh.toLocaleString()}</p>
-                          <p className="text-[10px] text-zinc-600">$50 - $600 per converted lead</p>
+                          <p className="text-lg font-bold text-emerald-600 font-mono">${revLow.toLocaleString()} <span className="text-xs font-normal text-zinc-400">to</span> ${revHigh.toLocaleString()}</p>
+                          <p className="text-[10px] text-zinc-400">$50 - $600 per converted lead</p>
                         </div>
                       </div>
-                      <div className="flex items-center justify-between rounded bg-zinc-900/60 border border-emerald-900/30 p-3">
+                      <div className="flex items-center justify-between rounded bg-emerald-50 border border-emerald-200 p-3">
                         <div>
                           <p className="text-[10px] text-zinc-500 uppercase tracking-wider">Estimated Net Return</p>
-                          <p className="text-[10px] text-zinc-600 mt-0.5">Revenue minus campaign text cost</p>
+                          <p className="text-[10px] text-zinc-400 mt-0.5">Revenue minus campaign text cost</p>
                         </div>
-                        <p className="text-xl font-bold text-green-400 font-mono">
-                          ${Math.max(0, netLow).toLocaleString()} <span className="text-xs font-normal text-zinc-600">to</span> ${Math.max(0, netHigh).toLocaleString()}
+                        <p className="text-xl font-bold text-green-600 font-mono">
+                          ${Math.max(0, netLow).toLocaleString()} <span className="text-xs font-normal text-zinc-400">to</span> ${Math.max(0, netHigh).toLocaleString()}
                         </p>
                       </div>
                     </div>

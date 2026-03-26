@@ -335,18 +335,18 @@ const FundedDeals = () => {
         </div>
 
         {/* System-Wide Projections Panel */}
-        <div className="rounded-xl border border-zinc-800 bg-zinc-950 p-6 space-y-5" data-testid="projections-panel">
+        <div className="rounded-xl border border-zinc-200 bg-white p-6 space-y-5 shadow-sm" data-testid="projections-panel">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="h-10 w-10 rounded-lg bg-emerald-500/10 flex items-center justify-center">
-                <TrendingUp className="h-5 w-5 text-emerald-400" />
+              <div className="h-10 w-10 rounded-lg bg-emerald-50 flex items-center justify-center">
+                <TrendingUp className="h-5 w-5 text-emerald-600" />
               </div>
               <div>
-                <h2 className="text-lg font-semibold text-zinc-100 font-['Outfit']">Earning Projections</h2>
+                <h2 className="text-lg font-semibold text-zinc-900 font-['Outfit']">Earning Projections</h2>
                 <p className="text-xs text-zinc-500">Based on {totalLeads} total leads in your system</p>
               </div>
             </div>
-            <Badge className="bg-emerald-500/10 text-emerald-400 border-emerald-500/20 hover:bg-emerald-500/10">
+            <Badge className="bg-emerald-50 text-emerald-600 border-emerald-200 hover:bg-emerald-50">
               Live
             </Badge>
           </div>
@@ -354,124 +354,124 @@ const FundedDeals = () => {
           {/* KPI Cards Row */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
             {/* Total Leads */}
-            <div className="rounded-lg bg-zinc-900/80 border border-zinc-800 p-4" data-testid="kpi-total-leads">
+            <div className="rounded-lg bg-zinc-50 border border-zinc-200 p-4" data-testid="kpi-total-leads">
               <div className="flex items-center gap-2 mb-2">
-                <Users className="h-4 w-4 text-blue-400" />
+                <Users className="h-4 w-4 text-blue-500" />
                 <span className="text-xs text-zinc-500 uppercase tracking-wider">Total Leads</span>
               </div>
-              <p className="text-2xl font-bold text-zinc-100 font-['Outfit']">{totalLeads.toLocaleString()}</p>
-              <p className="text-xs text-zinc-600 mt-1">System-wide pipeline</p>
+              <p className="text-2xl font-bold text-zinc-900 font-['Outfit']">{totalLeads.toLocaleString()}</p>
+              <p className="text-xs text-zinc-400 mt-1">System-wide pipeline</p>
             </div>
 
             {/* Estimated Conversions */}
-            <div className="rounded-lg bg-zinc-900/80 border border-zinc-800 p-4" data-testid="kpi-est-conversions">
+            <div className="rounded-lg bg-zinc-50 border border-zinc-200 p-4" data-testid="kpi-est-conversions">
               <div className="flex items-center gap-2 mb-2">
-                <Target className="h-4 w-4 text-amber-400" />
+                <Target className="h-4 w-4 text-amber-500" />
                 <span className="text-xs text-zinc-500 uppercase tracking-wider">Est. Conversions</span>
               </div>
-              <p className="text-2xl font-bold text-zinc-100 font-['Outfit']">
-                {convLow} <span className="text-sm font-normal text-zinc-600">to</span> {convHigh}
+              <p className="text-2xl font-bold text-zinc-900 font-['Outfit']">
+                {convLow} <span className="text-sm font-normal text-zinc-400">to</span> {convHigh}
               </p>
-              <p className="text-xs text-zinc-600 mt-1">1% - 12% conversion rate</p>
+              <p className="text-xs text-zinc-400 mt-1">1% - 12% conversion rate</p>
             </div>
 
             {/* Projected Revenue */}
-            <div className="rounded-lg bg-zinc-900/80 border border-zinc-800 p-4" data-testid="kpi-projected-revenue">
+            <div className="rounded-lg bg-zinc-50 border border-zinc-200 p-4" data-testid="kpi-projected-revenue">
               <div className="flex items-center gap-2 mb-2">
-                <DollarSign className="h-4 w-4 text-emerald-400" />
+                <DollarSign className="h-4 w-4 text-emerald-500" />
                 <span className="text-xs text-zinc-500 uppercase tracking-wider">Projected Revenue</span>
               </div>
-              <p className="text-2xl font-bold text-emerald-400 font-['Outfit']">
-                {fmt(profitLow)} <span className="text-sm font-normal text-zinc-600">to</span> {fmt(profitHigh)}
+              <p className="text-2xl font-bold text-emerald-600 font-['Outfit']">
+                {fmt(profitLow)} <span className="text-sm font-normal text-zinc-400">to</span> {fmt(profitHigh)}
               </p>
-              <p className="text-xs text-zinc-600 mt-1">$50 - $600 per converted lead</p>
+              <p className="text-xs text-zinc-400 mt-1">$50 - $600 per converted lead</p>
             </div>
 
             {/* Net Profit (after text costs) */}
-            <div className="rounded-lg bg-zinc-900/80 border border-zinc-800 p-4" data-testid="kpi-net-profit">
+            <div className="rounded-lg bg-zinc-50 border border-zinc-200 p-4" data-testid="kpi-net-profit">
               <div className="flex items-center gap-2 mb-2">
-                <Zap className="h-4 w-4 text-green-400" />
+                <Zap className="h-4 w-4 text-green-500" />
                 <span className="text-xs text-zinc-500 uppercase tracking-wider">Net Profit</span>
               </div>
-              <p className="text-2xl font-bold text-green-400 font-['Outfit']">
-                {fmt(Math.max(0, netProfitLow))} <span className="text-sm font-normal text-zinc-600">to</span> {fmt(Math.max(0, netProfitHigh))}
+              <p className="text-2xl font-bold text-green-600 font-['Outfit']">
+                {fmt(Math.max(0, netProfitLow))} <span className="text-sm font-normal text-zinc-400">to</span> {fmt(Math.max(0, netProfitHigh))}
               </p>
-              <p className="text-xs text-zinc-600 mt-1">After messaging costs</p>
+              <p className="text-xs text-zinc-400 mt-1">After messaging costs</p>
             </div>
           </div>
 
           {/* Detailed Breakdown */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
             {/* Cost Breakdown */}
-            <div className="rounded-lg bg-zinc-900/60 border border-zinc-800/60 p-4">
+            <div className="rounded-lg bg-zinc-50/80 border border-zinc-100 p-4">
               <h3 className="text-xs text-zinc-500 uppercase tracking-wider mb-3">Cost Breakdown</h3>
               <div className="space-y-2">
                 <div className="flex justify-between text-sm">
-                  <span className="text-zinc-400">Cost per text</span>
-                  <span className="text-zinc-200 font-mono">$0.0632</span>
+                  <span className="text-zinc-500">Cost per text</span>
+                  <span className="text-zinc-800 font-mono">$0.0632</span>
                 </div>
                 <div className="flex justify-between text-sm">
-                  <span className="text-zinc-400">Avg texts per campaign</span>
-                  <span className="text-zinc-200 font-mono">{avgMsgsPerLead}</span>
+                  <span className="text-zinc-500">Avg texts per campaign</span>
+                  <span className="text-zinc-800 font-mono">{avgMsgsPerLead}</span>
                 </div>
                 <div className="flex justify-between text-sm">
-                  <span className="text-zinc-400">Cost per lead contacted</span>
-                  <span className="text-zinc-200 font-mono">${(avgMsgsPerLead * textCost).toFixed(2)}</span>
+                  <span className="text-zinc-500">Cost per lead contacted</span>
+                  <span className="text-zinc-800 font-mono">${(avgMsgsPerLead * textCost).toFixed(2)}</span>
                 </div>
-                <div className="border-t border-zinc-800 pt-2 flex justify-between text-sm">
-                  <span className="text-zinc-400">Total text spend range</span>
-                  <span className="text-red-400 font-mono">${totalTextCostLow.toFixed(0)} - ${totalTextCostHigh.toFixed(0)}</span>
+                <div className="border-t border-zinc-200 pt-2 flex justify-between text-sm">
+                  <span className="text-zinc-500">Total text spend range</span>
+                  <span className="text-red-500 font-mono">${totalTextCostLow.toFixed(0)} - ${totalTextCostHigh.toFixed(0)}</span>
                 </div>
               </div>
             </div>
 
             {/* Pipeline Summary */}
-            <div className="rounded-lg bg-zinc-900/60 border border-zinc-800/60 p-4">
+            <div className="rounded-lg bg-zinc-50/80 border border-zinc-100 p-4">
               <h3 className="text-xs text-zinc-500 uppercase tracking-wider mb-3">Pipeline Summary</h3>
               <div className="space-y-2">
                 {projections?.pipeline_stages && Object.entries(projections.pipeline_stages)
                   .sort((a, b) => b[1] - a[1])
                   .map(([stage, count]) => (
                     <div key={stage} className="flex items-center justify-between text-sm">
-                      <span className="text-zinc-400 capitalize">{stage.replace(/_/g, ' ')}</span>
+                      <span className="text-zinc-500 capitalize">{stage.replace(/_/g, ' ')}</span>
                       <div className="flex items-center gap-2">
-                        <div className="h-1.5 rounded-full bg-zinc-800 w-16">
+                        <div className="h-1.5 rounded-full bg-zinc-200 w-16">
                           <div
-                            className="h-1.5 rounded-full bg-emerald-500/60"
+                            className="h-1.5 rounded-full bg-emerald-500"
                             style={{ width: `${Math.min(100, (count / totalLeads) * 100)}%` }}
                           />
                         </div>
-                        <span className="text-zinc-200 font-mono w-6 text-right">{count}</span>
+                        <span className="text-zinc-800 font-mono w-6 text-right">{count}</span>
                       </div>
                     </div>
                   ))}
                 {(!projections?.pipeline_stages || Object.keys(projections.pipeline_stages).length === 0) && (
-                  <p className="text-zinc-600 text-sm">No pipeline data yet</p>
+                  <p className="text-zinc-400 text-sm">No pipeline data yet</p>
                 )}
               </div>
             </div>
 
             {/* Campaign Activity */}
-            <div className="rounded-lg bg-zinc-900/60 border border-zinc-800/60 p-4">
+            <div className="rounded-lg bg-zinc-50/80 border border-zinc-100 p-4">
               <h3 className="text-xs text-zinc-500 uppercase tracking-wider mb-3">Campaign Activity</h3>
               <div className="space-y-2">
                 <div className="flex justify-between text-sm">
-                  <span className="text-zinc-400">Active campaigns</span>
-                  <span className="text-zinc-200 font-mono">{activeCampaigns}</span>
+                  <span className="text-zinc-500">Active campaigns</span>
+                  <span className="text-zinc-800 font-mono">{activeCampaigns}</span>
                 </div>
                 <div className="flex justify-between text-sm">
-                  <span className="text-zinc-400">Leads in campaigns</span>
-                  <span className="text-zinc-200 font-mono">{activeEnrollments}</span>
+                  <span className="text-zinc-500">Leads in campaigns</span>
+                  <span className="text-zinc-800 font-mono">{activeEnrollments}</span>
                 </div>
                 <div className="flex justify-between text-sm">
-                  <span className="text-zinc-400">Campaign coverage</span>
-                  <span className="text-emerald-400 font-mono">
+                  <span className="text-zinc-500">Campaign coverage</span>
+                  <span className="text-emerald-600 font-mono">
                     {totalLeads > 0 ? ((activeEnrollments / totalLeads) * 100).toFixed(0) : 0}%
                   </span>
                 </div>
-                <div className="border-t border-zinc-800 pt-2 flex justify-between text-sm">
-                  <span className="text-zinc-400">Funded deals</span>
-                  <span className="text-emerald-400 font-mono">{projections?.funded_count || 0}</span>
+                <div className="border-t border-zinc-200 pt-2 flex justify-between text-sm">
+                  <span className="text-zinc-500">Funded deals</span>
+                  <span className="text-emerald-600 font-mono">{projections?.funded_count || 0}</span>
                 </div>
               </div>
             </div>
@@ -479,8 +479,8 @@ const FundedDeals = () => {
 
           {/* Bottom Formula Footnote */}
           <div className="flex items-center gap-2 pt-1">
-            <BarChart3 className="h-3.5 w-3.5 text-zinc-600" />
-            <p className="text-[11px] text-zinc-600">
+            <BarChart3 className="h-3.5 w-3.5 text-zinc-400" />
+            <p className="text-[11px] text-zinc-400">
               Revenue = Conversions (1%-12%) x Net Profit ($50-$600/lead) &mdash; Text Cost ($0.0632/msg x {avgMsgsPerLead} msgs)
             </p>
           </div>

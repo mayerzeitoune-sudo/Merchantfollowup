@@ -7,10 +7,15 @@
 #### Twilio Pricing Update — 8x Base Rate Sitewide
 - Updated text cost from $0.0083 to **$0.0632** (8x Twilio base rate of $0.0079)
 - Projections page: Cost Breakdown shows $0.0632/text, $3.41/lead (54 msgs × $0.0632)
-- Added **"Estimated Costs & Projected Returns"** dark panel in Drip Campaign pre-launch dialog
-  - Shows: Total Texts, Campaign Cost, Est. Conversions (1%-12%), Projected Revenue ($50-$600/lead), Net Return
-  - Visible before user clicks "Start Campaign"
-- **Status**: VERIFIED (iteration_15.json) — 100% pass rate
+- Added **"Estimated Costs & Projected Returns"** panel in Drip Campaign pre-launch dialog
+- Changed all projection panels from dark/black to **white theme** per user request
+- Added 50 seed "New Lead" records for realistic projection data
+- **Status**: VERIFIED
+
+#### Bug Fix: Campaign Steps View Crash
+- Fixed `toUpperCase` crash when clicking "View Steps & Enrollments" on prebuilt campaigns
+- Added fallbacks for prebuilt step format (`day`/`phase` vs `channel`/`delay_days`)
+- **Status**: VERIFIED
 
 #### Bug Fix: Launched Bulk Campaigns Not Showing as "Live" (P0)
 - **Root cause**: `launch_prebuilt_campaign` in `backend/routes/enhanced.py` was creating campaign documents missing `updated_at`, `triggers`, `stop_on_reply`, `target_tags`, `contacts_enrolled`, `contacts_completed`, `total_messages_sent`, `total_replies` fields
