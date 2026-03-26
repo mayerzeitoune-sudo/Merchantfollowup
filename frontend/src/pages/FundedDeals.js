@@ -42,7 +42,7 @@ const getStatusColor = (status) => {
   return colors[status] || "bg-gray-100 text-gray-700";
 };
 
-const fmt = (n) => n >= 1000 ? `$${(n/1000).toFixed(n >= 10000 ? 0 : 1)}k` : `$${n.toLocaleString()}`;
+const fmt = (n) => n >= 1000 ? `$${(n/1000).toFixed(n >= 10000 ? 0 : 1)}k` : `$${Math.round(n).toLocaleString()}`;
 const fmtFull = (n) => `$${n.toLocaleString(undefined, {minimumFractionDigits: 0, maximumFractionDigits: 0})}`;
 
 const FundedDeals = () => {
@@ -209,8 +209,8 @@ const FundedDeals = () => {
 
   // Projection calculations
   const totalLeads = projections?.total_leads || 0;
-  const convLow = Math.round(totalLeads * 0.01);
-  const convHigh = Math.round(totalLeads * 0.12);
+  const convLow = Math.max(1, Math.round(totalLeads * 0.03));
+  const convHigh = Math.max(1, Math.round(totalLeads * 0.10));
   const profitLow = convLow * 50;
   const profitHigh = convHigh * 600;
   const activeCampaigns = projections?.active_campaigns || 0;
@@ -372,7 +372,7 @@ const FundedDeals = () => {
               <p className="text-2xl font-bold text-zinc-900 font-['Outfit']">
                 {convLow} <span className="text-sm font-normal text-zinc-400">to</span> {convHigh}
               </p>
-              <p className="text-xs text-zinc-400 mt-1">1% - 12% conversion rate</p>
+              <p className="text-xs text-zinc-400 mt-1">3% - 10% conversion rate</p>
             </div>
 
             {/* Projected Revenue */}
@@ -481,7 +481,7 @@ const FundedDeals = () => {
           <div className="flex items-center gap-2 pt-1">
             <BarChart3 className="h-3.5 w-3.5 text-zinc-400" />
             <p className="text-[11px] text-zinc-400">
-              Revenue = Conversions (1%-12%) x Net Profit ($50-$600/lead) &mdash; Text Cost ($0.0632/msg x {avgMsgsPerLead} msgs)
+              Revenue = Conversions (3%-10%) x Net Profit ($50-$600/lead) &mdash; Text Cost ($0.0632/msg x {avgMsgsPerLead} msgs)
             </p>
           </div>
         </div>
