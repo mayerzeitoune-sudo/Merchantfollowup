@@ -906,39 +906,53 @@ const Organizations = () => {
                 <Card>
                   <CardHeader>
                     <CardTitle>Organization Billing</CardTitle>
-                    <CardDescription>Billing status for each organization</CardDescription>
+                    <CardDescription>Usage breakdown and billing status per organization</CardDescription>
                   </CardHeader>
                   <CardContent>
                     <div className="overflow-x-auto">
-                      <table className="w-full">
+                      <table className="w-full text-sm">
                         <thead>
-                          <tr className="border-b">
-                            <th className="text-left py-3 px-4 font-medium">Organization</th>
-                            <th className="text-center py-3 px-4 font-medium">Users</th>
-                            <th className="text-right py-3 px-4 font-medium">Amount Owed</th>
-                            <th className="text-right py-3 px-4 font-medium">Amount Paid</th>
-                            <th className="text-right py-3 px-4 font-medium">Balance</th>
-                            <th className="text-center py-3 px-4 font-medium">Status</th>
-                            <th className="text-right py-3 px-4 font-medium">Actions</th>
+                          <tr className="border-b bg-muted/30">
+                            <th className="text-left py-3 px-3 font-medium">Organization</th>
+                            <th className="text-center py-3 px-3 font-medium">Users</th>
+                            <th className="text-center py-3 px-3 font-medium">Texts Sent</th>
+                            <th className="text-right py-3 px-3 font-medium">Text Cost</th>
+                            <th className="text-center py-3 px-3 font-medium">Numbers</th>
+                            <th className="text-right py-3 px-3 font-medium">Number Cost</th>
+                            <th className="text-right py-3 px-3 font-medium">Total Owed</th>
+                            <th className="text-right py-3 px-3 font-medium">Paid</th>
+                            <th className="text-right py-3 px-3 font-medium">Balance</th>
+                            <th className="text-center py-3 px-3 font-medium">Status</th>
+                            <th className="text-right py-3 px-3 font-medium">Actions</th>
                           </tr>
                         </thead>
                         <tbody>
                           {billingData.organizations.map((org) => (
                             <tr key={org.organization_id} className="border-b hover:bg-muted/50">
-                              <td className="py-3 px-4">
+                              <td className="py-3 px-3">
                                 <div className="flex items-center gap-2">
                                   <Building2 className="h-4 w-4 text-muted-foreground" />
                                   <span className="font-medium">{org.organization_name}</span>
                                 </div>
                               </td>
-                              <td className="text-center py-3 px-4">{org.user_count}</td>
-                              <td className="text-right py-3 px-4">${org.amount_owed.toLocaleString()}</td>
-                              <td className="text-right py-3 px-4 text-green-600">${org.amount_paid.toLocaleString()}</td>
-                              <td className={`text-right py-3 px-4 font-medium ${org.balance > 0 ? 'text-red-600' : 'text-green-600'}`}>
+                              <td className="text-center py-3 px-3">{org.user_count}</td>
+                              <td className="text-center py-3 px-3 font-mono">{(org.texts_sent || 0).toLocaleString()}</td>
+                              <td className="text-right py-3 px-3 font-mono text-orange-600">${(org.texting_cost || 0).toFixed(2)}</td>
+                              <td className="text-center py-3 px-3">
+                                {org.phone_count > 0 ? (
+                                  <span className="cursor-help" title={org.phone_numbers?.map(p => `${p.number}: $${p.cost}/mo`).join('\n')}>
+                                    {org.phone_count}
+                                  </span>
+                                ) : '0'}
+                              </td>
+                              <td className="text-right py-3 px-3 font-mono">${(org.phone_monthly_cost || 0).toFixed(2)}/mo</td>
+                              <td className="text-right py-3 px-3 font-medium font-mono">${(org.amount_owed || 0).toLocaleString()}</td>
+                              <td className="text-right py-3 px-3 text-green-600 font-mono">${(org.amount_paid || 0).toLocaleString()}</td>
+                              <td className={`text-right py-3 px-3 font-medium font-mono ${org.balance > 0 ? 'text-red-600' : 'text-green-600'}`}>
                                 ${Math.abs(org.balance).toLocaleString()}
                                 {org.balance < 0 && ' credit'}
                               </td>
-                              <td className="text-center py-3 px-4">
+                              <td className="text-center py-3 px-3">
                                 <Badge 
                                   variant={org.status === 'paid' ? 'default' : org.status === 'partial' ? 'secondary' : 'destructive'}
                                   className={
@@ -956,7 +970,7 @@ const Organizations = () => {
                                   )}
                                 </Badge>
                               </td>
-                              <td className="text-right py-3 px-4">
+                              <td className="text-right py-3 px-3">
                                 <div className="flex justify-end gap-2">
                                   <Button 
                                     variant="outline" 

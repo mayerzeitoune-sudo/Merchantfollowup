@@ -630,14 +630,36 @@ async def get_billing_overview(authorization: str = Query(...)):
     total_paid = 0
     total_users = 0
     
+    text_cost_per_msg = 0.0632
+    
     for org in orgs:
         org_id = org["id"]
         
         # Count users in this org
         user_count = await db.users.count_documents({"org_id": org_id})
         
-        # Calculate amount owed ($100 per user)
-        amount_owed = user_count * PRICE_PER_USER
+        # Get user IDs in this org for message lookups
+        org_user_ids = [u["id"] async for u in db.users.find({"org_id": org_id}, {"_id": 0, "id": 1})]
+        
+        # Count texts sent by this org (from campaign_messages + conversations)
+        campaign_texts = await db.campaign_messages.count_documents({"user_id": {"$in": org_user_ids}})
+        inbox_texts = await db.messages.count_documents({"user_id": {"$in": org_user_ids}, "direction": "outbound"})
+        total_texts = campaign_texts + inbox_texts
+        
+        # Count phone numbers owned by this org
+        phone_numbers = await db.phone_numbers.find(
+            {"org_id": org_id, "is_active": True},
+            {"_id": 0, "phone_number": 1, "monthly_cost": 1, "friendly_name": 1}
+        ).to_list(100)
+        phone_count = len(phone_numbers)
+        phone_monthly_cost = sum(p.get("monthly_cost", 8.00) for p in phone_numbers)
+        
+        # Calculate texting cost
+        texting_cost = round(total_texts * text_cost_per_msg, 2)
+        
+        # Calculate amount owed ($100 per user + phone costs + texting costs)
+        base_amount = user_count * PRICE_PER_USER
+        amount_owed = base_amount + phone_monthly_cost + texting_cost
         
         # Get total payments for this org
         payments = await db.billing_payments.find(
@@ -654,9 +676,16 @@ async def get_billing_overview(authorization: str = Query(...)):
             "organization_name": org["name"],
             "user_count": user_count,
             "price_per_user": PRICE_PER_USER,
-            "amount_owed": amount_owed,
+            "texts_sent": total_texts,
+            "text_cost_per_msg": text_cost_per_msg,
+            "texting_cost": texting_cost,
+            "phone_count": phone_count,
+            "phone_monthly_cost": round(phone_monthly_cost, 2),
+            "phone_numbers": [{"number": p.get("friendly_name", p["phone_number"]), "cost": p.get("monthly_cost", 8.00)} for p in phone_numbers],
+            "base_amount": base_amount,
+            "amount_owed": round(amount_owed, 2),
             "amount_paid": amount_paid,
-            "balance": balance,
+            "balance": round(balance, 2),
             "status": "paid" if balance <= 0 else ("partial" if amount_paid > 0 else "unpaid"),
             "is_active": org.get("is_active", True)
         })
