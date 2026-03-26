@@ -209,10 +209,12 @@ const FundedDeals = () => {
 
   // Projection calculations
   const totalLeads = projections?.total_leads || 0;
-  const convLow = Math.max(1, Math.round(totalLeads * 0.03));
-  const convHigh = Math.max(1, Math.round(totalLeads * 0.10));
-  const profitLow = convLow * 50;
-  const profitHigh = convHigh * 600;
+  const convLow = Math.max(1, Math.round(totalLeads * 0.08));
+  const convHigh = Math.max(1, Math.round(totalLeads * 0.17));
+  const dealValue = 5000;
+  const leadValue = 94;
+  const profitLow = convLow * dealValue;
+  const profitHigh = convHigh * dealValue;
   const activeCampaigns = projections?.active_campaigns || 0;
   const activeEnrollments = projections?.active_enrollments || 0;
 
@@ -372,7 +374,7 @@ const FundedDeals = () => {
               <p className="text-2xl font-bold text-zinc-900 font-['Outfit']">
                 {convLow} <span className="text-sm font-normal text-zinc-400">to</span> {convHigh}
               </p>
-              <p className="text-xs text-zinc-400 mt-1">3% - 10% conversion rate</p>
+              <p className="text-xs text-zinc-400 mt-1">8% - 17% conversion rate</p>
             </div>
 
             {/* Projected Revenue */}
@@ -384,7 +386,7 @@ const FundedDeals = () => {
               <p className="text-2xl font-bold text-emerald-600 font-['Outfit']">
                 {fmt(profitLow)} <span className="text-sm font-normal text-zinc-400">to</span> {fmt(profitHigh)}
               </p>
-              <p className="text-xs text-zinc-400 mt-1">$50 - $600 per converted lead</p>
+              <p className="text-xs text-zinc-400 mt-1">$5,000 avg per closed deal</p>
             </div>
 
             {/* Net Profit (after text costs) */}
@@ -417,6 +419,10 @@ const FundedDeals = () => {
                 <div className="flex justify-between text-sm">
                   <span className="text-zinc-500">Cost per lead contacted</span>
                   <span className="text-zinc-800 font-mono">${(avgMsgsPerLead * textCost).toFixed(2)}</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-zinc-500">Value per lead</span>
+                  <span className="text-emerald-600 font-mono font-semibold">${leadValue}</span>
                 </div>
                 <div className="border-t border-zinc-200 pt-2 flex justify-between text-sm">
                   <span className="text-zinc-500">Total text spend range</span>
@@ -481,7 +487,7 @@ const FundedDeals = () => {
           <div className="flex items-center gap-2 pt-1">
             <BarChart3 className="h-3.5 w-3.5 text-zinc-400" />
             <p className="text-[11px] text-zinc-400">
-              Revenue = Conversions (3%-10%) x Net Profit ($50-$600/lead) &mdash; Text Cost ($0.0632/msg x {avgMsgsPerLead} msgs)
+              Revenue = Conversions (8%-17%) x $5,000/deal &mdash; Text Cost ($0.0632/msg x {avgMsgsPerLead} msgs) &mdash; Lead Value: ${leadValue}/lead
             </p>
           </div>
         </div>

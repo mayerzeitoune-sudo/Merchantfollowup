@@ -1442,10 +1442,11 @@ const DripCampaigns = () => {
                   const costPerText = 0.0632; // 8x Twilio rate
                   const totalTexts = matchingClients * totalMsgs;
                   const totalCost = totalTexts * costPerText;
-                  const convLow = Math.max(1, Math.round(matchingClients * 0.03));
-                  const convHigh = Math.max(1, Math.round(matchingClients * 0.10));
-                  const revLow = convLow * 50;
-                  const revHigh = convHigh * 600;
+                  const convLow = Math.max(1, Math.round(matchingClients * 0.08));
+                  const convHigh = Math.max(1, Math.round(matchingClients * 0.17));
+                  const dealValue = 5000;
+                  const revLow = convLow * dealValue;
+                  const revHigh = convHigh * dealValue;
                   const netLow = revLow - totalCost;
                   const netHigh = revHigh - totalCost;
                   return (
@@ -1468,12 +1469,12 @@ const DripCampaigns = () => {
                         <div className="rounded bg-zinc-50 border border-zinc-200 p-3">
                           <p className="text-[10px] text-zinc-500 uppercase tracking-wider">Est. Conversions</p>
                           <p className="text-lg font-bold text-amber-600 font-mono">{convLow} <span className="text-xs font-normal text-zinc-400">to</span> {convHigh}</p>
-                          <p className="text-[10px] text-zinc-400">3% - 10% conversion rate</p>
+                          <p className="text-[10px] text-zinc-400">8% - 17% conversion rate</p>
                         </div>
                         <div className="rounded bg-zinc-50 border border-zinc-200 p-3">
                           <p className="text-[10px] text-zinc-500 uppercase tracking-wider">Projected Revenue</p>
                           <p className="text-lg font-bold text-emerald-600 font-mono">${revLow.toLocaleString()} <span className="text-xs font-normal text-zinc-400">to</span> ${revHigh.toLocaleString()}</p>
-                          <p className="text-[10px] text-zinc-400">$50 - $600 per converted lead</p>
+                          <p className="text-[10px] text-zinc-400">$5,000 avg per closed deal</p>
                         </div>
                       </div>
                       <div className="flex items-center justify-between rounded bg-emerald-50 border border-emerald-200 p-3">
