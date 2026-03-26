@@ -2817,7 +2817,7 @@ async def search_available_numbers(
         placeholder_numbers.append({
             "phone_number": f"+1{area_code}{random.randint(1000000, 9999999)}",
             "friendly_name": f"({area_code}) {random.randint(100, 999)}-{random.randint(1000, 9999)}",
-            "monthly_cost": round(random.uniform(1.00, 2.50), 2),
+            "monthly_cost": round(random.uniform(1.00, 2.50) * 8, 2),
             "capabilities": ["sms", "voice"],
             "region": "US"
         })
@@ -2896,7 +2896,7 @@ async def purchase_phone_number(data: PhoneNumberCreate, current_user: dict = De
         "is_default": False,
         "assigned_user_id": assigned_user_id,
         "assigned_user_name": assigned_user_name,
-        "monthly_cost": 1.00,
+        "monthly_cost": 8.00,
         "created_at": now
     }
     
