@@ -932,6 +932,49 @@ async def create_client(data: ClientCreate, current_user: dict = Depends(get_cur
         client_id
     )
     
+    # Auto-enroll in active drip campaigns that match client tags
+    if data.tags:
+        try:
+            accessible_ids = await get_accessible_user_ids(current_user)
+            active_campaigns = await db.enhanced_campaigns.find(
+                {"user_id": {"$in": accessible_ids}, "status": "active"},
+                {"_id": 0}
+            ).to_list(100)
+            
+            for campaign in active_campaigns:
+                camp_tags = campaign.get("target_tags", [])
+                camp_tag = campaign.get("target_tag", "")
+                matching_tags = set(data.tags) & set(camp_tags + ([camp_tag] if camp_tag else []))
+                
+                if matching_tags:
+                    existing = await db.campaign_enrollments.find_one({
+                        "client_id": client_id,
+                        "campaign_id": campaign["id"],
+                        "status": "active"
+                    })
+                    if not existing:
+                        enrollment = {
+                            "id": str(uuid.uuid4()),
+                            "campaign_id": campaign["id"],
+                            "campaign_type": campaign.get("campaign_type", campaign.get("type", "prebuilt")),
+                            "client_id": client_id,
+                            "user_id": current_user["user_id"],
+                            "status": "active",
+                            "current_step": 0,
+                            "start_date": now,
+                            "next_send_date": now,
+                            "last_sent_date": None,
+                            "created_at": now
+                        }
+                        await db.campaign_enrollments.insert_one(enrollment)
+                        await db.enhanced_campaigns.update_one(
+                            {"id": campaign["id"]},
+                            {"$inc": {"contacts_enrolled": 1}}
+                        )
+                        logger.info(f"Auto-enrolled client {client_id} into campaign {campaign['name']}")
+        except Exception as e:
+            logger.error(f"Auto-enrollment error for client {client_id}: {e}")
+    
     return client_doc
 
 @api_router.get("/clients/tags")

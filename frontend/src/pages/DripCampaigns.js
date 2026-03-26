@@ -1439,7 +1439,7 @@ const DripCampaigns = () => {
                 {(() => {
                   const matchingClients = clients.filter(c => c.tags?.includes(selectedPrebuilt.target_tag)).length;
                   const totalMsgs = prebuiltDetail?.steps?.length || selectedPrebuilt.total_steps || 0;
-                  const costPerText = 0.0632; // 8x Twilio rate
+                  const costPerText = 0.0632;
                   const totalTexts = matchingClients * totalMsgs;
                   const totalCost = totalTexts * costPerText;
                   const convLow = Math.max(1, Math.round(matchingClients * 0.08));
@@ -1464,7 +1464,7 @@ const DripCampaigns = () => {
                         <div className="rounded bg-zinc-50 border border-zinc-200 p-3">
                           <p className="text-[10px] text-zinc-500 uppercase tracking-wider">Campaign Cost</p>
                           <p className="text-lg font-bold text-red-500 font-mono">${totalCost.toFixed(2)}</p>
-                          <p className="text-[10px] text-zinc-400">${costPerText}/text (8x Twilio)</p>
+                          <p className="text-[10px] text-zinc-400">${costPerText}/text</p>
                         </div>
                         <div className="rounded bg-zinc-50 border border-zinc-200 p-3">
                           <p className="text-[10px] text-zinc-500 uppercase tracking-wider">Est. Conversions</p>

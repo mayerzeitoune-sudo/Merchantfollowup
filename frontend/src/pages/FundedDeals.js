@@ -219,7 +219,6 @@ const FundedDeals = () => {
   const activeEnrollments = projections?.active_enrollments || 0;
 
   // Per-message cost projections (54 messages per new lead campaign)
-  // Pricing: 8x Twilio base rate ($0.0079) = $0.0632 per text
   const avgMsgsPerLead = 54;
   const textCost = 0.0632;
   const totalTextCostLow = convLow * avgMsgsPerLead * textCost;
