@@ -209,8 +209,8 @@ const FundedDeals = () => {
 
   // Projection calculations
   const totalLeads = projections?.total_leads || 0;
-  const convLow = Math.max(1, Math.round(totalLeads * 0.08));
-  const convHigh = Math.max(1, Math.round(totalLeads * 0.17));
+  const convLow = Math.max(1, Math.round(totalLeads * 0.05));
+  const convHigh = Math.max(1, Math.round(totalLeads * 0.12));
   const dealValue = 5000;
   const leadValue = 94;
   const profitLow = convLow * dealValue;
@@ -373,7 +373,7 @@ const FundedDeals = () => {
               <p className="text-2xl font-bold text-zinc-900 font-['Outfit']">
                 {convLow} <span className="text-sm font-normal text-zinc-400">to</span> {convHigh}
               </p>
-              <p className="text-xs text-zinc-400 mt-1">8% - 17% conversion rate</p>
+              <p className="text-xs text-zinc-400 mt-1">5% - 12% conversion rate</p>
             </div>
 
             {/* Projected Revenue */}
@@ -486,7 +486,7 @@ const FundedDeals = () => {
           <div className="flex items-center gap-2 pt-1">
             <BarChart3 className="h-3.5 w-3.5 text-zinc-400" />
             <p className="text-[11px] text-zinc-400">
-              Revenue = Conversions (8%-17%) x $5,000/deal &mdash; Text Cost ($0.0632/msg x {avgMsgsPerLead} msgs) &mdash; Lead Value: ${leadValue}/lead
+              Revenue = Conversions (5%-12%) x $5,000/deal &mdash; Text Cost ($0.0632/msg x {avgMsgsPerLead} msgs) &mdash; Lead Value: ${leadValue}/lead
             </p>
           </div>
         </div>
