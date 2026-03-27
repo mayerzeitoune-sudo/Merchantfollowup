@@ -1121,7 +1121,7 @@ const Organizations = () => {
                       {selectedOrgBilling.payments.map((p) => (
                         <div key={p.id} className="p-2 flex justify-between items-center text-sm">
                           <div>
-                            <span className="font-medium text-green-600">${p.amount.toLocaleString()}</span>
+                            <span className="font-medium text-green-600">{(p.amount * 5).toLocaleString()} cr</span>
                             {p.notes && <span className="text-muted-foreground ml-2">- {p.notes}</span>}
                           </div>
                           <span className="text-muted-foreground text-xs">

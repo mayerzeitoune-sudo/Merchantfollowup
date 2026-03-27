@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import DashboardLayout from '../components/DashboardLayout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
 import { Button } from '../components/ui/button';
@@ -85,6 +86,7 @@ const STATE_AREA_CODES = {
 
 const PhoneNumbers = () => {
   const { user } = useAuth();
+  const [searchParams] = useSearchParams();
   const [ownedNumbers, setOwnedNumbers] = useState([]);
   const [availableNumbers, setAvailableNumbers] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -113,6 +115,14 @@ const PhoneNumbers = () => {
     fetchPurchaseStatus();
     if (isAdmin) {
       fetchTeamMembers();
+    }
+    // Auto-fill area code from query param and auto-search
+    const areaParam = searchParams.get('area');
+    if (areaParam && areaParam.length === 3) {
+      setAreaCode(areaParam);
+      setTimeout(() => {
+        autoSearchArea(areaParam);
+      }, 500);
     }
   }, [isAdmin]);
 
@@ -186,6 +196,20 @@ const PhoneNumbers = () => {
       setIsDialogOpen(true);
     } catch (error) {
       toast.error('Failed to search numbers');
+    } finally {
+      setSearching(false);
+    }
+  };
+
+  const autoSearchArea = async (code) => {
+    setSearching(true);
+    try {
+      const response = await phoneNumbersApi.searchAvailable(code);
+      setAvailableNumbers(response.data.available_numbers);
+      setProviderConfigured(response.data.provider_configured);
+      setIsDialogOpen(true);
+    } catch (error) {
+      console.error('Auto-search failed:', error);
     } finally {
       setSearching(false);
     }

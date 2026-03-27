@@ -640,7 +640,7 @@ const Inbox = () => {
           </DialogHeader>
           <div className="p-4 rounded-lg bg-blue-50 border border-blue-200 text-center">
             <p className="font-semibold text-blue-800">Buy a ({areCodePopup?.areaCode}) number</p>
-            <p className="text-sm text-blue-600 mt-1">$1.00/month — familiar area codes get more replies</p>
+            <p className="text-sm text-blue-600 mt-1">40 credits/number — familiar area codes get more replies</p>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setAreaCodePopup(null)}>
@@ -648,8 +648,9 @@ const Inbox = () => {
             </Button>
             <Button 
               onClick={() => {
+                const ac = areCodePopup?.areaCode;
                 setAreaCodePopup(null);
-                window.location.href = '/phone-numbers';
+                window.location.href = `/phone-numbers?area=${ac || ''}`;
               }}
               data-testid="buy-area-code-btn"
             >

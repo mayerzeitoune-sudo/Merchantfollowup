@@ -264,25 +264,25 @@ const FundedDealProfile = () => {
           <Card>
             <CardContent className="pt-4">
               <p className="text-xs text-muted-foreground mb-1">Funded Amount</p>
-              <p className="text-xl font-bold text-green-600">${deal.funded_amount?.toLocaleString()}</p>
+              <p className="text-xl font-bold text-green-600">{((deal.funded_amount || 0) * 5)?.toLocaleString()} cr</p>
             </CardContent>
           </Card>
           <Card>
             <CardContent className="pt-4">
               <p className="text-xs text-muted-foreground mb-1">Total Payback</p>
-              <p className="text-xl font-bold">${deal.total_payback?.toLocaleString()}</p>
+              <p className="text-xl font-bold">{((deal.total_payback || 0) * 5)?.toLocaleString()} cr</p>
             </CardContent>
           </Card>
           <Card>
             <CardContent className="pt-4">
               <p className="text-xs text-muted-foreground mb-1">Collected</p>
-              <p className="text-xl font-bold text-emerald-600">${deal.total_collected?.toLocaleString()}</p>
+              <p className="text-xl font-bold text-emerald-600">{((deal.total_collected || 0) * 5)?.toLocaleString()} cr</p>
             </CardContent>
           </Card>
           <Card>
             <CardContent className="pt-4">
               <p className="text-xs text-muted-foreground mb-1">Remaining</p>
-              <p className="text-xl font-bold text-orange-600">${deal.remaining_balance?.toLocaleString()}</p>
+              <p className="text-xl font-bold text-orange-600">{((deal.remaining_balance || 0) * 5)?.toLocaleString()} cr</p>
             </CardContent>
           </Card>
           <Card>
@@ -620,7 +620,7 @@ const FundedDealProfile = () => {
                     </div>
                     <div>
                       <Label className="text-muted-foreground text-xs">Payment Amount</Label>
-                      <p className="font-medium">${deal.payment_amount?.toLocaleString()}</p>
+                      <p className="font-medium">{((deal.payment_amount || 0) * 5)?.toLocaleString()} cr</p>
                     </div>
                     <div>
                       <Label className="text-muted-foreground text-xs">Assigned Rep</Label>

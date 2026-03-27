@@ -141,11 +141,12 @@ const Dashboard = () => {
     }
   };
 
-  const searchPhoneNumbers = async () => {
+  const searchPhoneNumbers = async (areaOverride) => {
     setPhoneSearchLoading(true);
     try {
-      const res = await phoneNumbersApi.searchAvailable(phoneSearchArea || '');
-      setAvailableNumbers(res.data || []);
+      const code = areaOverride || phoneSearchArea || '';
+      const res = await phoneNumbersApi.searchAvailable(code);
+      setAvailableNumbers(res.data?.available_numbers || []);
     } catch (e) {
       toast.error('Failed to search numbers');
       setAvailableNumbers([]);
@@ -420,7 +421,7 @@ const Dashboard = () => {
                 </div>
                 <Button
                   className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold h-12 px-6"
-                  onClick={() => { setPhoneShopOpen(true); searchPhoneNumbers(); }}
+                  onClick={() => { setPhoneShopOpen(true); setPhoneSearchArea(''); searchPhoneNumbers(''); }}
                   data-testid="shop-numbers-btn"
                 >
                   <Phone className="h-4 w-4 mr-2" /> Shop Numbers
@@ -458,11 +459,12 @@ const Dashboard = () => {
                 <div>
                   <p className="text-sm font-medium opacity-90">Projected Volume</p>
                   <p className="text-3xl font-bold mt-1 font-['Outfit']">
-                    ${loading ? '-' : (fundedStats?.total_funded_volume || 0).toLocaleString('en-US', { minimumFractionDigits: 0 })}
+                    {loading ? '-' : ((fundedStats?.total_funded_volume || 0) * 5).toLocaleString()}
                   </p>
+                  <p className="text-xs opacity-60 mt-0.5">credits</p>
                 </div>
                 <div className="h-12 w-12 rounded-full bg-white/20 flex items-center justify-center">
-                  <DollarSign className="h-6 w-6" />
+                  <Coins className="h-6 w-6" />
                 </div>
               </div>
             </CardContent>
@@ -474,8 +476,9 @@ const Dashboard = () => {
                 <div>
                   <p className="text-sm font-medium opacity-90">Total Collected</p>
                   <p className="text-3xl font-bold mt-1 font-['Outfit']">
-                    ${loading ? '-' : (fundedStats?.total_collected || 0).toLocaleString('en-US', { minimumFractionDigits: 0 })}
+                    {loading ? '-' : ((fundedStats?.total_collected || 0) * 5).toLocaleString()}
                   </p>
+                  <p className="text-xs opacity-60 mt-0.5">credits</p>
                 </div>
                 <div className="h-12 w-12 rounded-full bg-white/20 flex items-center justify-center">
                   <CheckCircle2 className="h-6 w-6" />
@@ -490,8 +493,9 @@ const Dashboard = () => {
                 <div>
                   <p className="text-sm font-medium opacity-90">Remaining Balance</p>
                   <p className="text-3xl font-bold mt-1 font-['Outfit']">
-                    ${loading ? '-' : (fundedStats?.total_outstanding || 0).toLocaleString('en-US', { minimumFractionDigits: 0 })}
+                    {loading ? '-' : ((fundedStats?.total_outstanding || 0) * 5).toLocaleString()}
                   </p>
+                  <p className="text-xs opacity-60 mt-0.5">credits</p>
                 </div>
                 <div className="h-12 w-12 rounded-full bg-white/20 flex items-center justify-center">
                   <Clock className="h-6 w-6" />
@@ -760,7 +764,7 @@ const Dashboard = () => {
                       <div>
                         <p className="font-medium text-sm">{reminder.client_name}</p>
                         <p className="text-xs text-muted-foreground">
-                          ${reminder.amount_due?.toFixed(2) || '0.00'}
+                          {Math.round((reminder.amount_due || 0) * 5).toLocaleString()} credits
                         </p>
                       </div>
                     </div>

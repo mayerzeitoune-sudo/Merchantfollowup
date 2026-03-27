@@ -37,6 +37,8 @@ import GlobalSearch from './GlobalSearch';
 import NotificationBell from './NotificationBell';
 import PhoneDialer from './PhoneDialer';
 import { creditsApi } from '../lib/api';
+import { useTheme } from '../context/ThemeContext';
+import { Sun, Moon } from 'lucide-react';
 
 const navItems = [
   { path: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
@@ -75,6 +77,7 @@ const DashboardLayout = ({ children }) => {
   const location = useLocation();
   const navigate = useNavigate();
   const { user, logout, isImpersonating, impersonator, stopImpersonation } = useAuth();
+  const { isDark, toggleTheme } = useTheme();
 
   const logoUrl = "https://customer-assets.emergentagent.com/job_8de675b6-2eb0-4aa2-9eba-eeadd9657b38/artifacts/gcg3jc1g_Image_20260311_161856_605.png";
 
@@ -102,7 +105,7 @@ const DashboardLayout = ({ children }) => {
   };
 
   return (
-    <div className="min-h-screen bg-secondary/30">
+    <div className="min-h-screen bg-secondary/30 dark:bg-zinc-950">
       {/* Impersonation Banner */}
       {isImpersonating && (
         <div className="fixed top-0 left-0 right-0 bg-orange-600 text-white py-2 px-4 z-[100] flex items-center justify-between shadow-lg">
@@ -130,7 +133,7 @@ const DashboardLayout = ({ children }) => {
         </div>
       )}
       {/* Mobile Header */}
-      <header className={`lg:hidden fixed left-0 right-0 h-16 bg-white border-b border-border z-50 flex items-center justify-between px-4 ${isImpersonating ? 'top-10' : 'top-0'}`}>
+      <header className={`lg:hidden fixed left-0 right-0 h-16 bg-white dark:bg-zinc-900 border-b border-border z-50 flex items-center justify-between px-4 ${isImpersonating ? 'top-10' : 'top-0'}`}>
         <button
           onClick={() => setSidebarOpen(true)}
           className="p-2 hover:bg-secondary rounded-md"
@@ -150,6 +153,9 @@ const DashboardLayout = ({ children }) => {
           </div>
         </div>
         <div className="flex items-center gap-2">
+          <button onClick={toggleTheme} className="flex items-center justify-center h-8 w-8 rounded bg-zinc-100 dark:bg-zinc-800" data-testid="mobile-dark-toggle">
+            {isDark ? <Sun className="h-3.5 w-3.5 text-amber-400" /> : <Moon className="h-3.5 w-3.5 text-zinc-500" />}
+          </button>
           {creditBalance !== null && (
             <Link to="/credit-shop" className="flex items-center gap-1 px-2 py-1 rounded bg-zinc-900" data-testid="mobile-credit-balance">
               <Coins className="h-3 w-3 text-amber-400" />
@@ -170,14 +176,14 @@ const DashboardLayout = ({ children }) => {
 
       {/* Sidebar */}
       <aside className={`
-        fixed top-0 left-0 h-screen w-64 bg-white border-r border-border z-50
+        fixed top-0 left-0 h-screen w-64 bg-white dark:bg-zinc-900 border-r border-border z-50
         transform transition-transform duration-300 ease-in-out overflow-y-auto
         lg:translate-x-0
         ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}
       `}>
         <div className="flex flex-col h-full">
           {/* Logo */}
-          <div className="h-20 flex items-center justify-between px-4 border-b border-border sticky top-0 bg-white z-10">
+          <div className="h-20 flex items-center justify-between px-4 border-b border-border sticky top-0 bg-white dark:bg-zinc-900 z-10">
             <Link to="/dashboard" className="flex items-center gap-3 group">
               <div className="relative">
                 <img 
@@ -253,7 +259,7 @@ const DashboardLayout = ({ children }) => {
           </nav>
 
           {/* User Section */}
-          <div className="p-4 border-t border-border sticky bottom-0 bg-white">
+          <div className="p-4 border-t border-border sticky bottom-0 bg-white dark:bg-zinc-900">
             <Link to="/profile" className="flex items-center gap-3 mb-4 p-2 -m-2 rounded-lg hover:bg-secondary/50 transition-colors" data-testid="profile-link">
               <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
                 <span className="text-primary font-semibold">
@@ -281,9 +287,18 @@ const DashboardLayout = ({ children }) => {
       {/* Main Content */}
       <main className={`lg:ml-64 min-h-screen ${isImpersonating ? 'pt-26 lg:pt-10' : 'pt-16 lg:pt-0'}`}>
         {/* Desktop Top Bar */}
-        <div className="hidden lg:flex items-center justify-between h-16 px-8 bg-white border-b border-border">
+        <div className="hidden lg:flex items-center justify-between h-16 px-8 bg-white dark:bg-zinc-900 border-b border-border">
           <GlobalSearch />
           <div className="flex items-center gap-4">
+            {/* Dark Mode Toggle */}
+            <button
+              onClick={toggleTheme}
+              className="flex items-center justify-center h-9 w-9 rounded-lg bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-colors"
+              data-testid="dark-mode-toggle"
+              aria-label="Toggle dark mode"
+            >
+              {isDark ? <Sun className="h-4 w-4 text-amber-400" /> : <Moon className="h-4 w-4 text-zinc-500" />}
+            </button>
             {/* Credit Balance */}
             {creditBalance !== null && (
               <Link
