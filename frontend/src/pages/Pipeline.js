@@ -217,7 +217,7 @@ const Pipeline = () => {
                   <DollarSign className="h-5 w-5 text-green-600" />
                 </div>
                 <div>
-                  <p className="text-2xl font-bold">{(totalValue * 5).toLocaleString()} cr</p>
+                  <p className="text-2xl font-bold">${totalValue.toLocaleString()}</p>
                   <p className="text-sm text-muted-foreground">Pipeline Value</p>
                 </div>
               </div>

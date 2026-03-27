@@ -389,7 +389,7 @@ const ClientProfile = () => {
                               <Badge>{deal.status}</Badge>
                             </div>
                             <div className="flex items-center gap-4 mt-2 text-sm text-muted-foreground">
-                              <span>{((deal.amount || 0) * 5).toLocaleString()} cr</span>
+                              <span>${deal.amount?.toLocaleString() || 0}</span>
                               <span>{new Date(deal.created_at).toLocaleDateString()}</span>
                             </div>
                           </div>

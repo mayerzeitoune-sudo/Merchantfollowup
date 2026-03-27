@@ -1595,7 +1595,7 @@ const DripCampaigns = () => {
                   const totalCreditCost = Math.round(totalTexts * creditsPerText);
                   const convLow = Math.max(1, Math.round(matchingClients * 0.05));
                   const convHigh = Math.max(1, Math.round(matchingClients * 0.12));
-                  const dealValue = 25000; // credits (5x $5,000)
+                  const dealValue = 5000;
                   const revLow = convLow * dealValue;
                   const revHigh = convHigh * dealValue;
                   return (
@@ -1622,8 +1622,8 @@ const DripCampaigns = () => {
                         </div>
                         <div className="rounded bg-zinc-50 border border-zinc-200 p-3">
                           <p className="text-[10px] text-zinc-500 uppercase tracking-wider">Projected Revenue</p>
-                          <p className="text-lg font-bold text-emerald-600 font-mono">{revLow.toLocaleString()} <span className="text-xs font-normal text-zinc-400">to</span> {revHigh.toLocaleString()}</p>
-                          <p className="text-[10px] text-zinc-400">25,000 credits avg per closed deal</p>
+                          <p className="text-lg font-bold text-emerald-600 font-mono">${revLow.toLocaleString()} <span className="text-xs font-normal text-zinc-400">to</span> ${revHigh.toLocaleString()}</p>
+                          <p className="text-[10px] text-zinc-400">$5,000 avg per closed deal</p>
                         </div>
                       </div>
                       <div className="flex items-center justify-between rounded bg-emerald-50 border border-emerald-200 p-3">
@@ -1632,7 +1632,7 @@ const DripCampaigns = () => {
                           <p className="text-[10px] text-zinc-400 mt-0.5">Revenue minus credit cost (at base rate)</p>
                         </div>
                         <p className="text-xl font-bold text-green-600 font-mono">
-                          {Math.max(0, Math.round(revLow - totalCreditCost)).toLocaleString()} <span className="text-xs font-normal text-zinc-400">to</span> {Math.max(0, Math.round(revHigh - totalCreditCost)).toLocaleString()}
+                          ${Math.max(0, Math.round(revLow - (totalCreditCost / 5))).toLocaleString()} <span className="text-xs font-normal text-zinc-400">to</span> ${Math.max(0, Math.round(revHigh - (totalCreditCost / 5))).toLocaleString()}
                         </p>
                       </div>
                     </div>

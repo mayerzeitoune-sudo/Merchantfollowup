@@ -784,7 +784,7 @@ const Team = () => {
                     <DollarSign className="h-5 w-5 text-emerald-600" />
                   </div>
                   <div>
-                    <p className="text-2xl font-bold">{((teamStats.pipeline_value || 0) * 5).toLocaleString()} cr</p>
+                    <p className="text-2xl font-bold">${(teamStats.pipeline_value || 0).toLocaleString()}</p>
                     <p className="text-sm text-muted-foreground">Pipeline Value</p>
                   </div>
                 </div>

@@ -408,7 +408,7 @@ const PhoneBlower = () => {
                           {client.amount_requested && (
                             <div className="flex items-center gap-2">
                               <TrendingUp className="h-3.5 w-3.5 text-zinc-400" />
-                              <span className="font-mono font-semibold text-emerald-600">{((client.amount_requested || 0) * 5)?.toLocaleString()} cr</span>
+                              <span className="font-mono font-semibold text-emerald-600">${client.amount_requested?.toLocaleString()}</span>
                             </div>
                           )}
                         </div>

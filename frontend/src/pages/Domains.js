@@ -453,7 +453,7 @@ const Domains = () => {
                         <span className="font-medium">{domain.domain}</span>
                       </div>
                       <div className="flex items-center gap-3">
-                        <span className="font-semibold text-primary">{(domain.price * 5)} cr/yr</span>
+                        <span className="font-semibold text-primary">${domain.price}/yr</span>
                         <Badge variant="outline" className="text-green-600">Available</Badge>
                         <Button size="sm" disabled>
                           Coming Soon

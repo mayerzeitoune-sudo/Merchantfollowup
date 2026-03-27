@@ -42,8 +42,8 @@ const getStatusColor = (status) => {
   return colors[status] || "bg-gray-100 text-gray-700";
 };
 
-const fmt = (n) => n >= 1000 ? `${(n/1000).toFixed(n >= 10000 ? 0 : 1)}k` : `${Math.round(n).toLocaleString()}`;
-const fmtFull = (n) => n.toLocaleString(undefined, {minimumFractionDigits: 0, maximumFractionDigits: 0});
+const fmt = (n) => n >= 1000 ? `$${(n/1000).toFixed(n >= 10000 ? 0 : 1)}k` : `$${Math.round(n).toLocaleString()}`;
+const fmtFull = (n) => `$${n.toLocaleString(undefined, {minimumFractionDigits: 0, maximumFractionDigits: 0})}`;
 
 const FundedDeals = () => {
   const [deals, setDeals] = useState([]);
@@ -211,8 +211,8 @@ const FundedDeals = () => {
   const totalLeads = projections?.total_leads || 0;
   const convLow = Math.max(1, Math.round(totalLeads * 0.05));
   const convHigh = Math.max(1, Math.round(totalLeads * 0.12));
-  const dealValue = 25000; // credits (5x $5,000)
-  const leadValue = 470; // credits (5x $94)
+  const dealValue = 5000;
+  const leadValue = 94;
   const profitLow = convLow * dealValue;
   const profitHigh = convHigh * dealValue;
   const activeCampaigns = projections?.active_campaigns || 0;
@@ -270,7 +270,7 @@ const FundedDeals = () => {
                 <div className="space-y-2">
                   <Label>Funded Amount *</Label>
                   <div className="relative">
-                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-xs">cr</span>
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">$</span>
                     <Input type="number" value={newDeal.funded_amount} onChange={(e) => handleFundedAmountChange(e.target.value)} placeholder="100,000" className="pl-7" />
                   </div>
                 </div>
@@ -288,7 +288,7 @@ const FundedDeals = () => {
                 <div className="space-y-2">
                   <Label>Total Payback Amount *</Label>
                   <div className="relative">
-                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-xs">cr</span>
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">$</span>
                     <Input type="number" value={newDeal.payback_amount} onChange={(e) => handlePaybackChange(e.target.value)} placeholder="150,000" className={`pl-7 ${newDeal.auto_calculate ? 'bg-muted/50' : ''}`} />
                   </div>
                 </div>
@@ -306,7 +306,7 @@ const FundedDeals = () => {
                 <div className="space-y-2">
                   <Label>Payment Amount *</Label>
                   <div className="relative">
-                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-xs">cr</span>
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">$</span>
                     <Input type="number" value={newDeal.payment_amount} onChange={(e) => setNewDeal({...newDeal, payment_amount: e.target.value})} className="pl-7 bg-muted/50" />
                   </div>
                 </div>
@@ -384,7 +384,7 @@ const FundedDeals = () => {
               <p className="text-2xl font-bold text-emerald-600 font-['Outfit']">
                 {fmt(profitLow)} <span className="text-sm font-normal text-zinc-400">to</span> {fmt(profitHigh)}
               </p>
-              <p className="text-xs text-zinc-400 mt-1">25,000 credits avg per closed deal</p>
+              <p className="text-xs text-zinc-400 mt-1">$5,000 avg per closed deal</p>
             </div>
 
             {/* Net Profit (after text costs) */}
@@ -485,7 +485,7 @@ const FundedDeals = () => {
           <div className="flex items-center gap-2 pt-1">
             <BarChart3 className="h-3.5 w-3.5 text-zinc-400" />
             <p className="text-[11px] text-zinc-400">
-              Revenue = Conversions (5%-12%) x 25,000 credits/deal &mdash; Credit Cost (0.316 credits/msg x {avgMsgsPerLead} msgs) &mdash; Credit value: {leadValueCredits}/lead
+              Revenue = Conversions (5%-12%) x $5,000/deal &mdash; Credit Cost (0.316 credits/msg x {avgMsgsPerLead} msgs) &mdash; Lead value: ${leadValue}/lead
             </p>
           </div>
         </div>
@@ -498,8 +498,8 @@ const FundedDeals = () => {
                 <div className="flex items-center gap-2">
                   <DollarSign className="h-5 w-5 text-green-600" />
                   <div>
-                    <p className="text-xl font-bold">{((stats.total_funded_volume || 0) * 5).toLocaleString()}</p>
-                    <p className="text-xs text-muted-foreground">Projected Volume (credits)</p>
+                    <p className="text-xl font-bold">${(stats.total_funded_volume || 0).toLocaleString()}</p>
+                    <p className="text-xs text-muted-foreground">Projected Volume</p>
                   </div>
                 </div>
               </CardContent>
@@ -520,7 +520,7 @@ const FundedDeals = () => {
                 <div className="flex items-center gap-2">
                   <TrendingUp className="h-5 w-5 text-purple-600" />
                   <div>
-                    <p className="text-xl font-bold">{((stats.total_outstanding || 0) * 5).toLocaleString()}</p>
+                    <p className="text-xl font-bold">${(stats.total_outstanding || 0).toLocaleString()}</p>
                     <p className="text-xs text-muted-foreground">Outstanding</p>
                   </div>
                 </div>
@@ -531,7 +531,7 @@ const FundedDeals = () => {
                 <div className="flex items-center gap-2">
                   <CheckCircle2 className="h-5 w-5 text-emerald-600" />
                   <div>
-                    <p className="text-xl font-bold">{((stats.total_collected || 0) * 5).toLocaleString()}</p>
+                    <p className="text-xl font-bold">${(stats.total_collected || 0).toLocaleString()}</p>
                     <p className="text-xs text-muted-foreground">Collected</p>
                   </div>
                 </div>
@@ -553,7 +553,7 @@ const FundedDeals = () => {
                 <div className="flex items-center gap-2">
                   <BarChart3 className="h-5 w-5 text-cyan-600" />
                   <div>
-                    <p className="text-xl font-bold">{((stats.average_deal_size || 0) * 5).toLocaleString()}</p>
+                    <p className="text-xl font-bold">${(stats.average_deal_size || 0).toLocaleString()}</p>
                     <p className="text-xs text-muted-foreground">Avg Deal Size</p>
                   </div>
                 </div>
@@ -614,7 +614,7 @@ const FundedDeals = () => {
                               <p className="text-sm text-muted-foreground">{item.business_name}</p>
                             </div>
                             <div className="text-right">
-                              <p className="font-bold">{(item.amount * 5).toLocaleString()} cr</p>
+                              <p className="font-bold">${item.amount.toLocaleString()}</p>
                               <Badge className={getStatusColor(item.status)}>
                                 {item.days_diff < 0 ? `${Math.abs(item.days_diff)} days late` : item.days_diff === 0 ? 'Due today' : `Due in ${item.days_diff} days`}
                               </Badge>
@@ -650,7 +650,7 @@ const FundedDeals = () => {
                               <p className="text-sm text-green-600">{deal.business_name}</p>
                             </div>
                             <div className="text-right">
-                              <p className="font-bold text-green-700">{(deal.funded_amount * 5)?.toLocaleString()} cr</p>
+                              <p className="font-bold text-green-700">${deal.funded_amount?.toLocaleString()}</p>
                               <p className="text-xs text-green-600">{new Date(deal.funding_date).toLocaleDateString()}</p>
                             </div>
                           </div>
@@ -717,9 +717,9 @@ const FundedDeals = () => {
                         <td className="p-3"><Checkbox checked={selectedDeals.includes(deal.id)} onCheckedChange={() => toggleSelectDeal(deal.id)} /></td>
                         <td className="p-3"><p className="font-medium">{deal.client_name}</p><p className="text-xs text-muted-foreground">{deal.business_name}</p></td>
                         <td className="p-3">{deal.deal_type}</td>
-                        <td className="p-3 text-right font-medium">{(deal.funded_amount * 5)?.toLocaleString()} cr</td>
-                        <td className="p-3 text-right">{(deal.payback_amount * 5)?.toLocaleString()} cr</td>
-                        <td className="p-3 text-right text-green-600">{(deal.total_collected * 5)?.toLocaleString()} cr</td>
+                        <td className="p-3 text-right font-medium">${deal.funded_amount?.toLocaleString()}</td>
+                        <td className="p-3 text-right">${deal.payback_amount?.toLocaleString()}</td>
+                        <td className="p-3 text-right text-green-600">${deal.total_collected?.toLocaleString()}</td>
                         <td className="p-3 text-center"><Badge className={deal.percent_paid >= 50 ? "bg-green-100 text-green-700" : "bg-gray-100"}>{deal.percent_paid}%</Badge></td>
                         <td className="p-3 text-center"><Badge className={getStatusColor(deal.payment_status)}>{deal.payment_status}</Badge></td>
                         <td className="p-3">{deal.assigned_rep_name || '-'}</td>
@@ -764,7 +764,7 @@ const FundedDeals = () => {
                       <div key={i} className="flex items-center justify-between p-3 rounded-lg border">
                         <div className="flex items-center gap-3">
                           <div className={`h-2 w-2 rounded-full ${item.days_diff < 0 ? 'bg-red-500' : item.days_diff === 0 ? 'bg-yellow-500' : 'bg-blue-500'}`} />
-                          <div><p className="font-medium">{item.client_name}</p><p className="text-sm text-muted-foreground">{(item.amount * 5).toLocaleString()} cr - Payment #{item.payment_number}</p></div>
+                          <div><p className="font-medium">{item.client_name}</p><p className="text-sm text-muted-foreground">${item.amount.toLocaleString()} - Payment #{item.payment_number}</p></div>
                         </div>
                         <div className="flex items-center gap-2">
                           <Badge className={getStatusColor(item.status)}>
@@ -789,17 +789,17 @@ const FundedDeals = () => {
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                   <div className="p-6 rounded-lg bg-gradient-to-br from-green-50 to-emerald-50 border border-green-200">
                     <p className="text-sm text-green-600 mb-1">Total Book Value</p>
-                    <p className="text-3xl font-bold text-green-700">{((stats?.book_value || 0) * 5).toLocaleString()} cr</p>
+                    <p className="text-3xl font-bold text-green-700">${(stats?.book_value || 0).toLocaleString()}</p>
                     <p className="text-xs text-green-500 mt-1">Outstanding receivables</p>
                   </div>
                   <div className="p-6 rounded-lg bg-gradient-to-br from-blue-50 to-cyan-50 border border-blue-200">
                     <p className="text-sm text-blue-600 mb-1">Expected Receivables</p>
-                    <p className="text-3xl font-bold text-blue-700">{((stats?.expected_receivables || 0) * 5).toLocaleString()} cr</p>
+                    <p className="text-3xl font-bold text-blue-700">${(stats?.expected_receivables || 0).toLocaleString()}</p>
                     <p className="text-xs text-blue-500 mt-1">Future collections</p>
                   </div>
                   <div className="p-6 rounded-lg bg-gradient-to-br from-purple-50 to-pink-50 border border-purple-200">
                     <p className="text-sm text-purple-600 mb-1">Monthly Funded</p>
-                    <p className="text-3xl font-bold text-purple-700">{((stats?.monthly_funded_volume || 0) * 5).toLocaleString()} cr</p>
+                    <p className="text-3xl font-bold text-purple-700">${(stats?.monthly_funded_volume || 0).toLocaleString()}</p>
                     <p className="text-xs text-purple-500 mt-1">This month</p>
                   </div>
                 </div>
