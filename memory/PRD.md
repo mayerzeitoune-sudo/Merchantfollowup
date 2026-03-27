@@ -1,107 +1,94 @@
 # Merchant Follow Up - Product Requirements Document
 
-## Implementation Status - March 27, 2026
+## Core Product
+Full-stack MCA (Merchant Cash Advance) CRM with role-based access (org_admin, admin, team_leader, agent), Twilio SMS/Voice integration, automated drip campaigns, and a **credit-based billing platform**.
 
-### COMPLETED (This Session - Fork 3)
+## Credit System (Implemented March 27, 2026)
 
-#### Phone Blower 5-Minute Auto-Dialer
-- **START AUTO-DIAL** button on each lead's profile card in the Phone Blower page
-- Calls every 5 minutes, rotating through all org-owned phone numbers
-- AI voice (Amazon Polly.Matthew) plays: *"If you would like these phone calls to stop. Pay your bill. You know who to contact."*
-- TwiML endpoint: `GET /api/phone-blower/twiml/blower-message`
-- Auto-dial sessions stored in `auto_dial_sessions` collection
-- Active sessions panel at top of page with stop controls
-- APScheduler processes due sessions every 2 minutes
-- Business hours enforcement (9-5 ET, weekdays)
-- Compliance checks (DNC, opt-out, wrong number) before each call
-- **Note: Calls are SIMULATED until Twilio credentials are configured**
-- **Status**: VERIFIED (iteration_17.json — 100% pass)
+### Architecture
+- **1 dollar = 5 credits**
+- Credits are **organization-wide**, not user-specific
+- Only admins can purchase credits
+- All in-app purchases use credits (USD only in Credit Shop)
+- Atomic MongoDB operations for safe balance mutations
+- Full transaction ledger (credit_transactions collection)
 
-#### MAX AGGRESSION DRIP — Stop Trigger Words
-- When selecting MAX AGGRESSION DRIP, a **2-step dialog** appears:
-  - **Step 1: Trigger Words** — 15 pre-built stop words (stop, no, out, fuck you, fuck off, unsubscribe, remove, quit, cancel, leave me alone, do not contact, take me off, opt out, not interested, wrong number)
-  - **Step 2: Review & Launch** — campaign name, cost preview, trigger words summary, message preview
-- Users can remove pre-built words and add custom ones
-- Trigger words stored in `trigger_words` array on the `enhanced_campaigns` document
-- Inbound SMS webhook checks trigger words and auto-removes leads from campaigns
-- Backend endpoints: `GET/PUT /api/campaigns/{id}/trigger-words`
-- **Status**: VERIFIED (iteration_17.json — 100% pass)
+### Credit Packages
+| Tier | USD | Credits | Discount |
+|------|-----|---------|----------|
+| Starter | $20 | 100 | 0% |
+| Growth | $100 | 525 | 4.76% |
+| Professional | $250 | 1,350 | 7.41% |
+| Scale | $500 | 2,850 | 12.28% |
+| Executive | $1,000 | 6,100 | 18.03% |
+| Enterprise | $2,500 | 16,700 | 25.15% |
+| Titan | $5,000 | 36,750 | 31.97% |
+| Black | $10,000 | 83,333 | 40% |
 
-### COMPLETED (Previous Session - Fork 2)
-
-#### MAX AGGRESSION DRIP Campaign
-- 100 aggressive message templates, hourly 9-5 M-F, 30 days
-- **Status**: VERIFIED
-
-#### PHONE BLOWER Page (Base)
-- Call queue, lead profile card, 13 dispositions, compliance guardrails, analytics
-- **Status**: VERIFIED
-
-#### Twilio Pricing — 8x Base Rate ($0.0632/msg)
-- System-wide pricing update across projections and campaign previews
-- **Status**: VERIFIED
-
-#### APScheduler Background Processing
-- Hourly 9AM-5PM ET for high-intensity campaigns
-- Daily 10:45 AM ET for standard campaigns
-- Every 2 min for auto-dial sessions
-- **Status**: VERIFIED
-
-### COMPLETED (Earlier Sessions)
-
-- Drip Campaign System (54-msg New Lead + 3 Funded Deal campaigns)
-- Phone Number Management (purchase, assign, delete)
-- Org Admin Impersonation
-- Client Data Access Fixes
-- Billing System ($100/user/month)
-- Google OAuth + Legal Pages (Privacy, Terms)
-- Signup & Landing Page Overhaul
-- Branding (Merchant Followup favicon/title)
-- Auto-enrollment for new leads into matching campaigns
-- Projections Page Overhaul
-
-### Technical Stack
-- **Backend**: FastAPI + MongoDB (Motor async driver) + APScheduler
-- **Frontend**: React + Tailwind + Shadcn/UI
-- **Auth**: JWT with role-based access (org_admin, admin, team_leader, agent)
-- **Integrations**: Twilio (SMS + Voice — requires user credentials)
+### Credit Costs
+- Phone number: 40 credits
+- Text message: 0.316 credits
+- Per user/month: 500 credits
 
 ### Key Files
-- `backend/routes/phone_blower.py`: Auto-dialer, TwiML, call queue, dispositions
-- `backend/routes/enhanced.py`: Campaigns, projections, trigger words
-- `backend/routes/sms.py`: Inbound SMS with trigger word checking
-- `backend/campaign_templates.py`: All pre-built campaign templates
-- `backend/server.py`: Main app, APScheduler, route registration
-- `frontend/src/pages/PhoneBlower.js`: Phone Blower UI with auto-dial controls
-- `frontend/src/pages/DripCampaigns.js`: Campaign management, trigger words step
-- `frontend/src/lib/api.js`: All API definitions
+- `backend/routes/credits.py`: Full credit system (packages, balance, purchase, deduction, history)
+- `frontend/src/pages/CreditShop.js`: Premium dark UI credit store
+- `frontend/src/components/DashboardLayout.js`: Global header credit balance + sidebar
 
-### Prioritized Backlog
+## Implementation Status
 
-**P0 - Critical**
-- Configure live Twilio credentials (SID + Auth Token) for real SMS/Voice
-- Refactor `server.py` monolith (~5500 lines) into modular routes
+### Completed - Session 4 (March 27, 2026)
+- Credit system backend (packages, purchase, deduction, balance, history, constants)
+- Credit Shop page (premium dark design, 8 tiers, checkout flow, purchase history)
+- Global header credit balance (desktop + mobile, links to Credit Shop)
+- Dashboard "Buy Phone Numbers" widget with credit pricing
+- Dashboard Organization Credits card
+- Phone number purchase deducts 40 credits from org
+- Insufficient credits protection (402 error)
+- Admin-only purchasing (403 for non-admins)
+- Converted USD → credits: PhoneNumbers, Projections, DripCampaigns, Billing, Organizations
+- Phone Blower 5-min auto-dialer (backend + frontend)
+- MAX AGGRESSION DRIP trigger words (15 pre-built stop words + custom)
+- **Status**: VERIFIED (iteration_18.json — 100% pass, 12/12 backend + all frontend)
 
-**P1 - Important**
+### Completed - Previous Sessions
+- Drip campaigns, phone number management, org admin impersonation
+- Client data access, billing system, Google OAuth, legal pages
+- Signup/landing page overhaul, branding
+- MAX AGGRESSION DRIP campaign (198 steps, hourly 9-5 M-F, 30 days)
+- Phone Blower base page (queue, dispositions, analytics, compliance)
+- APScheduler background processing
+- Twilio pricing (8x base rate, 0.316 credits/text)
+- Auto-enrollment for new leads
+
+## Tech Stack
+- **Backend**: FastAPI + MongoDB (Motor) + APScheduler
+- **Frontend**: React + Tailwind + Shadcn/UI
+- **Auth**: JWT with role-based access
+- **Integrations**: Twilio (MOCKED), Payment (MOCKED)
+
+## Prioritized Backlog
+
+### P0 - Critical
+- Configure live Twilio credentials (SID + Auth Token)
+- Wire Stripe for real credit purchases
+- Refactor server.py monolith (~5500 lines)
+
+### P1 - Important
 - Support Email UI on Settings page
-- Email service integration for OTPs
 - Twilio A2P 10DLC registration
-- Bulk User Upload
+- Bulk user uploads
 - Real-time notifications (WebSocket)
 
-**P2 - Nice to Have**
-- Email Inbox View
+### P2 - Nice to Have
+- Email Inbox view
 - Auto-import leads from email
 
-### Known Issues
-- **SMS/Voice**: MOCKED — Twilio credentials not configured
-- **Monolithic server.py**: ~5500 lines, needs continued refactoring
-
-### Test Reports
-- `/app/test_reports/iteration_17.json` — All tests passed (11/11 backend, all frontend verified)
-- `/app/test_reports/iteration_16.json` — Previous session all tests passed
-
-### Credentials
+## Credentials
 - Org Admin: `orgadmin@merchant.com` / `Admin123!`
 - Admin: `john@acmefunding.com` / `Password123!`
 - Agent: `mike@acmefunding.com` / `Password123!`
+
+## Test Reports
+- `/app/test_reports/iteration_18.json` — Credit system: 100% (12/12 backend + all frontend)
+- `/app/test_reports/iteration_17.json` — Phone Blower + Trigger Words: 100%
