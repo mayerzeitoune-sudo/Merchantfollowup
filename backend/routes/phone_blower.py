@@ -7,6 +7,11 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from typing import Optional, List
 from datetime import datetime, timezone, timedelta
+import os
+import logging
+from fastapi.responses import Response
+
+logger = logging.getLogger("phone_blower")
 import uuid
 
 router = APIRouter(prefix="/phone-blower", tags=["Phone Blower"])
@@ -376,3 +381,229 @@ async def get_call_queue(current_user: dict = Depends(get_current_user)):
     # Sort: leads with fewer attempts first, then by name
     queue.sort(key=lambda x: (x["today_attempts"], x["client"].get("name", "")))
     return queue[:100]
+
+
+# ============== AUTO-DIALER ==============
+
+BLOWER_MESSAGE = "If you would like these phone calls to stop. Pay your bill. You know who to contact."
+
+
+class AutoDialerStart(BaseModel):
+    client_id: str
+    interval_minutes: Optional[int] = 5
+
+
+class AutoDialerStop(BaseModel):
+    client_id: str
+
+
+@router.get("/twiml/blower-message")
+async def twiml_blower_message():
+    """TwiML endpoint - plays the PHONE BLOWER message when call connects"""
+    twiml = f"""<?xml version="1.0" encoding="UTF-8"?>
+<Response>
+    <Pause length="1"/>
+    <Say voice="Polly.Matthew" language="en-US">{BLOWER_MESSAGE}</Say>
+    <Pause length="1"/>
+    <Say voice="Polly.Matthew" language="en-US">{BLOWER_MESSAGE}</Say>
+    <Pause length="2"/>
+    <Hangup/>
+</Response>"""
+    return Response(content=twiml, media_type="application/xml")
+
+
+@router.post("/auto-dial/start")
+async def start_auto_dialer(data: AutoDialerStart, current_user: dict = Depends(get_current_user)):
+    """Start auto-dialing a lead every 5 minutes, rotating through owned numbers"""
+    from server import get_accessible_user_ids
+    accessible_ids = await get_accessible_user_ids(current_user)
+
+    client = await db.clients.find_one(
+        {"id": data.client_id, "user_id": {"$in": accessible_ids}},
+        {"_id": 0}
+    )
+    if not client:
+        raise HTTPException(status_code=404, detail="Lead not found")
+    if not client.get("phone"):
+        raise HTTPException(status_code=400, detail="Lead has no phone number")
+
+    # Check compliance
+    if client.get("do_not_contact") or client.get("opted_out") or client.get("wrong_number"):
+        raise HTTPException(status_code=403, detail="Lead is blocked (DNC/Opted Out/Wrong Number)")
+
+    # Get org's owned numbers
+    user = await db.users.find_one({"id": current_user["user_id"]}, {"_id": 0})
+    org_id = user.get("org_id") if user else None
+    owned_numbers = await db.phone_numbers.find(
+        {"org_id": org_id, "is_active": True},
+        {"_id": 0, "phone_number": 1, "friendly_name": 1}
+    ).to_list(50)
+
+    if not owned_numbers:
+        raise HTTPException(status_code=400, detail="No owned phone numbers available")
+
+    now = datetime.now(timezone.utc).isoformat()
+    session_id = str(uuid.uuid4())
+
+    # Create auto-dial session
+    session = {
+        "id": session_id,
+        "client_id": data.client_id,
+        "client_phone": client["phone"],
+        "client_name": client.get("name", "Unknown"),
+        "user_id": current_user["user_id"],
+        "org_id": org_id,
+        "interval_minutes": data.interval_minutes or 5,
+        "owned_numbers": [n["phone_number"] for n in owned_numbers],
+        "current_number_index": 0,
+        "total_calls_made": 0,
+        "status": "active",
+        "created_at": now,
+        "updated_at": now,
+        "last_call_at": None,
+        "next_call_at": now,
+    }
+    await db.auto_dial_sessions.insert_one(session)
+
+    # Make the first call immediately
+    result = await _place_auto_dial_call(session)
+
+    # Clean _id
+    if "_id" in session:
+        del session["_id"]
+
+    return {
+        "session_id": session_id,
+        "status": "active",
+        "message": f"Auto-dialer started for {client.get('name')}. Calling every {data.interval_minutes} min from {len(owned_numbers)} numbers.",
+        "first_call": result,
+        "total_numbers": len(owned_numbers),
+    }
+
+
+@router.post("/auto-dial/stop")
+async def stop_auto_dialer(data: AutoDialerStop, current_user: dict = Depends(get_current_user)):
+    """Stop auto-dialing a lead"""
+    result = await db.auto_dial_sessions.update_many(
+        {"client_id": data.client_id, "user_id": current_user["user_id"], "status": "active"},
+        {"$set": {"status": "stopped", "updated_at": datetime.now(timezone.utc).isoformat()}}
+    )
+    return {"stopped": result.modified_count}
+
+
+@router.get("/auto-dial/active")
+async def get_active_auto_dialers(current_user: dict = Depends(get_current_user)):
+    """Get all active auto-dial sessions for the current user"""
+    sessions = await db.auto_dial_sessions.find(
+        {"user_id": current_user["user_id"], "status": "active"},
+        {"_id": 0}
+    ).to_list(50)
+    return sessions
+
+
+async def _place_auto_dial_call(session: dict):
+    """Place a single call for an auto-dial session"""
+    twilio_sid = os.environ.get("TWILIO_ACCOUNT_SID")
+    twilio_token = os.environ.get("TWILIO_AUTH_TOKEN")
+    backend_url = os.environ.get("BACKEND_URL", "")
+
+    # Rotate to next number
+    numbers = session["owned_numbers"]
+    idx = session.get("current_number_index", 0) % len(numbers)
+    from_number = numbers[idx]
+
+    now = datetime.now(timezone.utc).isoformat()
+
+    # Log the attempt
+    attempt_doc = {
+        "id": str(uuid.uuid4()),
+        "client_id": session["client_id"],
+        "user_id": session["user_id"],
+        "outbound_number": from_number,
+        "disposition": "auto_dial_attempted",
+        "notes": f"Auto-dialer call #{session.get('total_calls_made', 0) + 1} from {from_number}",
+        "duration_seconds": 0,
+        "auto_dial_session_id": session["id"],
+        "created_at": now,
+    }
+    await db.call_attempts.insert_one(attempt_doc)
+
+    call_result = {"from": from_number, "to": session["client_phone"], "status": "queued"}
+
+    if twilio_sid and twilio_token:
+        try:
+            from twilio.rest import Client
+            twilio_client = Client(twilio_sid, twilio_token)
+
+            # TwiML URL for the blower message
+            twiml_url = f"{backend_url}/api/phone-blower/twiml/blower-message"
+
+            call = twilio_client.calls.create(
+                to=session["client_phone"],
+                from_=from_number,
+                url=twiml_url,
+                timeout=30,
+                machine_detection="Enable",
+            )
+            call_result["twilio_sid"] = call.sid
+            call_result["status"] = "initiated"
+            logger.info(f"Auto-dial call placed: {from_number} -> {session['client_phone']} (SID: {call.sid})")
+        except Exception as e:
+            call_result["status"] = "failed"
+            call_result["error"] = str(e)
+            logger.error(f"Auto-dial call failed: {e}")
+    else:
+        call_result["status"] = "simulated"
+        call_result["note"] = "Twilio credentials not configured - call simulated"
+        logger.info(f"Auto-dial simulated: {from_number} -> {session['client_phone']}")
+
+    # Update session
+    next_idx = (idx + 1) % len(numbers)
+    interval = session.get("interval_minutes", 5)
+    next_call = (datetime.now(timezone.utc) + timedelta(minutes=interval)).isoformat()
+
+    await db.auto_dial_sessions.update_one(
+        {"id": session["id"]},
+        {"$set": {
+            "current_number_index": next_idx,
+            "total_calls_made": session.get("total_calls_made", 0) + 1,
+            "last_call_at": now,
+            "next_call_at": next_call,
+            "updated_at": now,
+        }}
+    )
+
+    return call_result
+
+
+async def process_auto_dial_sessions():
+    """Background task: process all active auto-dial sessions that are due"""
+    now_iso = datetime.now(timezone.utc).isoformat()
+
+    # Check business hours (9AM-5PM ET, weekdays)
+    from zoneinfo import ZoneInfo
+    et = ZoneInfo("America/New_York")
+    now_et = datetime.now(timezone.utc).astimezone(et)
+    if now_et.weekday() >= 5 or not (9 <= now_et.hour < 17):
+        return {"processed": 0, "reason": "Outside business hours"}
+
+    due_sessions = await db.auto_dial_sessions.find(
+        {"status": "active", "next_call_at": {"$lte": now_iso}},
+        {"_id": 0}
+    ).to_list(100)
+
+    processed = 0
+    for session in due_sessions:
+        # Re-check compliance
+        client = await db.clients.find_one({"id": session["client_id"]}, {"_id": 0})
+        if not client or client.get("do_not_contact") or client.get("opted_out") or client.get("wrong_number"):
+            await db.auto_dial_sessions.update_one(
+                {"id": session["id"]},
+                {"$set": {"status": "stopped_compliance", "updated_at": now_iso}}
+            )
+            continue
+
+        await _place_auto_dial_call(session)
+        processed += 1
+
+    return {"processed": processed, "total_due": len(due_sessions)}
