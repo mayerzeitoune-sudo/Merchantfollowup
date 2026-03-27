@@ -34,7 +34,8 @@ import {
   Wand2,
   Send,
   Loader2,
-  X
+  X,
+  Shield
 } from 'lucide-react';
 import { enhancedCampaignsApi, clientsApi, segmentsApi, aiApi } from '../lib/api';
 import { toast } from 'sonner';
@@ -82,6 +83,15 @@ const DripCampaigns = () => {
   const [prebuiltDetail, setPrebuiltDetail] = useState(null);
   const [launchLoading, setLaunchLoading] = useState(false);
   const [prebuiltName, setPrebuiltName] = useState('');
+  const [prebuiltStep, setPrebuiltStep] = useState('select'); // 'select' | 'triggers' | 'review'
+  const [triggerWords, setTriggerWords] = useState([]);
+  const [newTriggerWord, setNewTriggerWord] = useState('');
+
+  const DEFAULT_TRIGGER_WORDS = [
+    'stop', 'no', 'out', 'unsubscribe', 'remove', 'quit', 'cancel',
+    'leave me alone', 'fuck you', 'fuck off', 'do not contact',
+    'take me off', 'opt out', 'not interested', 'wrong number'
+  ];
   
   // Form state
   const [formData, setFormData] = useState({
@@ -134,11 +144,18 @@ const DripCampaigns = () => {
   const handleSelectPrebuilt = async (campaign) => {
     setSelectedPrebuilt(campaign);
     setPrebuiltName(campaign.name);
+    setTriggerWords([...DEFAULT_TRIGGER_WORDS]);
     try {
       const response = await enhancedCampaignsApi.getPrebuiltDetail(campaign.id);
       setPrebuiltDetail(response.data);
     } catch (error) {
       toast.error('Failed to load campaign details');
+    }
+    // For high-intensity campaigns, show trigger words step
+    if (campaign.id === 'max_aggression') {
+      setPrebuiltStep('triggers');
+    } else {
+      setPrebuiltStep('review');
     }
   };
 
@@ -148,18 +165,32 @@ const DripCampaigns = () => {
     try {
       const result = await enhancedCampaignsApi.launchPrebuilt(selectedPrebuilt.id, {
         name: prebuiltName || selectedPrebuilt.name,
-        tag: selectedPrebuilt.target_tag
+        tag: selectedPrebuilt.target_tag,
+        trigger_words: triggerWords
       });
       toast.success(`Campaign launched! ${result.data.enrolled_count} clients enrolled.`);
       setPrebuiltDialogOpen(false);
       setSelectedPrebuilt(null);
       setPrebuiltDetail(null);
+      setPrebuiltStep('select');
       fetchCampaigns();
     } catch (error) {
       toast.error(error.response?.data?.detail || 'Failed to launch campaign');
     } finally {
       setLaunchLoading(false);
     }
+  };
+
+  const addTriggerWord = () => {
+    const word = newTriggerWord.trim().toLowerCase();
+    if (word && !triggerWords.includes(word)) {
+      setTriggerWords([...triggerWords, word]);
+      setNewTriggerWord('');
+    }
+  };
+
+  const removeTriggerWord = (word) => {
+    setTriggerWords(triggerWords.filter(w => w !== word));
   };
 
   const fetchEnrollments = async (campaignId) => {
@@ -1366,7 +1397,7 @@ const DripCampaigns = () => {
         {/* Bulk Templated Campaign Dialog */}
         <Dialog open={prebuiltDialogOpen} onOpenChange={(open) => {
           setPrebuiltDialogOpen(open);
-          if (!open) { setSelectedPrebuilt(null); setPrebuiltDetail(null); }
+          if (!open) { setSelectedPrebuilt(null); setPrebuiltDetail(null); setPrebuiltStep('select'); }
         }}>
           <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
             <DialogHeader>
@@ -1376,6 +1407,21 @@ const DripCampaigns = () => {
               </DialogDescription>
             </DialogHeader>
             
+            {/* Step indicator for multi-step flows */}
+            {selectedPrebuilt && selectedPrebuilt.id === 'max_aggression' && (
+              <div className="flex items-center gap-2 text-xs">
+                <div className={`flex items-center gap-1 ${prebuiltStep === 'triggers' ? 'text-zinc-900 font-bold' : 'text-zinc-400'}`}>
+                  <div className={`h-5 w-5 rounded-full flex items-center justify-center text-[10px] ${prebuiltStep === 'triggers' ? 'bg-zinc-900 text-white' : 'bg-zinc-200 text-zinc-500'}`}>1</div>
+                  Trigger Words
+                </div>
+                <ArrowRight className="h-3 w-3 text-zinc-300" />
+                <div className={`flex items-center gap-1 ${prebuiltStep === 'review' ? 'text-zinc-900 font-bold' : 'text-zinc-400'}`}>
+                  <div className={`h-5 w-5 rounded-full flex items-center justify-center text-[10px] ${prebuiltStep === 'review' ? 'bg-zinc-900 text-white' : 'bg-zinc-200 text-zinc-500'}`}>2</div>
+                  Review & Launch
+                </div>
+              </div>
+            )}
+
             {!selectedPrebuilt ? (
               <div className="space-y-3">
                 <p className="text-sm text-muted-foreground font-medium">Select a campaign template:</p>
@@ -1410,10 +1456,97 @@ const DripCampaigns = () => {
                   </Card>
                 ))}
               </div>
+            ) : prebuiltStep === 'triggers' ? (
+              /* ===== TRIGGER WORDS STEP ===== */
+              <div className="space-y-4" data-testid="trigger-words-step">
+                <div className="flex items-center gap-2">
+                  <Button variant="ghost" size="sm" onClick={() => { setSelectedPrebuilt(null); setPrebuiltDetail(null); setPrebuiltStep('select'); }}>
+                    <ArrowRight className="h-4 w-4 rotate-180 mr-1" /> Back
+                  </Button>
+                  <h4 className="font-semibold">{selectedPrebuilt.name}</h4>
+                </div>
+
+                <div className="rounded-lg border border-amber-200 bg-amber-50 p-3">
+                  <div className="flex items-center gap-2 mb-1">
+                    <Shield className="h-4 w-4 text-amber-600" />
+                    <h4 className="text-sm font-bold text-amber-800">Stop Trigger Words</h4>
+                  </div>
+                  <p className="text-xs text-amber-700">
+                    When a lead replies with any of these words, they are <strong>automatically removed</strong> from the campaign. Pre-built words are included — add your own below.
+                  </p>
+                </div>
+
+                {/* Current trigger words */}
+                <div className="space-y-2">
+                  <Label className="text-sm">Active Trigger Words ({triggerWords.length})</Label>
+                  <div className="flex flex-wrap gap-1.5 max-h-40 overflow-y-auto p-2 border rounded-lg bg-zinc-50">
+                    {triggerWords.map((word) => (
+                      <Badge 
+                        key={word}
+                        variant="secondary"
+                        className="text-xs cursor-pointer hover:bg-red-100 hover:text-red-700 transition-colors group"
+                        onClick={() => removeTriggerWord(word)}
+                        data-testid={`trigger-word-${word.replace(/\s+/g, '-')}`}
+                      >
+                        {word}
+                        <X className="h-3 w-3 ml-1 opacity-50 group-hover:opacity-100" />
+                      </Badge>
+                    ))}
+                    {triggerWords.length === 0 && (
+                      <p className="text-xs text-zinc-400 py-2">No trigger words set — leads won't be auto-removed on reply</p>
+                    )}
+                  </div>
+                </div>
+
+                {/* Add custom trigger word */}
+                <div className="flex gap-2">
+                  <Input 
+                    placeholder="Add custom trigger word..."
+                    value={newTriggerWord}
+                    onChange={(e) => setNewTriggerWord(e.target.value)}
+                    onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addTriggerWord(); } }}
+                    className="flex-1"
+                    data-testid="add-trigger-word-input"
+                  />
+                  <Button variant="outline" onClick={addTriggerWord} data-testid="add-trigger-word-btn">
+                    <Plus className="h-4 w-4 mr-1" /> Add
+                  </Button>
+                </div>
+
+                {/* Quick add defaults back */}
+                {DEFAULT_TRIGGER_WORDS.filter(w => !triggerWords.includes(w)).length > 0 && (
+                  <div className="space-y-1">
+                    <Label className="text-xs text-zinc-500">Quick add removed defaults:</Label>
+                    <div className="flex flex-wrap gap-1">
+                      {DEFAULT_TRIGGER_WORDS.filter(w => !triggerWords.includes(w)).map(word => (
+                        <Badge 
+                          key={word} 
+                          variant="outline" 
+                          className="text-[10px] cursor-pointer hover:bg-zinc-100"
+                          onClick={() => setTriggerWords([...triggerWords, word])}
+                        >
+                          + {word}
+                        </Badge>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                <DialogFooter>
+                  <Button variant="outline" onClick={() => setPrebuiltDialogOpen(false)}>Cancel</Button>
+                  <Button onClick={() => setPrebuiltStep('review')} data-testid="triggers-next-btn">
+                    Next: Review & Launch <ArrowRight className="h-4 w-4 ml-1" />
+                  </Button>
+                </DialogFooter>
+              </div>
             ) : (
+              /* ===== REVIEW & LAUNCH STEP ===== */
               <div className="space-y-4">
                 <div className="flex items-center gap-2">
-                  <Button variant="ghost" size="sm" onClick={() => { setSelectedPrebuilt(null); setPrebuiltDetail(null); }}>
+                  <Button variant="ghost" size="sm" onClick={() => {
+                    if (selectedPrebuilt.id === 'max_aggression') setPrebuiltStep('triggers');
+                    else { setSelectedPrebuilt(null); setPrebuiltDetail(null); setPrebuiltStep('select'); }
+                  }}>
                     <ArrowRight className="h-4 w-4 rotate-180 mr-1" /> Back
                   </Button>
                   <h4 className="font-semibold">{selectedPrebuilt.name}</h4>
@@ -1437,6 +1570,21 @@ const DripCampaigns = () => {
                     {clients.filter(c => c.tags?.includes(selectedPrebuilt.target_tag)).length} clients will be enrolled
                   </p>
                 </div>
+
+                {/* Trigger words summary */}
+                {triggerWords.length > 0 && (
+                  <div className="p-3 rounded-lg bg-amber-50 border border-amber-200">
+                    <div className="flex items-center gap-2 mb-1">
+                      <Shield className="h-3.5 w-3.5 text-amber-600" />
+                      <p className="text-sm font-medium text-amber-800">
+                        {triggerWords.length} Stop Trigger Words Active
+                      </p>
+                    </div>
+                    <p className="text-xs text-amber-600">
+                      Leads replying with: {triggerWords.slice(0, 5).join(', ')}{triggerWords.length > 5 ? ` +${triggerWords.length - 5} more` : ''}
+                    </p>
+                  </div>
+                )}
 
                 {/* Estimated Costs & Projected Returns Panel */}
                 {(() => {

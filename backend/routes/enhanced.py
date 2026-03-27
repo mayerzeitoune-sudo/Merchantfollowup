@@ -1558,6 +1558,7 @@ async def launch_prebuilt_campaign(
         "steps": template["steps"],
         "triggers": [],
         "stop_on_reply": True,
+        "trigger_words": data.get("trigger_words", []),
         "target_tags": [template["target_tag"]],
         "status": "active",
         "duration_days": 365,
@@ -1634,6 +1635,37 @@ async def launch_prebuilt_campaign(
         "total_clients_matched": len(clients),
         "message": f"Campaign launched with {enrolled_count} clients enrolled"
     }
+
+@router.get("/campaigns/{campaign_id}/trigger-words")
+async def get_campaign_trigger_words(
+    campaign_id: str,
+    current_user: dict = Depends(get_current_user)
+):
+    """Get trigger words for a campaign"""
+    campaign = await db.enhanced_campaigns.find_one({"id": campaign_id}, {"_id": 0})
+    if not campaign:
+        raise HTTPException(status_code=404, detail="Campaign not found")
+    return {"trigger_words": campaign.get("trigger_words", [])}
+
+
+@router.put("/campaigns/{campaign_id}/trigger-words")
+async def update_campaign_trigger_words(
+    campaign_id: str,
+    data: dict,
+    current_user: dict = Depends(get_current_user)
+):
+    """Update trigger words for a campaign"""
+    campaign = await db.enhanced_campaigns.find_one({"id": campaign_id}, {"_id": 0})
+    if not campaign:
+        raise HTTPException(status_code=404, detail="Campaign not found")
+    
+    words = data.get("trigger_words", [])
+    await db.enhanced_campaigns.update_one(
+        {"id": campaign_id},
+        {"$set": {"trigger_words": words, "updated_at": datetime.now(timezone.utc).isoformat()}}
+    )
+    return {"status": "updated", "trigger_words": words}
+
 
 @router.post("/campaigns/{campaign_id}/remove-client/{client_id}")
 async def remove_client_from_campaign(

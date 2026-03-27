@@ -214,6 +214,35 @@ async def handle_inbound_sms(
         }
         await db.conversations.insert_one(conv_doc)
         
+        # Check trigger words — auto-remove from campaigns if matched
+        if Body:
+            body_lower = Body.strip().lower()
+            active_enrollments = await db.campaign_enrollments.find(
+                {"client_id": client_id, "status": "active"}
+            ).to_list(100)
+            for enrollment in active_enrollments:
+                campaign = await db.enhanced_campaigns.find_one(
+                    {"id": enrollment["campaign_id"]}, {"_id": 0, "trigger_words": 1, "stop_on_reply": 1}
+                )
+                if not campaign:
+                    continue
+                trigger_words = campaign.get("trigger_words", [])
+                should_stop = False
+                # Check trigger words
+                for tw in trigger_words:
+                    if tw.lower() in body_lower or body_lower == tw.lower():
+                        should_stop = True
+                        break
+                # Also stop on any reply if stop_on_reply is True
+                if campaign.get("stop_on_reply") and not should_stop:
+                    should_stop = True
+                if should_stop:
+                    await db.campaign_enrollments.update_one(
+                        {"id": enrollment["id"]},
+                        {"$set": {"status": "stopped_trigger", "stopped_at": datetime.now(timezone.utc).isoformat(), "stopped_reason": f"trigger_word: {body_lower[:50]}"}}
+                    )
+                    logger.info(f"Auto-stopped enrollment {enrollment['id']} for client {client_id} due to trigger word match")
+        
         # Create notification for the user
         notification = {
             "id": str(uuid.uuid4()),

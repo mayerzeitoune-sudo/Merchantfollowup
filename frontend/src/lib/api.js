@@ -87,6 +87,8 @@ export const enhancedCampaignsApi = {
   getPrebuilt: () => axios.get(`${API}/campaigns/prebuilt`),
   getPrebuiltDetail: (type) => axios.get(`${API}/campaigns/prebuilt/${type}`),
   launchPrebuilt: (type, data) => axios.post(`${API}/campaigns/prebuilt/${type}/launch`, data),
+  getTriggerWords: (campaignId) => axios.get(`${API}/campaigns/${campaignId}/trigger-words`),
+  updateTriggerWords: (campaignId, data) => axios.put(`${API}/campaigns/${campaignId}/trigger-words`, data),
   removeClient: (campaignId, clientId) => axios.post(`${API}/campaigns/${campaignId}/remove-client/${clientId}`),
   getClientActiveCampaigns: (clientId) => axios.get(`${API}/campaigns/client/${clientId}/active`),
   processDue: () => axios.post(`${API}/campaigns/process-due`),
@@ -101,6 +103,9 @@ export const phoneBlowerApi = {
   logCall: (data) => axios.post(`${API}/phone-blower/call`, data),
   getAnalytics: () => axios.get(`${API}/phone-blower/analytics`),
   getQueue: () => axios.get(`${API}/phone-blower/queue`),
+  startAutoDial: (data) => axios.post(`${API}/phone-blower/auto-dial/start`, data),
+  stopAutoDial: (data) => axios.post(`${API}/phone-blower/auto-dial/stop`, data),
+  getActiveAutoDialers: () => axios.get(`${API}/phone-blower/auto-dial/active`),
 };
 
 // SMS Providers API

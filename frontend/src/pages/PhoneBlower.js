@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
 import DashboardLayout from '../components/DashboardLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
 import { Button } from '../components/ui/button';
@@ -13,7 +13,8 @@ import {
   Phone, PhoneOff, Clock, Shield, AlertTriangle, CheckCircle2, XCircle,
   User, Building2, MapPin, MessageSquare, FileText, Search, BarChart3,
   PhoneCall, PhoneForwarded, PhoneMissed, Voicemail, Timer, Zap,
-  ArrowRight, Ban, Settings, TrendingUp, Target, Activity
+  ArrowRight, Ban, Settings, TrendingUp, Target, Activity,
+  Power, PowerOff, RotateCcw, Volume2
 } from 'lucide-react';
 import { phoneBlowerApi, phoneNumbersApi, clientsApi } from '../lib/api';
 import { toast } from 'sonner';
@@ -48,17 +49,38 @@ const PhoneBlower = () => {
   const [settings, setSettings] = useState(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [settingsForm, setSettingsForm] = useState({ max_attempts_per_day: 3, cooldown_minutes: 60 });
+  const [autoDialSessions, setAutoDialSessions] = useState([]);
+  const [autoDialLoading, setAutoDialLoading] = useState(false);
+  const autoDialPollRef = useRef(null);
 
-  useEffect(() => { loadInitialData(); }, []);
+  useEffect(() => { loadInitialData(); return () => { if (autoDialPollRef.current) clearInterval(autoDialPollRef.current); }; }, []);
+
+  // Poll active auto-dial sessions every 30s
+  useEffect(() => {
+    if (autoDialSessions.length > 0) {
+      autoDialPollRef.current = setInterval(fetchAutoDialSessions, 30000);
+    } else if (autoDialPollRef.current) {
+      clearInterval(autoDialPollRef.current);
+    }
+    return () => { if (autoDialPollRef.current) clearInterval(autoDialPollRef.current); };
+  }, [autoDialSessions.length]);
+
+  const fetchAutoDialSessions = async () => {
+    try {
+      const res = await phoneBlowerApi.getActiveAutoDialers();
+      setAutoDialSessions(res.data || []);
+    } catch (e) { /* silent */ }
+  };
 
   const loadInitialData = async () => {
     setLoading(true);
     try {
-      const [queueRes, analyticsRes, numbersRes, settingsRes] = await Promise.all([
+      const [queueRes, analyticsRes, numbersRes, settingsRes, autoDialRes] = await Promise.all([
         phoneBlowerApi.getQueue(),
         phoneBlowerApi.getAnalytics(),
         phoneNumbersApi.getOwned().catch(() => ({ data: [] })),
         phoneBlowerApi.getSettings().catch(() => ({ data: null })),
+        phoneBlowerApi.getActiveAutoDialers().catch(() => ({ data: [] })),
       ]);
       setQueue(queueRes.data || []);
       setAnalytics(analyticsRes.data);
@@ -71,6 +93,7 @@ const PhoneBlower = () => {
           cooldown_minutes: settingsRes.data.cooldown_minutes || 60,
         });
       }
+      setAutoDialSessions(autoDialRes.data || []);
     } catch (e) {
       console.error(e);
     } finally {
@@ -124,6 +147,33 @@ const PhoneBlower = () => {
       toast.error('Failed to update settings');
     }
   };
+
+  const handleStartAutoDial = async (clientId) => {
+    setAutoDialLoading(true);
+    try {
+      const res = await phoneBlowerApi.startAutoDial({ client_id: clientId, interval_minutes: 5 });
+      toast.success(res.data?.message || 'Auto-dialer started');
+      await fetchAutoDialSessions();
+      if (clientId === selectedLead) await selectLead(clientId);
+    } catch (e) {
+      toast.error(e.response?.data?.detail || 'Failed to start auto-dialer');
+    } finally {
+      setAutoDialLoading(false);
+    }
+  };
+
+  const handleStopAutoDial = async (clientId) => {
+    try {
+      await phoneBlowerApi.stopAutoDial({ client_id: clientId });
+      toast.success('Auto-dialer stopped');
+      await fetchAutoDialSessions();
+    } catch (e) {
+      toast.error('Failed to stop auto-dialer');
+    }
+  };
+
+  const isAutoDialActive = (clientId) => autoDialSessions.some(s => s.client_id === clientId);
+  const getAutoDialSession = (clientId) => autoDialSessions.find(s => s.client_id === clientId);
 
   const filteredQueue = queue.filter(item => {
     if (!search) return true;
@@ -194,6 +244,48 @@ const PhoneBlower = () => {
           </div>
         )}
 
+        {/* Active Auto-Dial Sessions */}
+        {autoDialSessions.length > 0 && (
+          <Card className="border-red-200 bg-red-50/50" data-testid="auto-dial-sessions-panel">
+            <CardContent className="py-3 px-4">
+              <div className="flex items-center gap-2 mb-2">
+                <div className="h-2 w-2 rounded-full bg-red-500 animate-pulse" />
+                <h4 className="text-sm font-bold text-red-700 uppercase tracking-wider">Active Auto-Dialers</h4>
+                <Badge variant="destructive" className="text-xs">{autoDialSessions.length} running</Badge>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
+                {autoDialSessions.map(session => (
+                  <div key={session.id} className="flex items-center justify-between rounded-lg border border-red-200 bg-white p-2.5">
+                    <div className="min-w-0">
+                      <p className="text-sm font-semibold truncate">{session.client_name || 'Unknown'}</p>
+                      <div className="flex items-center gap-2 text-[10px] text-zinc-500">
+                        <span className="font-mono">{session.client_phone}</span>
+                        <span>|</span>
+                        <span>{session.total_calls_made} calls</span>
+                        <span>|</span>
+                        <RotateCcw className="h-2.5 w-2.5 inline" />
+                        <span>{session.owned_numbers?.length || 0} numbers</span>
+                      </div>
+                      <p className="text-[10px] text-zinc-400 mt-0.5">
+                        Next call: {session.next_call_at ? new Date(session.next_call_at).toLocaleTimeString() : 'Now'}
+                      </p>
+                    </div>
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                      className="h-7 text-xs shrink-0 ml-2"
+                      onClick={() => handleStopAutoDial(session.client_id)}
+                      data-testid={`stop-autodial-${session.client_id}`}
+                    >
+                      <PowerOff className="h-3 w-3 mr-1" /> Stop
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
         {/* Main Content: Queue + Lead Card */}
         <div className="grid grid-cols-12 gap-4">
           {/* Left: Call Queue */}
@@ -232,6 +324,9 @@ const PhoneBlower = () => {
                               <p className="text-xs text-muted-foreground">{item.client.company || item.client.phone}</p>
                             </div>
                             <div className="flex items-center gap-1">
+                              {isAutoDialActive(item.client.id) && (
+                                <Badge className="bg-red-100 text-red-700 text-[9px] px-1 py-0 animate-pulse">AUTO</Badge>
+                              )}
                               {item.today_attempts > 0 && (
                                 <Badge variant="outline" className="text-[10px] px-1">{item.today_attempts}x</Badge>
                               )}
@@ -389,7 +484,7 @@ const PhoneBlower = () => {
 
                 {/* Call Controls + Disposition */}
                 <div className="grid grid-cols-3 gap-4">
-                  {/* Outbound Number + Call */}
+                  {/* Outbound Number + Call + Auto-Dial */}
                   <Card>
                     <CardContent className="pt-4 space-y-3">
                       <h4 className="text-xs text-zinc-500 uppercase tracking-wider font-semibold">Outbound Number</h4>
@@ -414,6 +509,64 @@ const PhoneBlower = () => {
                         <PhoneCall className="h-5 w-5 mr-2" />
                         {comp.can_call ? 'CALL NOW' : 'BLOCKED'}
                       </Button>
+
+                      {/* AUTO-DIAL 5-MIN LOOP */}
+                      <div className="border-t pt-3">
+                        <div className="flex items-center gap-1.5 mb-2">
+                          <Volume2 className="h-3.5 w-3.5 text-red-600" />
+                          <h4 className="text-xs text-red-600 uppercase tracking-wider font-bold">5-Min Auto-Dialer</h4>
+                        </div>
+                        {isAutoDialActive(selectedLead) ? (
+                          <div className="space-y-2">
+                            <div className="rounded bg-red-50 border border-red-200 p-2">
+                              <div className="flex items-center gap-1.5 mb-1">
+                                <div className="h-2 w-2 rounded-full bg-red-500 animate-pulse" />
+                                <span className="text-xs font-bold text-red-700">AUTO-DIALING ACTIVE</span>
+                              </div>
+                              {(() => {
+                                const session = getAutoDialSession(selectedLead);
+                                return (
+                                  <div className="text-[10px] text-red-600 space-y-0.5">
+                                    <p>Calls made: <span className="font-mono font-bold">{session?.total_calls_made || 0}</span></p>
+                                    <p>Rotating through: <span className="font-mono font-bold">{session?.owned_numbers?.length || 0}</span> numbers</p>
+                                    <p>Next call: <span className="font-mono">{session?.next_call_at ? new Date(session.next_call_at).toLocaleTimeString() : 'Soon'}</span></p>
+                                  </div>
+                                );
+                              })()}
+                            </div>
+                            <Button
+                              variant="destructive"
+                              className="w-full h-10 font-bold"
+                              onClick={() => handleStopAutoDial(selectedLead)}
+                              data-testid="stop-autodial-btn"
+                            >
+                              <PowerOff className="h-4 w-4 mr-2" /> STOP AUTO-DIAL
+                            </Button>
+                          </div>
+                        ) : (
+                          <div className="space-y-2">
+                            <p className="text-[10px] text-zinc-500 leading-tight">
+                              Calls every 5 min from rotating numbers. AI voice plays: <em className="text-red-600">"Pay your bill..."</em>
+                            </p>
+                            <Button
+                              className="w-full h-10 bg-red-600 hover:bg-red-700 font-bold"
+                              disabled={!client.phone || ownedNumbers.length === 0 || autoDialLoading || comp.is_blocked}
+                              onClick={() => handleStartAutoDial(selectedLead)}
+                              data-testid="start-autodial-btn"
+                            >
+                              {autoDialLoading ? (
+                                <><RotateCcw className="h-4 w-4 mr-2 animate-spin" /> Starting...</>
+                              ) : (
+                                <><Power className="h-4 w-4 mr-2" /> START AUTO-DIAL</>
+                              )}
+                            </Button>
+                            {ownedNumbers.length === 0 && (
+                              <p className="text-[10px] text-red-500 text-center">No owned numbers — buy numbers first</p>
+                            )}
+                          </div>
+                        )}
+                      </div>
+
                       {!comp.can_call && (
                         <p className="text-xs text-red-500 text-center">{leadProfile.recommendation}</p>
                       )}

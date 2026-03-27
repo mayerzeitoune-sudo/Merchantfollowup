@@ -5571,6 +5571,24 @@ async def startup_campaign_scheduler():
         id="campaign_daily_send",
         replace_existing=True
     )
+    # Auto-dialer processor: runs every 2 minutes to check for due auto-dial sessions
+    async def run_auto_dialer():
+        try:
+            from routes.phone_blower import process_auto_dial_sessions
+            result = await process_auto_dial_sessions()
+            if result.get("processed", 0) > 0:
+                logger.info(f"Auto-dialer ran: {result}")
+        except Exception as e:
+            logger.error(f"Auto-dialer scheduler error: {e}")
+
+    from apscheduler.triggers.interval import IntervalTrigger
+    scheduler.add_job(
+        run_auto_dialer,
+        IntervalTrigger(minutes=2),
+        id="auto_dialer_processor",
+        replace_existing=True
+    )
+
     scheduler.start()
     app.state.scheduler = scheduler
-    logger.info("Campaign scheduler started - hourly 9AM-5PM ET + daily 10:45 AM ET, Mon-Fri")
+    logger.info("Campaign scheduler started - hourly 9AM-5PM ET + daily 10:45 AM ET, Mon-Fri + auto-dialer every 2 min")
