@@ -869,7 +869,7 @@ const Organizations = () => {
                         <div>
                           <p className="text-3xl font-bold">{billingData.summary.total_users}</p>
                           <p className="text-sm text-muted-foreground">
-                            @ ${billingData.summary.price_per_user}/user
+                            @ {billingData.summary.price_per_user * 5} credits/user
                           </p>
                         </div>
                       </div>
@@ -888,14 +888,14 @@ const Organizations = () => {
                   <CardContent>
                     <div className="flex items-center justify-between">
                       <div>
-                        <p className="text-4xl font-bold text-orange-600">$100</p>
-                        <p className="text-muted-foreground">per user / month</p>
+                        <p className="text-4xl font-bold text-orange-600">500</p>
+                        <p className="text-muted-foreground">credits per user / month</p>
                       </div>
                       <div className="text-right">
                         <p className="text-sm text-muted-foreground">Current total users</p>
                         <p className="text-2xl font-bold">{billingData.summary.total_users} users</p>
                         <p className="text-sm text-muted-foreground mt-1">
-                          Monthly billing: <span className="font-semibold text-orange-600">${billingData.summary.total_owed.toLocaleString()}</span>
+                          Monthly billing: <span className="font-semibold text-orange-600">{(billingData.summary.total_owed * 5).toLocaleString()} credits</span>
                         </p>
                       </div>
                     </div>
@@ -937,7 +937,7 @@ const Organizations = () => {
                               </td>
                               <td className="text-center py-3 px-3">{org.user_count}</td>
                               <td className="text-center py-3 px-3 font-mono">{(org.texts_sent || 0).toLocaleString()}</td>
-                              <td className="text-right py-3 px-3 font-mono text-orange-600">${(org.texting_cost || 0).toFixed(2)}</td>
+                              <td className="text-right py-3 px-3 font-mono text-orange-600">{Math.round((org.texting_cost || 0) * 5).toLocaleString()} cr</td>
                               <td className="text-center py-3 px-3">
                                 {org.phone_count > 0 ? (
                                   <span className="cursor-help" title={org.phone_numbers?.map(p => `${p.number}: $${p.cost}/mo`).join('\n')}>
@@ -945,11 +945,11 @@ const Organizations = () => {
                                   </span>
                                 ) : '0'}
                               </td>
-                              <td className="text-right py-3 px-3 font-mono">${(org.phone_monthly_cost || 0).toFixed(2)}/mo</td>
-                              <td className="text-right py-3 px-3 font-medium font-mono">${(org.amount_owed || 0).toLocaleString()}</td>
-                              <td className="text-right py-3 px-3 text-green-600 font-mono">${(org.amount_paid || 0).toLocaleString()}</td>
+                              <td className="text-right py-3 px-3 font-mono">{Math.round((org.phone_monthly_cost || 0) * 5)} cr/mo</td>
+                              <td className="text-right py-3 px-3 font-medium font-mono">{((org.amount_owed || 0) * 5).toLocaleString()} cr</td>
+                              <td className="text-right py-3 px-3 text-green-600 font-mono">{((org.amount_paid || 0) * 5).toLocaleString()} cr</td>
                               <td className={`text-right py-3 px-3 font-medium font-mono ${org.balance > 0 ? 'text-red-600' : 'text-green-600'}`}>
-                                ${Math.abs(org.balance).toLocaleString()}
+                                {(Math.abs(org.balance) * 5).toLocaleString()} cr
                                 {org.balance < 0 && ' credit'}
                               </td>
                               <td className="text-center py-3 px-3">
@@ -1091,12 +1091,12 @@ const Organizations = () => {
                     <p className="text-sm text-muted-foreground">Users</p>
                   </div>
                   <div className="p-4 bg-orange-50 rounded-lg text-center">
-                    <p className="text-2xl font-bold text-orange-600">${selectedOrgBilling.billing.amount_owed}</p>
-                    <p className="text-sm text-muted-foreground">Amount Owed</p>
+                    <p className="text-2xl font-bold text-orange-600">{(selectedOrgBilling.billing.amount_owed * 5).toLocaleString()} cr</p>
+                    <p className="text-sm text-muted-foreground">Credits Owed</p>
                   </div>
                   <div className="p-4 bg-green-50 rounded-lg text-center">
-                    <p className="text-2xl font-bold text-green-600">${selectedOrgBilling.billing.amount_paid}</p>
-                    <p className="text-sm text-muted-foreground">Amount Paid</p>
+                    <p className="text-2xl font-bold text-green-600">{(selectedOrgBilling.billing.amount_paid * 5).toLocaleString()} cr</p>
+                    <p className="text-sm text-muted-foreground">Credits Paid</p>
                   </div>
                 </div>
                 

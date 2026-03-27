@@ -1590,21 +1590,19 @@ const DripCampaigns = () => {
                 {(() => {
                   const matchingClients = clients.filter(c => c.tags?.includes(selectedPrebuilt.target_tag)).length;
                   const totalMsgs = prebuiltDetail?.steps?.length || selectedPrebuilt.total_steps || 0;
-                  const costPerText = 0.0632;
+                  const creditsPerText = 0.316;
                   const totalTexts = matchingClients * totalMsgs;
-                  const totalCost = totalTexts * costPerText;
+                  const totalCreditCost = Math.round(totalTexts * creditsPerText);
                   const convLow = Math.max(1, Math.round(matchingClients * 0.05));
                   const convHigh = Math.max(1, Math.round(matchingClients * 0.12));
                   const dealValue = 5000;
                   const revLow = convLow * dealValue;
                   const revHigh = convHigh * dealValue;
-                  const netLow = revLow - totalCost;
-                  const netHigh = revHigh - totalCost;
                   return (
                     <div className="rounded-lg border border-zinc-200 bg-white p-4 space-y-3 shadow-sm" data-testid="campaign-cost-preview">
                       <div className="flex items-center gap-2">
                         <BarChart3 className="h-4 w-4 text-emerald-600" />
-                        <h4 className="text-sm font-semibold text-zinc-900">Estimated Costs & Projected Returns</h4>
+                        <h4 className="text-sm font-semibold text-zinc-900">Estimated Credits & Projected Returns</h4>
                       </div>
                       <div className="grid grid-cols-2 gap-2">
                         <div className="rounded bg-zinc-50 border border-zinc-200 p-3">
@@ -1613,9 +1611,9 @@ const DripCampaigns = () => {
                           <p className="text-[10px] text-zinc-400">{matchingClients} leads x {totalMsgs} msgs</p>
                         </div>
                         <div className="rounded bg-zinc-50 border border-zinc-200 p-3">
-                          <p className="text-[10px] text-zinc-500 uppercase tracking-wider">Campaign Cost</p>
-                          <p className="text-lg font-bold text-red-500 font-mono">${totalCost.toFixed(2)}</p>
-                          <p className="text-[10px] text-zinc-400">${costPerText}/text</p>
+                          <p className="text-[10px] text-zinc-500 uppercase tracking-wider">Campaign Credit Cost</p>
+                          <p className="text-lg font-bold text-amber-600 font-mono">{totalCreditCost.toLocaleString()}</p>
+                          <p className="text-[10px] text-zinc-400">{creditsPerText} credits/text</p>
                         </div>
                         <div className="rounded bg-zinc-50 border border-zinc-200 p-3">
                           <p className="text-[10px] text-zinc-500 uppercase tracking-wider">Est. Conversions</p>
@@ -1631,10 +1629,10 @@ const DripCampaigns = () => {
                       <div className="flex items-center justify-between rounded bg-emerald-50 border border-emerald-200 p-3">
                         <div>
                           <p className="text-[10px] text-zinc-500 uppercase tracking-wider">Estimated Net Return</p>
-                          <p className="text-[10px] text-zinc-400 mt-0.5">Revenue minus campaign text cost</p>
+                          <p className="text-[10px] text-zinc-400 mt-0.5">Revenue minus credit cost (at base rate)</p>
                         </div>
                         <p className="text-xl font-bold text-green-600 font-mono">
-                          ${Math.max(0, Math.round(netLow)).toLocaleString()} <span className="text-xs font-normal text-zinc-400">to</span> ${Math.max(0, Math.round(netHigh)).toLocaleString()}
+                          ${Math.max(0, Math.round(revLow - (totalCreditCost / 5))).toLocaleString()} <span className="text-xs font-normal text-zinc-400">to</span> ${Math.max(0, Math.round(revHigh - (totalCreditCost / 5))).toLocaleString()}
                         </p>
                       </div>
                     </div>

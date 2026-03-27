@@ -218,13 +218,12 @@ const FundedDeals = () => {
   const activeCampaigns = projections?.active_campaigns || 0;
   const activeEnrollments = projections?.active_enrollments || 0;
 
-  // Per-message cost projections (54 messages per new lead campaign)
+  // Per-message cost projections (54 messages per new lead campaign) - in credits
   const avgMsgsPerLead = 54;
-  const textCost = 0.0632;
-  const totalTextCostLow = convLow * avgMsgsPerLead * textCost;
-  const totalTextCostHigh = convHigh * avgMsgsPerLead * textCost;
-  const netProfitLow = profitLow - totalTextCostHigh;
-  const netProfitHigh = profitHigh - totalTextCostLow;
+  const textCostCredits = 0.316; // credits per text
+  const totalTextCostCreditsLow = convLow * avgMsgsPerLead * textCostCredits;
+  const totalTextCostCreditsHigh = convHigh * avgMsgsPerLead * textCostCredits;
+  const leadValueCredits = Math.round((profitLow / Math.max(1, totalLeads)) * 5); // convert lead value to credits
 
   return (
     <DashboardLayout>
@@ -392,12 +391,12 @@ const FundedDeals = () => {
             <div className="rounded-lg bg-zinc-50 border border-zinc-200 p-4" data-testid="kpi-net-profit">
               <div className="flex items-center gap-2 mb-2">
                 <Zap className="h-4 w-4 text-green-500" />
-                <span className="text-xs text-zinc-500 uppercase tracking-wider">Net Profit</span>
+                <span className="text-xs text-zinc-500 uppercase tracking-wider">Campaign Credit Cost</span>
               </div>
-              <p className="text-2xl font-bold text-green-600 font-['Outfit']">
-                {fmt(Math.max(0, netProfitLow))} <span className="text-sm font-normal text-zinc-400">to</span> {fmt(Math.max(0, netProfitHigh))}
+              <p className="text-2xl font-bold text-amber-600 font-['Outfit']">
+                {Math.round(totalTextCostCreditsLow).toLocaleString()} <span className="text-sm font-normal text-zinc-400">to</span> {Math.round(totalTextCostCreditsHigh).toLocaleString()}
               </p>
-              <p className="text-xs text-zinc-400 mt-1">After messaging costs</p>
+              <p className="text-xs text-zinc-400 mt-1">credits for messaging all leads</p>
             </div>
           </div>
 
@@ -405,27 +404,27 @@ const FundedDeals = () => {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
             {/* Cost Breakdown */}
             <div className="rounded-lg bg-zinc-50/80 border border-zinc-100 p-4">
-              <h3 className="text-xs text-zinc-500 uppercase tracking-wider mb-3">Cost Breakdown</h3>
+              <h3 className="text-xs text-zinc-500 uppercase tracking-wider mb-3">Credit Cost Breakdown</h3>
               <div className="space-y-2">
                 <div className="flex justify-between text-sm">
-                  <span className="text-zinc-500">Cost per text</span>
-                  <span className="text-zinc-800 font-mono">$0.0632</span>
+                  <span className="text-zinc-500">Credits per text</span>
+                  <span className="text-zinc-800 font-mono">0.316</span>
                 </div>
                 <div className="flex justify-between text-sm">
                   <span className="text-zinc-500">Avg texts per campaign</span>
                   <span className="text-zinc-800 font-mono">{avgMsgsPerLead}</span>
                 </div>
                 <div className="flex justify-between text-sm">
-                  <span className="text-zinc-500">Cost per lead contacted</span>
-                  <span className="text-zinc-800 font-mono">${(avgMsgsPerLead * textCost).toFixed(2)}</span>
+                  <span className="text-zinc-500">Credits per lead contacted</span>
+                  <span className="text-zinc-800 font-mono">{Math.round(avgMsgsPerLead * textCostCredits)}</span>
                 </div>
                 <div className="flex justify-between text-sm">
-                  <span className="text-zinc-500">Value per lead</span>
-                  <span className="text-emerald-600 font-mono font-semibold">${leadValue}</span>
+                  <span className="text-zinc-500">Credit value per lead</span>
+                  <span className="text-emerald-600 font-mono font-semibold">{leadValueCredits.toLocaleString()}</span>
                 </div>
                 <div className="border-t border-zinc-200 pt-2 flex justify-between text-sm">
-                  <span className="text-zinc-500">Total text spend range</span>
-                  <span className="text-red-500 font-mono">${totalTextCostLow.toFixed(0)} - ${totalTextCostHigh.toFixed(0)}</span>
+                  <span className="text-zinc-500">Total credit spend range</span>
+                  <span className="text-amber-600 font-mono">{Math.round(totalTextCostCreditsLow).toLocaleString()} - {Math.round(totalTextCostCreditsHigh).toLocaleString()}</span>
                 </div>
               </div>
             </div>
@@ -486,7 +485,7 @@ const FundedDeals = () => {
           <div className="flex items-center gap-2 pt-1">
             <BarChart3 className="h-3.5 w-3.5 text-zinc-400" />
             <p className="text-[11px] text-zinc-400">
-              Revenue = Conversions (5%-12%) x $5,000/deal &mdash; Text Cost ($0.0632/msg x {avgMsgsPerLead} msgs) &mdash; Lead Value: ${leadValue}/lead
+              Revenue = Conversions (5%-12%) x $5,000/deal &mdash; Credit Cost (0.316 credits/msg x {avgMsgsPerLead} msgs) &mdash; Credit value: {leadValueCredits}/lead
             </p>
           </div>
         </div>

@@ -108,7 +108,7 @@ const Billing = () => {
                       <Receipt className="h-6 w-6 text-orange-600" />
                     </div>
                     <div>
-                      <p className="text-3xl font-bold">${billing.billing.amount_owed.toLocaleString()}</p>
+                      <p className="text-3xl font-bold">{(billing.billing.amount_owed * 5).toLocaleString()} credits</p>
                       <p className="text-sm text-muted-foreground">Amount Owed</p>
                     </div>
                   </div>
@@ -122,7 +122,7 @@ const Billing = () => {
                       <DollarSign className="h-6 w-6 text-green-600" />
                     </div>
                     <div>
-                      <p className="text-3xl font-bold text-green-600">${billing.billing.amount_paid.toLocaleString()}</p>
+                      <p className="text-3xl font-bold text-green-600">{(billing.billing.amount_paid * 5).toLocaleString()} credits</p>
                       <p className="text-sm text-muted-foreground">Amount Paid</p>
                     </div>
                   </div>
@@ -141,7 +141,7 @@ const Billing = () => {
                     </div>
                     <div>
                       <p className={`text-3xl font-bold ${billing.billing.balance > 0 ? 'text-red-600' : 'text-green-600'}`}>
-                        ${Math.abs(billing.billing.balance).toLocaleString()}
+                        {(Math.abs(billing.billing.balance) * 5).toLocaleString()} credits
                       </p>
                       <p className="text-sm text-muted-foreground">
                         {billing.billing.balance > 0 ? 'Outstanding Balance' : 'Credit Balance'}
@@ -163,8 +163,8 @@ const Billing = () => {
               <CardContent>
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-4xl font-bold text-orange-600">${billing.billing.price_per_user}</p>
-                    <p className="text-muted-foreground">per user / month</p>
+                    <p className="text-4xl font-bold text-orange-600">{billing.billing.price_per_user * 5}</p>
+                    <p className="text-muted-foreground">credits per user / month</p>
                   </div>
                   <div className="text-right">
                     <Badge 
@@ -192,7 +192,7 @@ const Billing = () => {
             <Card>
               <CardHeader>
                 <CardTitle>Users ({billing.users.length})</CardTitle>
-                <CardDescription>Each user costs ${billing.billing.price_per_user}/month</CardDescription>
+                <CardDescription>Each user costs {billing.billing.price_per_user * 5} credits/month</CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="divide-y">
@@ -204,7 +204,7 @@ const Billing = () => {
                       </div>
                       <div className="flex items-center gap-3">
                         <Badge variant="outline">{u.role}</Badge>
-                        <span className="text-sm text-muted-foreground">${billing.billing.price_per_user}/mo</span>
+                        <span className="text-sm text-muted-foreground">{billing.billing.price_per_user * 5} credits/mo</span>
                       </div>
                     </div>
                   ))}
@@ -224,7 +224,7 @@ const Billing = () => {
                     {billing.payments.map((p) => (
                       <div key={p.id} className="py-3 flex justify-between items-center">
                         <div>
-                          <p className="font-medium text-green-600">${p.amount.toLocaleString()}</p>
+                          <p className="font-medium text-green-600">{(p.amount * 5).toLocaleString()} credits</p>
                           {p.notes && <p className="text-sm text-muted-foreground">{p.notes}</p>}
                         </div>
                         <span className="text-sm text-muted-foreground">

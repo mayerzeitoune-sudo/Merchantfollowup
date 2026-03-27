@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { Button } from '../components/ui/button';
@@ -30,11 +30,13 @@ import {
   Activity,
   UsersRound,
   ArrowLeftCircle,
-  Eye
+  Eye,
+  Coins
 } from 'lucide-react';
 import GlobalSearch from './GlobalSearch';
 import NotificationBell from './NotificationBell';
 import PhoneDialer from './PhoneDialer';
+import { creditsApi } from '../lib/api';
 
 const navItems = [
   { path: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
@@ -51,6 +53,8 @@ const navItems = [
   { divider: true, label: 'Growth' },
   { path: '/lead-capture', label: 'Lead Capture', icon: UserPlus },
   { path: '/analytics', label: 'Analytics', icon: BarChart3 },
+  { divider: true, label: 'Billing' },
+  { path: '/credit-shop', label: 'Credit Shop', icon: Coins, badge: 'New' },
   { divider: true, label: 'Team' },
   { path: '/team', label: 'Team Members', icon: Users },
   { path: '/my-team', label: 'My Team', icon: UsersRound, teamLeaderOnly: true },
@@ -67,11 +71,21 @@ const navItems = [
 
 const DashboardLayout = ({ children }) => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [creditBalance, setCreditBalance] = useState(null);
   const location = useLocation();
   const navigate = useNavigate();
   const { user, logout, isImpersonating, impersonator, stopImpersonation } = useAuth();
 
   const logoUrl = "https://customer-assets.emergentagent.com/job_8de675b6-2eb0-4aa2-9eba-eeadd9657b38/artifacts/gcg3jc1g_Image_20260311_161856_605.png";
+
+  useEffect(() => {
+    if (user) {
+      creditsApi.getBalance().then(res => setCreditBalance(res.data?.balance ?? 0)).catch(() => {});
+    }
+    const handler = (e) => setCreditBalance(e.detail?.balance ?? 0);
+    window.addEventListener('credits-updated', handler);
+    return () => window.removeEventListener('credits-updated', handler);
+  }, [user]);
 
   const handleLogout = () => {
     // Navigate first, then logout to avoid ProtectedRoute redirect
@@ -135,7 +149,15 @@ const DashboardLayout = ({ children }) => {
             <span className="text-xs font-semibold text-orange-500">FOLLOWUP</span>
           </div>
         </div>
-        <NotificationBell />
+        <div className="flex items-center gap-2">
+          {creditBalance !== null && (
+            <Link to="/credit-shop" className="flex items-center gap-1 px-2 py-1 rounded bg-zinc-900" data-testid="mobile-credit-balance">
+              <Coins className="h-3 w-3 text-amber-400" />
+              <span className="text-xs font-bold font-mono text-white">{creditBalance.toLocaleString()}</span>
+            </Link>
+          )}
+          <NotificationBell />
+        </div>
       </header>
 
       {/* Mobile Sidebar Overlay */}
@@ -262,6 +284,18 @@ const DashboardLayout = ({ children }) => {
         <div className="hidden lg:flex items-center justify-between h-16 px-8 bg-white border-b border-border">
           <GlobalSearch />
           <div className="flex items-center gap-4">
+            {/* Credit Balance */}
+            {creditBalance !== null && (
+              <Link
+                to="/credit-shop"
+                className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-zinc-900 hover:bg-zinc-800 transition-colors cursor-pointer group"
+                data-testid="header-credit-balance"
+              >
+                <Coins className="h-4 w-4 text-amber-400" />
+                <span className="text-sm font-bold font-mono text-white">{creditBalance.toLocaleString()}</span>
+                <span className="text-[10px] text-zinc-400 group-hover:text-zinc-300">credits</span>
+              </Link>
+            )}
             <NotificationBell />
             <div className="text-sm text-right">
               <p className="font-medium">{user?.name || user?.email}</p>

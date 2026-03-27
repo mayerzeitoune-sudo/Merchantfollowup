@@ -33,13 +33,20 @@ import {
   Loader2
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import { dashboardApi, remindersApi, followupsApi, analyticsApi, notificationsApi, fundedApi } from '../lib/api';
+import { dashboardApi, remindersApi, followupsApi, analyticsApi, notificationsApi, fundedApi, phoneNumbersApi, creditsApi } from '../lib/api';
 import { toast } from 'sonner';
 import axios from 'axios';
+import { useAuth } from '../context/AuthContext';
+import { Input } from '../components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '../components/ui/dialog';
+import { Coins } from 'lucide-react';
 
 const API = process.env.REACT_APP_BACKEND_URL;
 
 const Dashboard = () => {
+  const { user } = useAuth();
+  const isAdmin = ['admin', 'org_admin'].includes(user?.role);
   const [stats, setStats] = useState({
     total_clients: 0,
     total_reminders: 0,
@@ -58,6 +65,14 @@ const Dashboard = () => {
   const [onboardingStatus, setOnboardingStatus] = useState(null);
   const [loading, setLoading] = useState(true);
   const [smsSetupExpanded, setSmsSetupExpanded] = useState(false);
+  // Phone number shopping state
+  const [phoneShopOpen, setPhoneShopOpen] = useState(false);
+  const [availableNumbers, setAvailableNumbers] = useState([]);
+  const [phoneSearchArea, setPhoneSearchArea] = useState('');
+  const [phoneSearchLoading, setPhoneSearchLoading] = useState(false);
+  const [purchasingNumber, setPurchasingNumber] = useState(null);
+  const [creditBalance, setCreditBalance] = useState(0);
+  const [ownedNumberCount, setOwnedNumberCount] = useState(0);
 
   useEffect(() => {
     fetchAllData();
@@ -65,13 +80,15 @@ const Dashboard = () => {
 
   const fetchAllData = async () => {
     try {
-      const [statsRes, followupsRes, analyticsRes, notificationsRes, fundedRes, onboardingRes] = await Promise.all([
+      const [statsRes, followupsRes, analyticsRes, notificationsRes, fundedRes, onboardingRes, creditsRes, ownedRes] = await Promise.all([
         dashboardApi.getStats().catch(() => ({ data: stats })),
         followupsApi.getToday().catch(() => ({ data: { followups: [] } })),
         analyticsApi.getOverview().catch(() => ({ data: null })),
         notificationsApi.getAll(true, 5).catch(() => ({ data: { notifications: [], unread_count: 0 } })),
         fundedApi.getStats().catch(() => ({ data: null })),
-        axios.get(`${API}/api/onboarding/status`).catch(() => ({ data: { status: 'not_started' } }))
+        axios.get(`${API}/api/onboarding/status`).catch(() => ({ data: { status: 'not_started' } })),
+        creditsApi.getBalance().catch(() => ({ data: { balance: 0 } })),
+        phoneNumbersApi.getOwned().catch(() => ({ data: [] })),
       ]);
       
       setStats(statsRes.data);
@@ -81,6 +98,8 @@ const Dashboard = () => {
       setUnreadCount(notificationsRes.data?.unread_count || 0);
       setFundedStats(fundedRes.data);
       setOnboardingStatus(onboardingRes.data);
+      setCreditBalance(creditsRes.data?.balance || 0);
+      setOwnedNumberCount(Array.isArray(ownedRes.data) ? ownedRes.data.length : 0);
     } catch (error) {
       console.error('Failed to fetch data:', error);
     } finally {
@@ -119,6 +138,47 @@ const Dashboard = () => {
       fetchAllData();
     } catch (error) {
       toast.error('Failed to snooze follow-up');
+    }
+  };
+
+  const searchPhoneNumbers = async () => {
+    setPhoneSearchLoading(true);
+    try {
+      const res = await phoneNumbersApi.searchAvailable(phoneSearchArea || '');
+      setAvailableNumbers(res.data || []);
+    } catch (e) {
+      toast.error('Failed to search numbers');
+      setAvailableNumbers([]);
+    } finally {
+      setPhoneSearchLoading(false);
+    }
+  };
+
+  const handleBuyNumber = async (number) => {
+    setPurchasingNumber(number.phone_number || number.phoneNumber);
+    try {
+      await phoneNumbersApi.purchase({
+        phone_number: number.phone_number || number.phoneNumber,
+        friendly_name: number.friendly_name || number.friendlyName || '',
+        provider: 'twilio',
+      });
+      toast.success('Phone number purchased!');
+      // Update credit balance
+      const balRes = await creditsApi.getBalance();
+      setCreditBalance(balRes.data?.balance || 0);
+      window.dispatchEvent(new CustomEvent('credits-updated', { detail: { balance: balRes.data?.balance || 0 } }));
+      setPhoneShopOpen(false);
+      setAvailableNumbers([]);
+      fetchAllData();
+    } catch (e) {
+      const detail = e.response?.data?.detail || 'Failed to purchase number';
+      if (detail.includes('Insufficient credits')) {
+        toast.error(detail + ' — Visit Credit Shop to add more.');
+      } else {
+        toast.error(detail);
+      }
+    } finally {
+      setPurchasingNumber(null);
     }
   };
 
@@ -324,6 +384,70 @@ const Dashboard = () => {
               </Link>
             );
           })}
+        </div>
+
+        {/* Buy Phone Numbers + Credit Balance Row */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+          {/* Buy Phone Numbers Card */}
+          <Card className="lg:col-span-2 border-2 border-zinc-200 bg-gradient-to-br from-zinc-900 via-zinc-800 to-zinc-900 text-white overflow-hidden relative" data-testid="buy-phone-numbers-card">
+            <div className="absolute inset-0 bg-[radial-gradient(circle_at_80%_20%,rgba(255,255,255,0.04),transparent)] pointer-events-none" />
+            <CardContent className="p-6 relative z-10">
+              <div className="flex items-start justify-between">
+                <div>
+                  <div className="flex items-center gap-2 mb-1">
+                    <Phone className="h-5 w-5 text-emerald-400" />
+                    <h3 className="text-lg font-bold font-['Outfit']">Buy Phone Numbers</h3>
+                  </div>
+                  <p className="text-sm text-zinc-400 mb-4">
+                    Provision numbers for outreach and campaigns instantly
+                  </p>
+                  <div className="flex items-center gap-3">
+                    <div className="text-center">
+                      <p className="text-2xl font-black font-mono">{ownedNumberCount}</p>
+                      <p className="text-[10px] text-zinc-500 uppercase tracking-wider">Active Numbers</p>
+                    </div>
+                    <div className="h-8 w-px bg-zinc-700" />
+                    <div className="text-center">
+                      <p className="text-2xl font-black font-mono text-amber-400">{creditBalance.toLocaleString()}</p>
+                      <p className="text-[10px] text-zinc-500 uppercase tracking-wider">Credits Available</p>
+                    </div>
+                    <div className="h-8 w-px bg-zinc-700" />
+                    <div className="text-center">
+                      <p className="text-2xl font-black font-mono text-emerald-400">40</p>
+                      <p className="text-[10px] text-zinc-500 uppercase tracking-wider">Credits / Number</p>
+                    </div>
+                  </div>
+                </div>
+                <Button
+                  className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold h-12 px-6"
+                  onClick={() => { setPhoneShopOpen(true); searchPhoneNumbers(); }}
+                  data-testid="shop-numbers-btn"
+                >
+                  <Phone className="h-4 w-4 mr-2" /> Shop Numbers
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Credit Balance Quick Card */}
+          <Link to="/credit-shop">
+            <Card className="h-full border-2 border-amber-200/50 bg-gradient-to-br from-amber-50 to-orange-50 hover:shadow-lg transition-all cursor-pointer" data-testid="dashboard-credit-card">
+              <CardContent className="p-6 flex flex-col justify-between h-full">
+                <div>
+                  <div className="flex items-center gap-2 mb-1">
+                    <Coins className="h-5 w-5 text-amber-600" />
+                    <h3 className="text-sm font-bold text-zinc-700 uppercase tracking-wider">Organization Credits</h3>
+                  </div>
+                  <p className="text-4xl font-black font-mono text-zinc-900 mt-2">
+                    {creditBalance.toLocaleString()}
+                  </p>
+                </div>
+                <div className="flex items-center gap-1 mt-4 text-sm text-amber-700 font-semibold">
+                  {isAdmin ? 'Buy Credits' : 'View Credit Shop'} <ArrowRight className="h-4 w-4" />
+                </div>
+              </CardContent>
+            </Card>
+          </Link>
         </div>
 
         {/* Projected Value Cards */}
@@ -657,6 +781,84 @@ const Dashboard = () => {
           </CardContent>
         </Card>
       </div>
+
+      {/* Phone Number Shopping Dialog */}
+      <Dialog open={phoneShopOpen} onOpenChange={setPhoneShopOpen}>
+        <DialogContent className="max-w-lg max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="font-['Outfit'] flex items-center gap-2">
+              <Phone className="h-5 w-5 text-emerald-600" /> Buy Phone Numbers
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="flex items-center justify-between p-3 rounded-lg bg-zinc-50 border">
+              <div className="flex items-center gap-2">
+                <Coins className="h-4 w-4 text-amber-500" />
+                <span className="text-sm text-zinc-600">Your balance:</span>
+                <span className="font-bold font-mono">{creditBalance.toLocaleString()} credits</span>
+              </div>
+              <Badge variant="outline">40 credits/number</Badge>
+            </div>
+
+            <div className="flex gap-2">
+              <Input
+                placeholder="Search by area code (e.g. 212, 310)..."
+                value={phoneSearchArea}
+                onChange={(e) => setPhoneSearchArea(e.target.value)}
+                onKeyDown={(e) => { if (e.key === 'Enter') searchPhoneNumbers(); }}
+                data-testid="phone-area-search"
+              />
+              <Button onClick={searchPhoneNumbers} disabled={phoneSearchLoading} data-testid="search-numbers-btn">
+                {phoneSearchLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Search'}
+              </Button>
+            </div>
+
+            {availableNumbers.length > 0 && (
+              <div className="space-y-2 max-h-60 overflow-y-auto">
+                {availableNumbers.map((num, i) => (
+                  <div key={i} className="flex items-center justify-between p-3 border rounded-lg hover:bg-zinc-50 transition-colors" data-testid={`avail-number-${i}`}>
+                    <div>
+                      <p className="font-mono font-semibold text-sm">{num.phone_number || num.phoneNumber}</p>
+                      <p className="text-xs text-zinc-500">{num.locality || num.region || 'US'} {num.capabilities?.SMS ? '• SMS' : ''} {num.capabilities?.voice ? '• Voice' : ''}</p>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <div className="text-right">
+                        <p className="text-sm font-bold font-mono">40</p>
+                        <p className="text-[10px] text-zinc-500">credits</p>
+                      </div>
+                      <Button
+                        size="sm"
+                        className="bg-emerald-600 hover:bg-emerald-700"
+                        disabled={purchasingNumber === (num.phone_number || num.phoneNumber) || creditBalance < 40}
+                        onClick={() => handleBuyNumber(num)}
+                        data-testid={`buy-number-${i}`}
+                      >
+                        {purchasingNumber === (num.phone_number || num.phoneNumber) ? <Loader2 className="h-3 w-3 animate-spin" /> : 'Buy'}
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {availableNumbers.length === 0 && !phoneSearchLoading && (
+              <div className="text-center py-8 text-zinc-400">
+                <Phone className="h-8 w-8 mx-auto mb-2 opacity-30" />
+                <p className="text-sm">Search for available phone numbers above</p>
+              </div>
+            )}
+
+            {creditBalance < 40 && (
+              <div className="p-3 rounded-lg bg-red-50 border border-red-200 text-sm text-red-700 flex items-center justify-between">
+                <span>Insufficient credits to purchase a number</span>
+                <Link to="/credit-shop">
+                  <Button size="sm" variant="destructive" className="text-xs">Buy Credits</Button>
+                </Link>
+              </div>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </DashboardLayout>
   );
 };

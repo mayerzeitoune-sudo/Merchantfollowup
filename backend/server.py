@@ -2883,7 +2883,7 @@ async def search_available_numbers(
 
 @api_router.post("/phone-numbers/purchase")
 async def purchase_phone_number(data: PhoneNumberCreate, current_user: dict = Depends(get_current_user)):
-    """Purchase/add a phone number - admins and agents can buy"""
+    """Purchase/add a phone number - deducts credits from org balance"""
     user = await db.users.find_one({"id": current_user["user_id"]})
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
@@ -2895,19 +2895,14 @@ async def purchase_phone_number(data: PhoneNumberCreate, current_user: dict = De
     if role == "org_admin":
         pass
     elif role == "admin":
-        # Admins can always buy for their org
         pass
     elif role in ["agent", "team_leader"]:
-        # Check if org allows rep purchases
         if org_id:
             org = await db.organizations.find_one({"id": org_id})
             if org and org.get("allow_rep_purchases") is False:
                 raise HTTPException(status_code=403, detail="Your organization does not allow reps to purchase phone numbers")
-            
-            # Check monthly purchase limit
-            rep_limit = org.get("rep_monthly_number_limit", 0) if org else 0  # 0 = no limit
+            rep_limit = org.get("rep_monthly_number_limit", 0) if org else 0
             if rep_limit > 0:
-                # Count how many numbers this rep bought this month
                 now = datetime.now(timezone.utc)
                 month_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0).isoformat()
                 purchased_this_month = await db.phone_numbers.count_documents({
@@ -2922,17 +2917,28 @@ async def purchase_phone_number(data: PhoneNumberCreate, current_user: dict = De
     else:
         raise HTTPException(status_code=403, detail="You don't have permission to purchase phone numbers")
     
+    # Deduct credits from org balance (40 credits per number)
+    PHONE_NUMBER_COST_CREDITS = 40
+    if org_id:
+        from routes.credits import deduct_credits
+        await deduct_credits(
+            org_id=org_id,
+            user_id=current_user["user_id"],
+            amount=PHONE_NUMBER_COST_CREDITS,
+            source="phone_number",
+            description=f"Phone number purchase: {data.phone_number}",
+            metadata={"phone_number": data.phone_number}
+        )
+    
     phone_id = str(uuid.uuid4())
     now = datetime.now(timezone.utc).isoformat()
     
-    # Get assigned user name if provided
     assigned_user_name = None
     if data.assigned_user_id:
         assigned_user = await db.users.find_one({"id": data.assigned_user_id})
         if assigned_user:
             assigned_user_name = assigned_user.get("name")
     
-    # For agents, auto-assign to themselves
     assigned_user_id = data.assigned_user_id
     if role in ["agent", "team_leader"] and not assigned_user_id:
         assigned_user_id = current_user["user_id"]
@@ -2940,8 +2946,8 @@ async def purchase_phone_number(data: PhoneNumberCreate, current_user: dict = De
     
     phone_doc = {
         "id": phone_id,
-        "user_id": current_user["user_id"],  # Who purchased it
-        "org_id": user.get("org_id"),  # Organization it belongs to
+        "user_id": current_user["user_id"],
+        "org_id": user.get("org_id"),
         "phone_number": data.phone_number,
         "friendly_name": data.friendly_name or data.phone_number,
         "provider": data.provider,
@@ -2950,10 +2956,10 @@ async def purchase_phone_number(data: PhoneNumberCreate, current_user: dict = De
         "assigned_user_id": assigned_user_id,
         "assigned_user_name": assigned_user_name,
         "monthly_cost": 8.00,
+        "credit_cost": PHONE_NUMBER_COST_CREDITS,
         "created_at": now
     }
     
-    # If purchaser has no org but assigns to someone who does, use their org_id
     if not phone_doc["org_id"] and assigned_user_id:
         assigned_user = await db.users.find_one({"id": assigned_user_id})
         if assigned_user and assigned_user.get("org_id"):
@@ -4822,6 +4828,16 @@ try:
     logger.info("Phone Blower routes loaded successfully")
 except Exception as e:
     logger.warning(f"Could not load Phone Blower routes: {e}")
+
+# Load Credits routes
+try:
+    from routes.credits import router as credits_router, set_db as credits_set_db, set_auth_dependency as credits_set_auth
+    credits_set_db(db)
+    credits_set_auth(get_current_user)
+    app.include_router(credits_router, prefix="/api")
+    logger.info("Credits routes loaded successfully")
+except Exception as e:
+    logger.warning(f"Could not load Credits routes: {e}")
 
 
 # ============== CALLING FEATURE ==============

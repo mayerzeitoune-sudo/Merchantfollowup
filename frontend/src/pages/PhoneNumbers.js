@@ -438,7 +438,7 @@ const PhoneNumbers = () => {
                   </div>
                   <div className="flex items-center gap-3">
                     <span className="text-sm font-medium text-primary">
-                      ${number.monthly_cost}/mo
+                      {number.credit_cost || 40} credits/mo
                     </span>
                     <Button 
                       size="sm" 
@@ -585,7 +585,7 @@ const PhoneNumbers = () => {
                         </div>
                       </div>
                       <p className="text-xs text-muted-foreground mt-3">
-                        Provider: {number.provider} • ${number.monthly_cost}/mo
+                        Provider: {number.provider} • {number.credit_cost || 40} credits/mo
                       </p>
                     </div>
                   ))}

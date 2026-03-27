@@ -108,6 +108,15 @@ export const phoneBlowerApi = {
   getActiveAutoDialers: () => axios.get(`${API}/phone-blower/auto-dial/active`),
 };
 
+// Credits API
+export const creditsApi = {
+  getBalance: () => axios.get(`${API}/credits/balance`),
+  getPackages: () => axios.get(`${API}/credits/packages`),
+  purchase: (data) => axios.post(`${API}/credits/purchase`, data),
+  getHistory: () => axios.get(`${API}/credits/history`),
+  getConstants: () => axios.get(`${API}/credits/constants`),
+};
+
 // SMS Providers API
 export const smsProvidersApi = {
   getAll: () => axios.get(`${API}/sms-providers`),
