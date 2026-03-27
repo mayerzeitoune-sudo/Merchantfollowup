@@ -4,6 +4,27 @@
 
 ### COMPLETED (This Session - Fork 2)
 
+#### MAX AGGRESSION DRIP Campaign
+- New prebuilt bulk campaign with **100 short aggressive message templates**
+- 22 weekday-only steps over 30 calendar days
+- Scheduling: Mon-Fri only, 9AM-5PM local time
+- Randomized delivery from template pool (no back-to-back repeats)
+- Stop conditions: reply, opt-out, wrong number, DNC, application started, funded
+- Added to `campaign_templates.py` and visible in Bulk Templated Campaign dialog
+- **Status**: VERIFIED (iteration_16.json)
+
+#### PHONE BLOWER Page
+- Complete outbound call workflow page at `/phone-blower`
+- **Call Queue**: Prioritized list of callable leads (59+ leads)
+- **Lead Profile Card**: Name, company, phone, timezone, amount requested, pipeline stage, tags
+- **Compliance Guardrails**: Call window (9-5 ET), weekday check, DNC, opt-out, cooldown, daily limit
+- **13 Dispositions**: no answer, voicemail, busy, interested, not interested, callback, wrong number, DNC, app sent/started, funded elsewhere, already funded, dead lead
+- **Call Controls**: CALL NOW (green) / BLOCKED (gray) based on compliance, outbound number selector
+- **Analytics Bar**: Total attempts, connects, no answers, voicemails, interested, connect rate
+- **Settings**: Admin-configurable max attempts/day and cooldown minutes
+- Backend: `routes/phone_blower.py` with 6 endpoints
+- **Status**: VERIFIED (iteration_16.json)
+
 #### Twilio Pricing Update — 8x Base Rate Sitewide
 - Updated text cost from $0.0083 to **$0.0632** (8x Twilio base rate of $0.0079)
 - Projections page: Cost Breakdown shows $0.0632/text, $3.41/lead (54 msgs × $0.0632)
