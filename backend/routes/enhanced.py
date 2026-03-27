@@ -1502,7 +1502,7 @@ async def get_prebuilt_campaigns(current_user: dict = Depends(get_current_user))
     """List all available pre-built campaign templates"""
     templates = []
     for key, template in ALL_PREBUILT_CAMPAIGNS.items():
-        templates.append({
+        summary = {
             "id": key,
             "name": template["name"],
             "description": template["description"],
@@ -1510,7 +1510,12 @@ async def get_prebuilt_campaigns(current_user: dict = Depends(get_current_user))
             "target_tag": template["target_tag"],
             "total_steps": len(template["steps"]),
             "total_days": template["steps"][-1]["day"] if template["steps"] else 0
-        })
+        }
+        # Include extra metadata for specialized campaigns
+        for field in ("hourly", "texts_per_day", "weekdays_only", "send_window", "stop_conditions", "duration_days"):
+            if field in template:
+                summary[field] = template[field]
+        templates.append(summary)
     return templates
 
 @router.get("/campaigns/prebuilt/{campaign_type}")
@@ -1760,12 +1765,23 @@ async def _process_due_messages():
         }
         await db.campaign_messages.insert_one(msg_doc)
 
-        # Calculate next send date at 10:45 AM ET
+        # Calculate next send date
         next_step = current_step + 1
         if next_step < len(steps):
-            days_diff = steps[next_step]["day"] - steps[current_step]["day"]
-            next_day_et = now_et + timedelta(days=days_diff)
-            next_send_et = next_day_et.replace(hour=10, minute=45, second=0, microsecond=0)
+            next_step_data = steps[next_step]
+            curr_step_data = steps[current_step]
+            days_diff = next_step_data["day"] - curr_step_data["day"]
+            
+            # Check if next step has a specific hour (hourly campaigns like MAX AGGRESSION)
+            next_hour = next_step_data.get("hour")
+            if next_hour:
+                h, m = int(next_hour.split(":")[0]), int(next_hour.split(":")[1])
+                next_day_et = now_et + timedelta(days=days_diff)
+                next_send_et = next_day_et.replace(hour=h, minute=m, second=0, microsecond=0)
+            else:
+                next_day_et = now_et + timedelta(days=days_diff)
+                next_send_et = next_day_et.replace(hour=10, minute=45, second=0, microsecond=0)
+            
             next_send = next_send_et.astimezone(timezone.utc).isoformat()
         else:
             next_send = None

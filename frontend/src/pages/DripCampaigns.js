@@ -1397,8 +1397,11 @@ const DripCampaigns = () => {
                           <p className="text-xs text-muted-foreground mt-1">{campaign.total_days} days</p>
                         </div>
                       </div>
-                      <div className="flex items-center gap-2 mt-2">
+                      <div className="flex items-center gap-2 mt-2 flex-wrap">
                         <Badge className="bg-blue-100 text-blue-700">Target: {campaign.target_tag}</Badge>
+                        {campaign.hourly && <Badge className="bg-red-100 text-red-700">{campaign.texts_per_day} texts/day</Badge>}
+                        {campaign.weekdays_only && <Badge className="bg-amber-100 text-amber-700">Mon-Fri</Badge>}
+                        {campaign.send_window && <Badge className="bg-purple-100 text-purple-700">{campaign.send_window.start}-{campaign.send_window.end}</Badge>}
                         <span className="text-xs text-muted-foreground">
                           {clients.filter(c => c.tags?.includes(campaign.target_tag)).length} clients match
                         </span>

@@ -5556,14 +5556,21 @@ async def startup_campaign_scheduler():
         except Exception as e:
             logger.error(f"Campaign scheduler error: {e}")
 
-    # Run at 10:45 AM Eastern Time every day
+    # Run every hour on the hour during business hours (9AM-5PM ET) to handle hourly campaigns
     eastern = pytz.timezone("America/New_York")
     scheduler.add_job(
         run_campaign_processor,
-        CronTrigger(hour=10, minute=45, timezone=eastern),
+        CronTrigger(hour="9-17", minute=0, timezone=eastern, day_of_week="mon-fri"),
+        id="campaign_hourly_send",
+        replace_existing=True
+    )
+    # Also keep the 10:45 AM run for standard daily campaigns
+    scheduler.add_job(
+        run_campaign_processor,
+        CronTrigger(hour=10, minute=45, timezone=eastern, day_of_week="mon-fri"),
         id="campaign_daily_send",
         replace_existing=True
     )
     scheduler.start()
     app.state.scheduler = scheduler
-    logger.info("Campaign scheduler started - messages will send at 10:45 AM ET daily")
+    logger.info("Campaign scheduler started - hourly 9AM-5PM ET + daily 10:45 AM ET, Mon-Fri")

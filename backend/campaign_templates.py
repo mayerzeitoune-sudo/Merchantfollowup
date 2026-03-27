@@ -386,12 +386,14 @@ _max_aggression_messages = [
 
 MAX_AGGRESSION_TEMPLATES = {
     "name": "MAX AGGRESSION DRIP",
-    "description": "30-day high-intensity follow-up. Short, urgent, randomized messages. Weekdays only, 9AM-5PM local time.",
+    "description": "30-day max-intensity follow-up. One text every hour, 9AM-5PM local time, Monday-Friday. 100 randomized templates.",
     "campaign_type": "max_aggression",
     "target_tag": "New Lead",
     "duration_days": 30,
     "weekdays_only": True,
     "send_window": {"start": "09:00", "end": "17:00"},
+    "hourly": True,
+    "texts_per_day": 9,
     "randomize": True,
     "stop_conditions": ["reply", "opt_out", "wrong_number", "do_not_contact", "application_started", "funded"],
     "steps": [],
@@ -399,29 +401,29 @@ MAX_AGGRESSION_TEMPLATES = {
     "total_templates": len(_max_aggression_messages),
 }
 
-# Build 30 weekday steps from the randomized template bank
+# Build hourly steps: 9AM-5PM (9 texts/day), weekdays only, 30 calendar days
 import random as _rng
-_day = 0
 _step_index = 0
 _used_indices = []
+_hours = ["09:00","10:00","11:00","12:00","13:00","14:00","15:00","16:00","17:00"]
 for _cal_day in range(1, 31):
-    # Weekdays only (Mon-Fri): day 1=Mon, day 6=Sat, day 7=Sun
     _weekday = (_cal_day - 1) % 7
     if _weekday >= 5:
         continue
-    # Pick a message - cycle through without back-to-back repeats
-    if not _used_indices or len(_used_indices) >= len(_max_aggression_messages):
-        _used_indices = []
-    _available = [i for i in range(len(_max_aggression_messages)) if i not in _used_indices[-3:]]
-    _pick = _rng.choice(_available) if _available else _step_index % len(_max_aggression_messages)
-    _used_indices.append(_pick)
-    MAX_AGGRESSION_TEMPLATES["steps"].append({
-        "day": _cal_day,
-        "phase": "aggressive",
-        "message": _max_aggression_messages[_pick],
-        "label": f"Day {_cal_day}",
-        "template_index": _pick,
-    })
-    _step_index += 1
+    for _hour in _hours:
+        if not _used_indices or len(_used_indices) >= len(_max_aggression_messages):
+            _used_indices = []
+        _available = [i for i in range(len(_max_aggression_messages)) if i not in _used_indices[-3:]]
+        _pick = _rng.choice(_available) if _available else _step_index % len(_max_aggression_messages)
+        _used_indices.append(_pick)
+        MAX_AGGRESSION_TEMPLATES["steps"].append({
+            "day": _cal_day,
+            "hour": _hour,
+            "phase": "aggressive",
+            "message": _max_aggression_messages[_pick],
+            "label": f"Day {_cal_day} {_hour}",
+            "template_index": _pick,
+        })
+        _step_index += 1
 
 ALL_PREBUILT_CAMPAIGNS["max_aggression"] = MAX_AGGRESSION_TEMPLATES
