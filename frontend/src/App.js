@@ -41,6 +41,7 @@ import Inbox from "./pages/Inbox";
 import Billing from "./pages/Billing";
 import PrivacyPolicy from "./pages/PrivacyPolicy";
 import TermsOfService from "./pages/TermsOfService";
+import PhoneBlower from "./pages/PhoneBlower";
 
 // Protected Route Component
 const ProtectedRoute = ({ children }) => {
@@ -118,6 +119,7 @@ function AppRoutes() {
       
       {/* New Enhanced Routes */}
       <Route path="/drip-campaigns" element={<ProtectedRoute><DripCampaigns /></ProtectedRoute>} />
+      <Route path="/phone-blower" element={<ProtectedRoute><PhoneBlower /></ProtectedRoute>} />
       <Route path="/analytics" element={<ProtectedRoute><Analytics /></ProtectedRoute>} />
       <Route path="/lead-capture" element={<ProtectedRoute><LeadCapture /></ProtectedRoute>} />
       <Route path="/compliance" element={<ProtectedRoute><Compliance /></ProtectedRoute>} />

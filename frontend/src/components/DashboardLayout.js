@@ -47,6 +47,7 @@ const navItems = [
   { path: '/calendar', label: 'Calendar', icon: Calendar },
   { divider: true, label: 'Automation' },
   { path: '/drip-campaigns', label: 'Drip Campaigns', icon: Zap },
+  { path: '/phone-blower', label: 'PHONE BLOWER', icon: Phone, badge: 'New' },
   { divider: true, label: 'Growth' },
   { path: '/lead-capture', label: 'Lead Capture', icon: UserPlus },
   { path: '/analytics', label: 'Analytics', icon: BarChart3 },

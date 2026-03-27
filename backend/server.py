@@ -4813,6 +4813,16 @@ try:
 except Exception as e:
     logger.warning(f"Could not load SMS routes: {e}")
 
+# Load Phone Blower routes
+try:
+    from routes.phone_blower import router as pb_router, set_db as pb_set_db, set_auth_dependency as pb_set_auth
+    pb_set_db(db)
+    pb_set_auth(get_current_user)
+    app.include_router(pb_router, prefix="/api")
+    logger.info("Phone Blower routes loaded successfully")
+except Exception as e:
+    logger.warning(f"Could not load Phone Blower routes: {e}")
+
 
 # ============== CALLING FEATURE ==============
 

@@ -93,6 +93,16 @@ export const enhancedCampaignsApi = {
   getSystemProjections: () => axios.get(`${API}/projections/system`)
 };
 
+// Phone Blower API
+export const phoneBlowerApi = {
+  getSettings: () => axios.get(`${API}/phone-blower/settings`),
+  updateSettings: (data) => axios.put(`${API}/phone-blower/settings`, data),
+  getLeadProfile: (clientId) => axios.get(`${API}/phone-blower/lead/${clientId}`),
+  logCall: (data) => axios.post(`${API}/phone-blower/call`, data),
+  getAnalytics: () => axios.get(`${API}/phone-blower/analytics`),
+  getQueue: () => axios.get(`${API}/phone-blower/queue`),
+};
+
 // SMS Providers API
 export const smsProvidersApi = {
   getAll: () => axios.get(`${API}/sms-providers`),

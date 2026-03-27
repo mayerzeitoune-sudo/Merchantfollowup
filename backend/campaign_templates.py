@@ -276,4 +276,152 @@ ALL_PREBUILT_CAMPAIGNS = {
     "funded_short": SHORT_TERM_TEMPLATES,
     "funded_medium": MEDIUM_TERM_TEMPLATES,
     "funded_long": LONG_TERM_TEMPLATES,
+    "max_aggression": None,  # Loaded below
 }
+
+# ============== MAX AGGRESSION DRIP ==============
+
+_max_aggression_messages = [
+    "Still need funding?",
+    "Yes or no?",
+    "Want capital or not?",
+    "Is this dead?",
+    "Can we close this?",
+    "Still interested?",
+    "Need money now?",
+    "File still open.",
+    "Should I reopen this?",
+    "Want options?",
+    "Did timing change?",
+    "Can I run this?",
+    "Need working capital?",
+    "Is cash still tight?",
+    "Should I push this?",
+    "Want numbers today?",
+    "Ready to move?",
+    "Did this die?",
+    "Keep open or close?",
+    "Are we done here?",
+    "I can still help.",
+    "This can move fast.",
+    "You asked for options.",
+    "I'm waiting on you.",
+    "Want me to proceed?",
+    "Still want a solution?",
+    "Funding still matters?",
+    "Need terms?",
+    "Want this handled?",
+    "You went quiet.",
+    "Is this a no?",
+    "Is this still live?",
+    "Can I finish this?",
+    "Want me on it?",
+    "Need a fast option?",
+    "This is still workable.",
+    "You still qualify?",
+    "Do you want this?",
+    "Can I revive this?",
+    "Need me to reopen?",
+    "If you need capital, answer.",
+    "Businesses that need money move.",
+    "Capital doesn't help if ignored.",
+    "If this matters, respond.",
+    "I can push this today.",
+    "Don't let this sit.",
+    "This won't stay open forever.",
+    "Last chance to revisit.",
+    "I can get this moving.",
+    "Waiting costs time.",
+    "If the need is real, act.",
+    "Want me to lock this in?",
+    "Should I mark inactive?",
+    "I can send options now.",
+    "Time to move?",
+    "Is funding still a priority?",
+    "Need help or no?",
+    "You wanted capital.",
+    "I can work this now.",
+    "Final follow-up.",
+    "Still trying to help.",
+    "Want this reopened today?",
+    "Should I keep this alive?",
+    "This can still get done.",
+    "Need an answer from you.",
+    "This file is waiting.",
+    "Can I move forward?",
+    "Need me to run this now?",
+    "Quiet usually means no.",
+    "Is that the case here?",
+    "Still want a funding path?",
+    "I can still price this.",
+    "Want me to send numbers?",
+    "We can still work this.",
+    "Are you passing on this?",
+    "I need a yes or no.",
+    "Still need cash flow help?",
+    "Should I close your file?",
+    "Do you want movement here?",
+    "This is still in reach.",
+    "Can I help or not?",
+    "Let me know either way.",
+    "Need this back in motion?",
+    "Still looking for capital?",
+    "I can move fast on this.",
+    "Is this worth revisiting?",
+    "Want to see what's possible?",
+    "Need this handled today?",
+    "Should I take action?",
+    "This is still on my desk.",
+    "I can reopen this now.",
+    "Need an update from you.",
+    "Still need a solution?",
+    "I can still get this going.",
+    "Respond if this matters.",
+    "This doesn't stay open forever.",
+    "I can work on this now.",
+    "Still need numbers?",
+    "Last chance to respond.",
+    "Should I keep pushing this?",
+]
+
+MAX_AGGRESSION_TEMPLATES = {
+    "name": "MAX AGGRESSION DRIP",
+    "description": "30-day high-intensity follow-up. Short, urgent, randomized messages. Weekdays only, 9AM-5PM local time.",
+    "campaign_type": "max_aggression",
+    "target_tag": "New Lead",
+    "duration_days": 30,
+    "weekdays_only": True,
+    "send_window": {"start": "09:00", "end": "17:00"},
+    "randomize": True,
+    "stop_conditions": ["reply", "opt_out", "wrong_number", "do_not_contact", "application_started", "funded"],
+    "steps": [],
+    "template_bank": _max_aggression_messages,
+    "total_templates": len(_max_aggression_messages),
+}
+
+# Build 30 weekday steps from the randomized template bank
+import random as _rng
+_day = 0
+_step_index = 0
+_used_indices = []
+for _cal_day in range(1, 31):
+    # Weekdays only (Mon-Fri): day 1=Mon, day 6=Sat, day 7=Sun
+    _weekday = (_cal_day - 1) % 7
+    if _weekday >= 5:
+        continue
+    # Pick a message - cycle through without back-to-back repeats
+    if not _used_indices or len(_used_indices) >= len(_max_aggression_messages):
+        _used_indices = []
+    _available = [i for i in range(len(_max_aggression_messages)) if i not in _used_indices[-3:]]
+    _pick = _rng.choice(_available) if _available else _step_index % len(_max_aggression_messages)
+    _used_indices.append(_pick)
+    MAX_AGGRESSION_TEMPLATES["steps"].append({
+        "day": _cal_day,
+        "phase": "aggressive",
+        "message": _max_aggression_messages[_pick],
+        "label": f"Day {_cal_day}",
+        "template_index": _pick,
+    })
+    _step_index += 1
+
+ALL_PREBUILT_CAMPAIGNS["max_aggression"] = MAX_AGGRESSION_TEMPLATES

@@ -1483,7 +1483,7 @@ const DripCampaigns = () => {
                           <p className="text-[10px] text-zinc-400 mt-0.5">Revenue minus campaign text cost</p>
                         </div>
                         <p className="text-xl font-bold text-green-600 font-mono">
-                          ${Math.max(0, netLow).toLocaleString()} <span className="text-xs font-normal text-zinc-400">to</span> ${Math.max(0, netHigh).toLocaleString()}
+                          ${Math.max(0, Math.round(netLow)).toLocaleString()} <span className="text-xs font-normal text-zinc-400">to</span> ${Math.max(0, Math.round(netHigh)).toLocaleString()}
                         </p>
                       </div>
                     </div>
