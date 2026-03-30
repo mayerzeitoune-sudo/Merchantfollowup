@@ -2912,19 +2912,18 @@ async def search_available_numbers(
             except Exception:
                 pass  # Mobile search not available in all countries
         
-        # 3) If area code specified, try local WITHOUT sms filter (voice-only for that area)
+        # 3) If area code specified but nothing found, try WITHOUT area code (nearby available numbers)
         if has_area_code:
-            kwargs_no_sms = {"limit": cap_limit, "area_code": area_code}
-            numbers = twilio_client.available_phone_numbers(country).local.list(**kwargs_no_sms)
+            kwargs_no_area = {"limit": cap_limit, "sms_enabled": True}
+            numbers = twilio_client.available_phone_numbers(country).local.list(**kwargs_no_area)
             if numbers:
-                return {"available_numbers": _format_results(numbers), "provider_configured": True, "note": "No SMS-enabled numbers found for this area code. Showing voice-only numbers."}
+                return {"available_numbers": _format_results(numbers), "provider_configured": True, "note": f"No numbers found for area code {area_code}. Showing other available numbers."}
         
-        # 4) Only fall back to toll-free if NO area code was specified
-        if not has_area_code:
-            tf_kwargs = {"limit": cap_limit, "sms_enabled": True}
-            numbers = twilio_client.available_phone_numbers(country).toll_free.list(**tf_kwargs)
-            if numbers:
-                return {"available_numbers": _format_results(numbers), "provider_configured": True, "type": "toll_free"}
+        # 5) Last resort: toll-free numbers
+        tf_kwargs = {"limit": cap_limit, "sms_enabled": True}
+        numbers = twilio_client.available_phone_numbers(country).toll_free.list(**tf_kwargs)
+        if numbers:
+            return {"available_numbers": _format_results(numbers), "provider_configured": True, "type": "toll_free", "note": "Showing toll-free numbers."}
         
         # Nothing found at all
         return {"available_numbers": [], "provider_configured": True, "note": f"No numbers available for area code {area_code}. Try a different area code."}
