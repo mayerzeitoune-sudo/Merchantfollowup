@@ -21,9 +21,8 @@ ROOT_DIR = Path(__file__).parent
 _env_path = ROOT_DIR / '.env'
 load_dotenv(_env_path)
 
-# Force-load Twilio creds from twilio_creds.json as fallback.
-# The deployment platform strips TWILIO_ACCOUNT_SID and TWILIO_AUTH_TOKEN
-# from the .env file but leaves other files untouched.
+# Force-load Twilio creds from twilio_creds.json.
+# The deployment platform caches old .env values. This file ALWAYS takes priority.
 _loaded_from_file = []
 _twilio_creds_path = ROOT_DIR / 'twilio_creds.json'
 if _twilio_creds_path.exists():
@@ -31,7 +30,7 @@ if _twilio_creds_path.exists():
     with open(_twilio_creds_path, 'r') as _f:
         _creds = _json.load(_f)
     for _key, _val in _creds.items():
-        if _val and not os.environ.get(_key, '').strip():
+        if _val:
             os.environ[_key] = _val
             _loaded_from_file.append(_key)
 
