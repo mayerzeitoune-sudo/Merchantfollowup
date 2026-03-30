@@ -13,7 +13,7 @@ from typing import Optional, List
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 
-from fastapi import APIRouter, HTTPException, Depends, Query
+from fastapi import APIRouter, HTTPException, Depends, Query, Request
 from fastapi.responses import RedirectResponse
 from pydantic import BaseModel
 from google_auth_oauthlib.flow import Flow
@@ -65,24 +65,21 @@ class EmailFilter(BaseModel):
     label_ids: Optional[List[str]] = None
 
 
-def get_redirect_uri():
-    """Get the OAuth redirect URI based on environment"""
-    # Read from frontend .env if not set in backend
-    backend_url = os.environ.get("BACKEND_URL")
+def get_redirect_uri(request: Request = None):
+    """Get the OAuth redirect URI based on environment.
+    Derives from request when available for correct production URLs."""
+    if request:
+        forwarded_proto = request.headers.get("x-forwarded-proto", "https")
+        forwarded_host = request.headers.get("x-forwarded-host") or request.headers.get("host", "")
+        if forwarded_host:
+            return f"{forwarded_proto}://{forwarded_host}/api/gmail/callback"
+    backend_url = os.environ.get("REACT_APP_BACKEND_URL")
     if not backend_url:
-        # Try to read from frontend .env
-        try:
-            with open('/app/frontend/.env', 'r') as f:
-                for line in f:
-                    if line.startswith('REACT_APP_BACKEND_URL='):
-                        backend_url = line.split('=', 1)[1].strip()
-                        break
-        except:
-            backend_url = FRONTEND_URL
+        backend_url = FRONTEND_URL
     return f"{backend_url}/api/gmail/callback"
 
 
-def get_oauth_flow(state: str = None):
+def get_oauth_flow(state: str = None, request: Request = None):
     """Create OAuth flow with client config"""
     if not GOOGLE_CLIENT_ID or not GOOGLE_CLIENT_SECRET:
         raise HTTPException(status_code=500, detail="Google OAuth credentials not configured")
@@ -99,7 +96,7 @@ def get_oauth_flow(state: str = None):
     flow = Flow.from_client_config(
         client_config,
         scopes=GMAIL_SCOPES,
-        redirect_uri=get_redirect_uri()
+        redirect_uri=get_redirect_uri(request)
     )
     
     if state:
@@ -170,12 +167,12 @@ async def get_gmail_credentials(user_id: str) -> Optional[Credentials]:
 # ============== OAuth Routes ==============
 
 @router.get("/auth")
-async def gmail_auth_start(token: str = Query(..., description="JWT token for user identification"), origin: str = Query(None, description="Frontend origin URL")):
+async def gmail_auth_start(request: Request, token: str = Query(..., description="JWT token for user identification"), origin: str = Query(None, description="Frontend origin URL")):
     """Start Gmail OAuth flow"""
     user = await get_current_user_from_token(token)
     user_id = user["user_id"]
     
-    flow = get_oauth_flow()
+    flow = get_oauth_flow(request=request)
     
     authorization_url, state = flow.authorization_url(
         access_type='offline',
@@ -203,7 +200,7 @@ async def gmail_auth_start(token: str = Query(..., description="JWT token for us
 
 
 @router.get("/callback")
-async def gmail_auth_callback(code: str = None, state: str = None, error: str = None):
+async def gmail_auth_callback(request: Request, code: str = None, state: str = None, error: str = None):
     """Handle Gmail OAuth callback"""
     import logging
     logger = logging.getLogger(__name__)
@@ -251,10 +248,10 @@ async def gmail_auth_callback(code: str = None, state: str = None, error: str = 
         return RedirectResponse(f"{base}/settings?gmail_error=state_expired")
     
     try:
-        redirect_uri = get_redirect_uri()
+        redirect_uri = get_redirect_uri(request)
         logger.info(f"Using redirect URI: {redirect_uri}")
         
-        flow = get_oauth_flow(state)
+        flow = get_oauth_flow(state, request=request)
         
         # Set the code_verifier if we have one
         if code_verifier:

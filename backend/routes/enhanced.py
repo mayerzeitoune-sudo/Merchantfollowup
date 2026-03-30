@@ -2,7 +2,7 @@
 Enhanced Routes for Merchant Follow Up Platform
 Smart Drip Campaigns, Analytics, Lead Capture, Teams, Compliance, AI Suggestions
 """
-from fastapi import APIRouter, HTTPException, Depends, UploadFile, File, BackgroundTasks
+from fastapi import APIRouter, HTTPException, Depends, UploadFile, File, BackgroundTasks, Request
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from typing import List, Optional, Dict, Any
 import uuid
@@ -55,6 +55,14 @@ JWT_SECRET = os.environ.get('JWT_SECRET', 'default-secret-key')
 JWT_ALGORITHM = "HS256"
 
 _get_current_user_func = None
+
+def _get_base_url(request: Request) -> str:
+    """Derive the public-facing base URL from the incoming request."""
+    proto = request.headers.get("x-forwarded-proto", "https")
+    host = request.headers.get("x-forwarded-host") or request.headers.get("host", "")
+    if host:
+        return f"{proto}://{host}"
+    return str(request.base_url).rstrip("/")
 
 def set_auth_dependency(auth_func):
     global _get_current_user_func
@@ -604,13 +612,13 @@ async def search_conversations(
 # ============== LEAD CAPTURE ==============
 
 @router.post("/leads/forms", response_model=LeadFormResponse)
-async def create_lead_form(data: LeadFormCreate, current_user: dict = Depends(get_current_user)):
+async def create_lead_form(data: LeadFormCreate, request: Request, current_user: dict = Depends(get_current_user)):
     """Create a lead capture form"""
     form_id = str(uuid.uuid4())
     now = datetime.now(timezone.utc).isoformat()
     
     # Generate form URL
-    base_url = os.environ.get("REACT_APP_BACKEND_URL", "")
+    base_url = _get_base_url(request)
     form_url = f"{base_url}/api/leads/submit/{form_id}"
     
     form_doc = {
@@ -752,10 +760,10 @@ async def import_leads_csv(
     return {"imported": imported, "errors": errors}
 
 @router.post("/leads/webhook")
-async def create_lead_webhook(current_user: dict = Depends(get_current_user)):
+async def create_lead_webhook(request: Request, current_user: dict = Depends(get_current_user)):
     """Generate a webhook URL for lead capture"""
     webhook_id = str(uuid.uuid4())
-    base_url = os.environ.get("REACT_APP_BACKEND_URL", "")
+    base_url = _get_base_url(request)
     
     webhook_doc = {
         "id": webhook_id,
@@ -896,12 +904,12 @@ async def get_campaign_analytics(campaign_id: str, current_user: dict = Depends(
 # ============== APPOINTMENTS ==============
 
 @router.post("/appointments/types", response_model=AppointmentTypeResponse)
-async def create_appointment_type(data: AppointmentTypeCreate, current_user: dict = Depends(get_current_user)):
+async def create_appointment_type(data: AppointmentTypeCreate, request: Request, current_user: dict = Depends(get_current_user)):
     """Create an appointment type"""
     type_id = str(uuid.uuid4())
     now = datetime.now(timezone.utc).isoformat()
     
-    base_url = os.environ.get("REACT_APP_BACKEND_URL", "")
+    base_url = _get_base_url(request)
     booking_url = f"{base_url}/book/{current_user['user_id']}/{type_id}"
     
     type_doc = {

@@ -61,7 +61,7 @@ async def get_sms_status():
 
 
 @router.post("/send")
-async def send_sms(request: SMSRequest, user_id: str = Query(...)):
+async def send_sms(request_obj: Request, request: SMSRequest, user_id: str = Query(...)):
     """Send a single SMS message via Twilio"""
     
     # ===== CONTENT MODERATION =====
@@ -101,7 +101,9 @@ async def send_sms(request: SMSRequest, user_id: str = Query(...)):
         if ms_sid:
             msg_params["messaging_service_sid"] = ms_sid
         
-        status_cb = os.environ.get('BACKEND_URL', '')
+        status_cb_proto = request_obj.headers.get("x-forwarded-proto", "https")
+        status_cb_host = request_obj.headers.get("x-forwarded-host") or request_obj.headers.get("host", "")
+        status_cb = f"{status_cb_proto}://{status_cb_host}" if status_cb_host else str(request_obj.base_url).rstrip("/")
         if status_cb:
             msg_params["status_callback"] = f"{status_cb}/api/sms/webhook/status"
         

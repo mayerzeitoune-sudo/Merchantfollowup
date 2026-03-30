@@ -46,6 +46,16 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+
+def get_base_url(request: Request) -> str:
+    """Derive the public-facing base URL from the incoming request.
+    Works correctly in both preview and production environments."""
+    forwarded_proto = request.headers.get("x-forwarded-proto", "https")
+    forwarded_host = request.headers.get("x-forwarded-host") or request.headers.get("host", "")
+    if forwarded_host:
+        return f"{forwarded_proto}://{forwarded_host}"
+    return str(request.base_url).rstrip("/")
+
 # ============== MODELS ==============
 
 # User Models
@@ -1687,13 +1697,11 @@ async def get_lead_forms(current_user: dict = Depends(get_current_user)):
     return forms
 
 @api_router.post("/leads/forms")
-async def create_lead_form(data: dict, current_user: dict = Depends(get_current_user)):
+async def create_lead_form(data: dict, request: Request, current_user: dict = Depends(get_current_user)):
     """Create a lead capture form"""
     form_id = str(uuid.uuid4())
     now = datetime.now(timezone.utc).isoformat()
-    base_url = os.environ.get('REACT_APP_BACKEND_URL')
-    if not base_url:
-        raise HTTPException(status_code=500, detail="REACT_APP_BACKEND_URL not configured")
+    base_url = get_base_url(request)
     
     form_doc = {
         "id": form_id,
@@ -1713,12 +1721,10 @@ async def create_lead_form(data: dict, current_user: dict = Depends(get_current_
     return form_doc
 
 @api_router.post("/leads/webhook")
-async def create_webhook(current_user: dict = Depends(get_current_user)):
+async def create_webhook(request: Request, current_user: dict = Depends(get_current_user)):
     """Create a webhook endpoint for receiving leads"""
     webhook_id = str(uuid.uuid4())
-    base_url = os.environ.get('REACT_APP_BACKEND_URL')
-    if not base_url:
-        raise HTTPException(status_code=500, detail="REACT_APP_BACKEND_URL not configured")
+    base_url = get_base_url(request)
     
     webhook_doc = {
         "id": webhook_id,
@@ -2274,7 +2280,7 @@ async def admin_reset_password(member_id: str, data: dict, current_user: dict = 
 
 
 @api_router.post("/team/members/{member_id}/send-reset-link")
-async def send_password_reset_link(member_id: str, current_user: dict = Depends(get_current_user)):
+async def send_password_reset_link(member_id: str, request: Request, current_user: dict = Depends(get_current_user)):
     """Admin/Org Admin can send a password reset email to a user"""
     admin_user = await db.users.find_one({"id": current_user["user_id"]}, {"_id": 0})
     if not is_admin_or_above(admin_user):
@@ -2312,7 +2318,7 @@ async def send_password_reset_link(member_id: str, current_user: dict = Depends(
         if creds:
             service = build_gmail_service(creds)
             
-            base_url = os.environ.get('REACT_APP_BACKEND_URL', '')
+            base_url = get_base_url(request)
             reset_link = f"{base_url}/reset-password?token={reset_token}&email={target_user['email']}"
             
             message_text = f"""
@@ -2835,7 +2841,7 @@ async def activate_sms_provider(provider_id: str, current_user: dict = Depends(g
 # ============== PLATFORM STATUS ==============
 
 @api_router.get("/platform/status")
-async def get_platform_status(current_user: dict = Depends(get_current_user)):
+async def get_platform_status(request: Request, current_user: dict = Depends(get_current_user)):
     """Return platform integration status (never exposes keys)"""
     twilio_sid = os.environ.get("TWILIO_ACCOUNT_SID", "")
     twilio_token = os.environ.get("TWILIO_AUTH_TOKEN", "")
@@ -2854,10 +2860,17 @@ async def get_platform_status(current_user: dict = Depends(get_current_user)):
         },
     }
     
-    # Only org_admin sees Stripe status
+    # Only org_admin sees Stripe status and diagnostics
     if is_org_admin:
         result["stripe"] = {
             "connected": bool(stripe_key.strip()),
+        }
+        result["diagnostics"] = {
+            "twilio_sid_loaded": bool(twilio_sid.strip()),
+            "twilio_token_loaded": bool(twilio_token.strip()),
+            "twilio_ms_loaded": bool(twilio_ms.strip()),
+            "stripe_key_loaded": bool(stripe_key.strip()),
+            "resolved_base_url": get_base_url(request),
         }
     
     return result
@@ -2953,7 +2966,7 @@ async def search_available_numbers(
         raise HTTPException(status_code=500, detail=f"Failed to search numbers: {str(e)}")
 
 @api_router.post("/phone-numbers/purchase")
-async def purchase_phone_number(data: PhoneNumberCreate, current_user: dict = Depends(get_current_user)):
+async def purchase_phone_number(data: PhoneNumberCreate, request: Request, current_user: dict = Depends(get_current_user)):
     """Purchase/add a phone number - deducts credits from org balance"""
     user = await db.users.find_one({"id": current_user["user_id"]})
     if not user:
@@ -3033,7 +3046,7 @@ async def purchase_phone_number(data: PhoneNumberCreate, current_user: dict = De
         client = Client(twilio_sid, twilio_token)
         
         # Buy the number
-        backend_url = os.environ.get('BACKEND_URL', '')
+        backend_url = get_base_url(request)
         incoming = client.incoming_phone_numbers.create(
             phone_number=data.phone_number,
             sms_url=f"{backend_url}/api/sms/webhook/inbound",
@@ -3390,6 +3403,7 @@ async def get_conversation_chains(client_id: str, current_user: dict = Depends(g
 async def send_sms_to_contact(
     client_id: str,
     data: dict,
+    request: Request,
     current_user: dict = Depends(get_current_user)
 ):
     """Send SMS to a contact from a specific phone number"""
@@ -3551,7 +3565,7 @@ async def send_sms_to_contact(
             else:
                 raise ValueError(f"Client has no valid phone digits: {raw}")
             
-            status_cb = os.environ.get('BACKEND_URL', '')
+            status_cb = get_base_url(request)
             ms_sid = os.environ.get('TWILIO_MESSAGING_SERVICE_SID', '')
             
             # Build Twilio message params

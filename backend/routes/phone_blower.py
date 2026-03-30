@@ -505,7 +505,7 @@ async def _place_auto_dial_call(session: dict):
     """Place a single call for an auto-dial session"""
     twilio_sid = os.environ.get("TWILIO_ACCOUNT_SID")
     twilio_token = os.environ.get("TWILIO_AUTH_TOKEN")
-    backend_url = os.environ.get("BACKEND_URL", "")
+    backend_url = os.environ.get("REACT_APP_BACKEND_URL", "")
 
     # Rotate to next number
     numbers = session["owned_numbers"]
