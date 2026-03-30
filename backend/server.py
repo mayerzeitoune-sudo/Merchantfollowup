@@ -21,12 +21,14 @@ ROOT_DIR = Path(__file__).parent
 _env_path = ROOT_DIR / '.env'
 load_dotenv(_env_path)
 
-# BULLETPROOF env loading: Read .env file directly with raw file I/O.
-# This handles ALL edge cases:
-# 1. load_dotenv skips vars that already exist (even if empty) in system env
-# 2. Deployment platform may regenerate .env without custom vars
-# 3. dotenv_values may fail silently
+# FORCE-LOAD critical integration vars from .env file.
+# The deployment platform may inject empty/placeholder values for TWILIO_ACCOUNT_SID 
+# and TWILIO_AUTH_TOKEN as system env vars. load_dotenv won't override them.
+# We MUST force-set these from the .env file to ensure they work in production.
 _loaded_from_file = []
+_force_override_keys = {
+    'TWILIO_ACCOUNT_SID', 'TWILIO_AUTH_TOKEN', 'TWILIO_MESSAGING_SERVICE_SID',
+}
 if _env_path.exists():
     with open(_env_path, 'r') as _f:
         for _line in _f:
@@ -36,8 +38,15 @@ if _env_path.exists():
             _key, _val = _line.split('=', 1)
             _key = _key.strip()
             _val = _val.strip().strip('"').strip("'")
-            # Only fill in if the var is missing or empty in current env
-            if _val and not os.environ.get(_key, '').strip():
+            if not _val:
+                continue
+            # Force override Twilio vars regardless of system env
+            if _key in _force_override_keys:
+                if os.environ.get(_key, '').strip() != _val:
+                    os.environ[_key] = _val
+                    _loaded_from_file.append(_key)
+            # For other vars, only fill in if missing/empty
+            elif not os.environ.get(_key, '').strip():
                 os.environ[_key] = _val
                 _loaded_from_file.append(_key)
 
