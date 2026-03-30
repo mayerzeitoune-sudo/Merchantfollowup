@@ -3018,6 +3018,17 @@ async def purchase_phone_number(data: PhoneNumberCreate, current_user: dict = De
             twilio_purchased = True
             twilio_sid_number = incoming.sid
             logger.info(f"Twilio number purchased: {data.phone_number} (SID: {incoming.sid})")
+            
+            # Auto-add to Messaging Service for A2P 10DLC compliance
+            ms_sid = os.environ.get('TWILIO_MESSAGING_SERVICE_SID', '')
+            if ms_sid:
+                try:
+                    client.messaging.v1.services(ms_sid).phone_numbers.create(
+                        phone_number_sid=incoming.sid
+                    )
+                    logger.info(f"Added {data.phone_number} to Messaging Service {ms_sid}")
+                except Exception as ms_err:
+                    logger.warning(f"Could not add number to Messaging Service: {ms_err}")
         except Exception as e:
             logger.error(f"Twilio purchase failed: {e}")
             # Refund credits if Twilio purchase fails
@@ -3458,12 +3469,26 @@ async def send_sms_to_contact(
                 raise ValueError(f"Client has no valid phone digits: {raw}")
             
             status_cb = os.environ.get('BACKEND_URL', '')
-            msg = twilio_client.messages.create(
-                body=processed_message,
-                from_=from_number,
-                to=to_phone,
-                status_callback=f"{status_cb}/api/sms/webhook/status" if status_cb else None,
-            )
+            ms_sid = os.environ.get('TWILIO_MESSAGING_SERVICE_SID', '')
+            
+            # Build Twilio message params
+            msg_params = {
+                "body": processed_message,
+                "to": to_phone,
+            }
+            
+            # Use Messaging Service if configured (for A2P 10DLC compliance)
+            if ms_sid:
+                msg_params["messaging_service_sid"] = ms_sid
+                # Still pass from_ so the specific number is used
+                msg_params["from_"] = from_number
+            else:
+                msg_params["from_"] = from_number
+            
+            if status_cb:
+                msg_params["status_callback"] = f"{status_cb}/api/sms/webhook/status"
+            
+            msg = twilio_client.messages.create(**msg_params)
             message_doc["status"] = msg.status or "sent"
             message_doc["twilio_sid"] = msg.sid
             logger.info(f"SMS sent via Twilio: {msg.sid} from {from_number} to {to_phone}")

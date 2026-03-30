@@ -92,11 +92,16 @@ async def send_sms(request: SMSRequest, user_id: str = Query(...)):
         if not sender:
             raise HTTPException(status_code=400, detail="No from_number provided and no default TWILIO_PHONE_NUMBER configured")
 
-        message = twilio_client.messages.create(
-            body=request.message,
-            from_=sender,
-            to=request.to
-        )
+        ms_sid = os.environ.get('TWILIO_MESSAGING_SERVICE_SID', '')
+        msg_params = {"body": request.message, "to": request.to, "from_": sender}
+        if ms_sid:
+            msg_params["messaging_service_sid"] = ms_sid
+        
+        status_cb = os.environ.get('BACKEND_URL', '')
+        if status_cb:
+            msg_params["status_callback"] = f"{status_cb}/api/sms/webhook/status"
+        
+        message = twilio_client.messages.create(**msg_params)
 
         msg_doc = {
             "id": str(uuid.uuid4()),
