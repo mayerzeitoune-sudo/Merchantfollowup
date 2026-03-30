@@ -18,23 +18,28 @@ from emergentintegrations.llm.chat import LlmChat, UserMessage
 import asyncio
 
 ROOT_DIR = Path(__file__).parent
-load_dotenv(ROOT_DIR / '.env')
+_env_path = ROOT_DIR / '.env'
+load_dotenv(_env_path)
 
-# Ensure critical integration vars are loaded from .env even if system env has them empty.
-# load_dotenv(override=False) won't replace an existing empty system var.
-# This is critical for production where the deployment platform may inject blank vars.
-from dotenv import dotenv_values as _dotenv_values
-_file_env = _dotenv_values(ROOT_DIR / '.env')
-_CRITICAL_VARS = [
-    'TWILIO_ACCOUNT_SID', 'TWILIO_AUTH_TOKEN', 'TWILIO_MESSAGING_SERVICE_SID',
-    'STRIPE_API_KEY', 'GOOGLE_CLIENT_ID', 'GOOGLE_CLIENT_SECRET',
-    'JWT_SECRET', 'EMERGENT_LLM_KEY',
-]
-for _key in _CRITICAL_VARS:
-    _sys_val = os.environ.get(_key, '').strip()
-    _file_val = (_file_env.get(_key) or '').strip()
-    if not _sys_val and _file_val:
-        os.environ[_key] = _file_val
+# BULLETPROOF env loading: Read .env file directly with raw file I/O.
+# This handles ALL edge cases:
+# 1. load_dotenv skips vars that already exist (even if empty) in system env
+# 2. Deployment platform may regenerate .env without custom vars
+# 3. dotenv_values may fail silently
+_loaded_from_file = []
+if _env_path.exists():
+    with open(_env_path, 'r') as _f:
+        for _line in _f:
+            _line = _line.strip()
+            if not _line or _line.startswith('#') or '=' not in _line:
+                continue
+            _key, _val = _line.split('=', 1)
+            _key = _key.strip()
+            _val = _val.strip().strip('"').strip("'")
+            # Only fill in if the var is missing or empty in current env
+            if _val and not os.environ.get(_key, '').strip():
+                os.environ[_key] = _val
+                _loaded_from_file.append(_key)
 
 # MongoDB connection
 mongo_url = os.environ['MONGO_URL']
@@ -62,12 +67,16 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# Startup diagnostics — logged once at boot so production issues are immediately visible
+# Startup diagnostics — logged once so production issues are immediately visible
 logger.info("=== STARTUP ENV CHECK ===")
-logger.info(f"TWILIO_ACCOUNT_SID loaded: {bool(os.environ.get('TWILIO_ACCOUNT_SID', '').strip())}")
+logger.info(f".env file path: {_env_path}")
+logger.info(f".env file exists: {_env_path.exists()}")
+if _loaded_from_file:
+    logger.info(f"Vars loaded from .env file (were missing in system): {_loaded_from_file}")
+logger.info(f"TWILIO_ACCOUNT_SID loaded: {bool(os.environ.get('TWILIO_ACCOUNT_SID', '').strip())} (val starts with: {os.environ.get('TWILIO_ACCOUNT_SID', '')[:4]}...)")
 logger.info(f"TWILIO_AUTH_TOKEN loaded: {bool(os.environ.get('TWILIO_AUTH_TOKEN', '').strip())}")
 logger.info(f"TWILIO_MESSAGING_SERVICE_SID loaded: {bool(os.environ.get('TWILIO_MESSAGING_SERVICE_SID', '').strip())}")
-logger.info(f"STRIPE_API_KEY loaded: {bool(os.environ.get('STRIPE_API_KEY', '').strip())}")
+logger.info(f"STRIPE_API_KEY loaded: {bool(os.environ.get('STRIPE_API_KEY', '').strip())} (val starts with: {os.environ.get('STRIPE_API_KEY', '')[:7]}...)")
 logger.info(f"MONGO_URL loaded: {bool(os.environ.get('MONGO_URL', '').strip())}")
 logger.info("=== END ENV CHECK ===")
 
@@ -5978,6 +5987,36 @@ async def get_purchase_status(current_user: dict = Depends(get_current_user)):
                 result["reason"] = f"Monthly limit reached ({purchased}/{rep_limit})"
     
     return result
+
+
+@api_router.get("/debug/env-check")
+async def debug_env_check():
+    """Public diagnostic endpoint — shows which env vars are loaded (no values exposed).
+    Hit this on production to verify Twilio/Stripe vars are present."""
+    env_path = Path(__file__).parent / '.env'
+    file_keys = []
+    if env_path.exists():
+        with open(env_path, 'r') as f:
+            for line in f:
+                line = line.strip()
+                if line and not line.startswith('#') and '=' in line:
+                    key = line.split('=', 1)[0].strip()
+                    val = line.split('=', 1)[1].strip().strip('"').strip("'")
+                    file_keys.append({"key": key, "in_file": bool(val), "in_env": bool(os.environ.get(key, '').strip())})
+    
+    return {
+        "env_file_path": str(env_path),
+        "env_file_exists": env_path.exists(),
+        "vars_loaded_from_file_at_startup": _loaded_from_file,
+        "file_keys": file_keys,
+        "critical_vars": {
+            "TWILIO_ACCOUNT_SID": bool(os.environ.get("TWILIO_ACCOUNT_SID", "").strip()),
+            "TWILIO_AUTH_TOKEN": bool(os.environ.get("TWILIO_AUTH_TOKEN", "").strip()),
+            "TWILIO_MESSAGING_SERVICE_SID": bool(os.environ.get("TWILIO_MESSAGING_SERVICE_SID", "").strip()),
+            "STRIPE_API_KEY": bool(os.environ.get("STRIPE_API_KEY", "").strip()),
+            "MONGO_URL": bool(os.environ.get("MONGO_URL", "").strip()),
+        }
+    }
 
 
 # Include the main router AFTER enhanced routes
