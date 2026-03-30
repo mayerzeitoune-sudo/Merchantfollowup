@@ -22,9 +22,14 @@ import {
   Mail,
   Link,
   Unlink,
-  Hash
+  Hash,
+  Shield,
+  Wifi,
+  WifiOff,
+  CreditCard,
+  MessageSquare
 } from 'lucide-react';
-import { smsProvidersApi, gmailApi, phoneNumbersApi } from '../lib/api';
+import { smsProvidersApi, gmailApi, phoneNumbersApi, platformApi } from '../lib/api';
 import { useAuth } from '../context/AuthContext';
 import { toast } from 'sonner';
 
@@ -58,6 +63,7 @@ const Settings = () => {
   });
   const [repMonthlyLimit, setRepMonthlyLimit] = useState(0);
   const [phoneSettingsLoading, setPhoneSettingsLoading] = useState(false);
+  const [platformStatus, setPlatformStatus] = useState(null);
   const [ownedNumbers, setOwnedNumbers] = useState([]);
   const [selectedDeleteNumber, setSelectedDeleteNumber] = useState('');
   const [deleteRequestSent, setDeleteRequestSent] = useState(false);
@@ -67,6 +73,7 @@ const Settings = () => {
   useEffect(() => {
     fetchProviders();
     fetchGmailStatus();
+    fetchPlatformStatus();
     if (isAdmin) {
       fetchPhoneSettings();
     }
@@ -79,6 +86,15 @@ const Settings = () => {
       toast.error(`Gmail connection failed: ${searchParams.get('gmail_error')}`);
     }
   }, [searchParams, isAdmin]);
+
+  const fetchPlatformStatus = async () => {
+    try {
+      const res = await platformApi.getStatus();
+      setPlatformStatus(res.data);
+    } catch (error) {
+      console.error('Failed to fetch platform status:', error);
+    }
+  };
 
   const fetchPhoneSettings = async () => {
     try {
@@ -317,188 +333,82 @@ const Settings = () => {
           <p className="text-muted-foreground mt-1">Manage your account and SMS providers</p>
         </div>
 
-        <Tabs defaultValue="providers" className="space-y-6">
+        <Tabs defaultValue="integrations" className="space-y-6">
           <TabsList>
-            <TabsTrigger value="providers">SMS Providers</TabsTrigger>
+            <TabsTrigger value="integrations">Platform Integrations</TabsTrigger>
             <TabsTrigger value="gmail">Gmail</TabsTrigger>
             {isAdmin && <TabsTrigger value="phone-settings">Phone Numbers</TabsTrigger>}
             <TabsTrigger value="profile">Profile</TabsTrigger>
           </TabsList>
 
-          {/* SMS Providers Tab */}
-          <TabsContent value="providers" className="space-y-6">
-            {/* Info Banner */}
-            <Card className="bg-blue-50 border-blue-100">
-              <CardContent className="p-4">
-                <div className="flex items-start gap-3">
-                  <AlertCircle className="h-5 w-5 text-blue-600 mt-0.5" />
-                  <div>
-                    <p className="font-medium text-blue-900">Connect Your SMS Provider</p>
-                    <p className="text-sm text-blue-700 mt-1">
-                      To send payment reminders, you'll need to connect an SMS provider. 
-                      We support Twilio, Telnyx, Vonage, Plivo, and Bandwidth.
-                    </p>
+          {/* Platform Integrations Tab */}
+          <TabsContent value="integrations" className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle className="font-['Outfit'] flex items-center gap-2">
+                  <Shield className="h-5 w-5" /> Platform Integrations
+                </CardTitle>
+                <CardDescription>
+                  These services are managed by the platform administrator and shared across all organizations.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {/* Twilio SMS */}
+                <div className="flex items-center justify-between p-4 rounded-lg border" data-testid="twilio-status-card">
+                  <div className="flex items-center gap-4">
+                    <div className={`h-12 w-12 rounded-lg flex items-center justify-center ${platformStatus?.twilio?.connected ? 'bg-green-100 dark:bg-green-950' : 'bg-red-100 dark:bg-red-950'}`}>
+                      <MessageSquare className={`h-6 w-6 ${platformStatus?.twilio?.connected ? 'text-green-600' : 'text-red-600'}`} />
+                    </div>
+                    <div>
+                      <p className="font-semibold">Twilio SMS</p>
+                      <p className="text-sm text-muted-foreground">
+                        SMS messaging, phone number purchasing, and voice calls
+                      </p>
+                    </div>
                   </div>
+                  <div className="flex items-center gap-3">
+                    {platformStatus?.twilio?.a2p_10dlc && (
+                      <Badge variant="outline" className="border-blue-200 text-blue-700 dark:text-blue-400">
+                        A2P 10DLC
+                      </Badge>
+                    )}
+                    {platformStatus?.twilio?.connected ? (
+                      <Badge className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200 flex items-center gap-1" data-testid="twilio-connected-badge">
+                        <Wifi className="h-3 w-3" /> Connected
+                      </Badge>
+                    ) : (
+                      <Badge variant="destructive" className="flex items-center gap-1" data-testid="twilio-disconnected-badge">
+                        <WifiOff className="h-3 w-3" /> Not Connected
+                      </Badge>
+                    )}
+                  </div>
+                </div>
+
+                {/* Stripe Payments */}
+                <div className="flex items-center justify-between p-4 rounded-lg border" data-testid="stripe-status-card">
+                  <div className="flex items-center gap-4">
+                    <div className={`h-12 w-12 rounded-lg flex items-center justify-center ${platformStatus?.stripe?.connected ? 'bg-green-100 dark:bg-green-950' : 'bg-red-100 dark:bg-red-950'}`}>
+                      <CreditCard className={`h-6 w-6 ${platformStatus?.stripe?.connected ? 'text-green-600' : 'text-red-600'}`} />
+                    </div>
+                    <div>
+                      <p className="font-semibold">Stripe Payments</p>
+                      <p className="text-sm text-muted-foreground">
+                        Credit card processing for credit purchases
+                      </p>
+                    </div>
+                  </div>
+                  {platformStatus?.stripe?.connected ? (
+                    <Badge className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200 flex items-center gap-1" data-testid="stripe-connected-badge">
+                      <Wifi className="h-3 w-3" /> Connected
+                    </Badge>
+                  ) : (
+                    <Badge variant="destructive" className="flex items-center gap-1" data-testid="stripe-disconnected-badge">
+                      <WifiOff className="h-3 w-3" /> Not Connected
+                    </Badge>
+                  )}
                 </div>
               </CardContent>
             </Card>
-
-            {/* Add Provider Button */}
-            <div className="flex justify-between items-center">
-              <h2 className="text-xl font-semibold font-['Outfit']">Connected Providers</h2>
-              <Dialog open={isDialogOpen} onOpenChange={(open) => { setIsDialogOpen(open); if (!open) resetForm(); }}>
-                <DialogTrigger asChild>
-                  <Button className="bg-primary hover:bg-primary/90" data-testid="add-provider-btn">
-                    <Plus className="h-4 w-4 mr-2" />
-                    Add Provider
-                  </Button>
-                </DialogTrigger>
-                <DialogContent className="sm:max-w-md">
-                  <DialogHeader>
-                    <DialogTitle className="font-['Outfit']">Add SMS Provider</DialogTitle>
-                    <DialogDescription>
-                      Connect your SMS service provider
-                    </DialogDescription>
-                  </DialogHeader>
-                  <form onSubmit={handleSubmit} className="space-y-4 mt-4">
-                    <div className="space-y-2">
-                      <Label>Provider</Label>
-                      <Select
-                        value={formData.provider}
-                        onValueChange={(value) => setFormData({ ...formData, provider: value })}
-                      >
-                        <SelectTrigger data-testid="provider-select">
-                          <SelectValue placeholder="Select a provider" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {smsProviders.map((provider) => (
-                            <SelectItem key={provider.id} value={provider.id}>
-                              <div className="flex items-center gap-2">
-                                <div className={`h-2 w-2 rounded-full ${provider.color}`} />
-                                {provider.name}
-                              </div>
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-
-                    {formData.provider && (
-                      <>
-                        <a
-                          href={getProviderInfo(formData.provider).url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-sm text-primary hover:underline flex items-center gap-1"
-                        >
-                          Get credentials from {getProviderInfo(formData.provider).name}
-                          <ExternalLink className="h-3 w-3" />
-                        </a>
-
-                        {renderProviderFields()}
-
-                        <div className="space-y-2">
-                          <Label htmlFor="from_number">From Phone Number *</Label>
-                          <div className="relative">
-                            <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                            <Input
-                              id="from_number"
-                              value={formData.from_number}
-                              onChange={(e) => setFormData({ ...formData, from_number: e.target.value })}
-                              placeholder="+1234567890"
-                              className="pl-10"
-                              required
-                              data-testid="provider-from-number-input"
-                            />
-                          </div>
-                          <p className="text-xs text-muted-foreground">
-                            The phone number messages will be sent from
-                          </p>
-                        </div>
-                      </>
-                    )}
-
-                    <div className="flex gap-3 pt-4">
-                      <Button type="button" variant="outline" className="flex-1" onClick={() => setIsDialogOpen(false)}>
-                        Cancel
-                      </Button>
-                      <Button 
-                        type="submit" 
-                        className="flex-1 bg-primary hover:bg-primary/90" 
-                        disabled={!formData.provider}
-                        data-testid="save-provider-btn"
-                      >
-                        Add Provider
-                      </Button>
-                    </div>
-                  </form>
-                </DialogContent>
-              </Dialog>
-            </div>
-
-            {/* Providers List */}
-            {loading ? (
-              <p className="text-center py-8 text-muted-foreground">Loading...</p>
-            ) : providers.length === 0 ? (
-              <Card>
-                <CardContent className="text-center py-12">
-                  <SettingsIcon className="h-12 w-12 mx-auto mb-4 text-muted-foreground/50" />
-                  <p className="text-muted-foreground mb-4">No SMS providers configured</p>
-                  <p className="text-sm text-muted-foreground">
-                    Add a provider to start sending payment reminders
-                  </p>
-                </CardContent>
-              </Card>
-            ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {providers.map((provider) => {
-                  const info = getProviderInfo(provider.provider);
-                  return (
-                    <Card key={provider.id} className={provider.is_active ? 'ring-2 ring-primary' : ''}>
-                      <CardContent className="p-4">
-                        <div className="flex items-start justify-between">
-                          <div className="flex items-center gap-3">
-                            <div className={`h-10 w-10 rounded-lg ${info.color} flex items-center justify-center text-white font-bold`}>
-                              {info.name.charAt(0)}
-                            </div>
-                            <div>
-                              <p className="font-medium">{info.name}</p>
-                              <p className="text-sm text-muted-foreground">{provider.from_number}</p>
-                            </div>
-                          </div>
-                          {provider.is_active && (
-                            <Badge className="bg-green-100 text-green-700">
-                              <CheckCircle className="h-3 w-3 mr-1" />
-                              Active
-                            </Badge>
-                          )}
-                        </div>
-                        <div className="flex gap-2 mt-4">
-                          {!provider.is_active && (
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              className="flex-1"
-                              onClick={() => handleActivate(provider.id)}
-                            >
-                              Set as Active
-                            </Button>
-                          )}
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="text-destructive hover:text-destructive"
-                            onClick={() => handleDelete(provider.id)}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  );
-                })}
-              </div>
-            )}
           </TabsContent>
 
           {/* Gmail Tab */}

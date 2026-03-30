@@ -133,6 +133,10 @@ export const smsProvidersApi = {
   activate: (id) => axios.put(`${API}/sms-providers/${id}/activate`)
 };
 
+export const platformApi = {
+  getStatus: () => axios.get(`${API}/platform/status`),
+};
+
 // Phone Numbers API
 export const phoneNumbersApi = {
   searchAvailable: (areaCode, country = 'US', limit = 20) => 

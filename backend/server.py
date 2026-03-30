@@ -2832,6 +2832,27 @@ async def activate_sms_provider(provider_id: str, current_user: dict = Depends(g
     
     return {"message": "Provider activated"}
 
+# ============== PLATFORM STATUS ==============
+
+@api_router.get("/platform/status")
+async def get_platform_status(current_user: dict = Depends(get_current_user)):
+    """Return platform integration status (never exposes keys)"""
+    twilio_sid = os.environ.get("TWILIO_ACCOUNT_SID")
+    twilio_token = os.environ.get("TWILIO_AUTH_TOKEN")
+    twilio_ms = os.environ.get("TWILIO_MESSAGING_SERVICE_SID")
+    stripe_key = os.environ.get("STRIPE_API_KEY")
+    
+    return {
+        "twilio": {
+            "connected": bool(twilio_sid and twilio_token),
+            "messaging_service": bool(twilio_ms),
+            "a2p_10dlc": bool(twilio_ms),
+        },
+        "stripe": {
+            "connected": bool(stripe_key),
+        },
+    }
+
 # ============== AI MATCHING ROUTE ==============
 
 @api_router.post("/ai/match-response", response_model=MatchResponse)

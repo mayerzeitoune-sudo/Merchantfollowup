@@ -433,18 +433,6 @@ const PhoneNumbers = () => {
               </DialogDescription>
             </DialogHeader>
             
-            {!providerConfigured && (
-              <div className="flex items-start gap-2 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
-                <AlertCircle className="h-5 w-5 text-yellow-600 mt-0.5" />
-                <div>
-                  <p className="font-medium text-yellow-800">SMS Provider Not Configured</p>
-                  <p className="text-sm text-yellow-700">
-                    Configure Twilio or another provider in Settings to purchase real phone numbers.
-                  </p>
-                </div>
-              </div>
-            )}
-            
             <div className="space-y-2 mt-4">
               {availableNumbers.map((number, index) => (
                 <div 
