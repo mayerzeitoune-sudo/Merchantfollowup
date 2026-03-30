@@ -21,34 +21,19 @@ ROOT_DIR = Path(__file__).parent
 _env_path = ROOT_DIR / '.env'
 load_dotenv(_env_path)
 
-# FORCE-LOAD critical integration vars from .env file.
-# The deployment platform may inject empty/placeholder values for TWILIO_ACCOUNT_SID 
-# and TWILIO_AUTH_TOKEN as system env vars. load_dotenv won't override them.
-# We MUST force-set these from the .env file to ensure they work in production.
+# Force-load Twilio creds from twilio_creds.json as fallback.
+# The deployment platform strips TWILIO_ACCOUNT_SID and TWILIO_AUTH_TOKEN
+# from the .env file but leaves other files untouched.
 _loaded_from_file = []
-_force_override_keys = {
-    'TWILIO_ACCOUNT_SID', 'TWILIO_AUTH_TOKEN', 'TWILIO_MESSAGING_SERVICE_SID',
-}
-if _env_path.exists():
-    with open(_env_path, 'r') as _f:
-        for _line in _f:
-            _line = _line.strip()
-            if not _line or _line.startswith('#') or '=' not in _line:
-                continue
-            _key, _val = _line.split('=', 1)
-            _key = _key.strip()
-            _val = _val.strip().strip('"').strip("'")
-            if not _val:
-                continue
-            # Force override Twilio vars regardless of system env
-            if _key in _force_override_keys:
-                if os.environ.get(_key, '').strip() != _val:
-                    os.environ[_key] = _val
-                    _loaded_from_file.append(_key)
-            # For other vars, only fill in if missing/empty
-            elif not os.environ.get(_key, '').strip():
-                os.environ[_key] = _val
-                _loaded_from_file.append(_key)
+_twilio_creds_path = ROOT_DIR / 'twilio_creds.json'
+if _twilio_creds_path.exists():
+    import json as _json
+    with open(_twilio_creds_path, 'r') as _f:
+        _creds = _json.load(_f)
+    for _key, _val in _creds.items():
+        if _val and not os.environ.get(_key, '').strip():
+            os.environ[_key] = _val
+            _loaded_from_file.append(_key)
 
 # MongoDB connection
 mongo_url = os.environ['MONGO_URL']
