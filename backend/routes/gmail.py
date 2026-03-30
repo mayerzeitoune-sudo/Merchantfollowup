@@ -170,7 +170,7 @@ async def get_gmail_credentials(user_id: str) -> Optional[Credentials]:
 # ============== OAuth Routes ==============
 
 @router.get("/auth")
-async def gmail_auth_start(token: str = Query(..., description="JWT token for user identification")):
+async def gmail_auth_start(token: str = Query(..., description="JWT token for user identification"), origin: str = Query(None, description="Frontend origin URL")):
     """Start Gmail OAuth flow"""
     user = await get_current_user_from_token(token)
     user_id = user["user_id"]
@@ -187,10 +187,14 @@ async def gmail_auth_start(token: str = Query(..., description="JWT token for us
     # The flow object has the code_verifier after authorization_url is called
     code_verifier = flow.code_verifier if hasattr(flow, 'code_verifier') else None
     
+    # Store the frontend origin for dynamic redirect in callback
+    frontend_origin = origin or FRONTEND_URL or ""
+    
     await db.oauth_states.insert_one({
         "state": state,
         "user_id": user_id,
         "code_verifier": code_verifier,
+        "frontend_origin": frontend_origin,
         "created_at": datetime.now(timezone.utc),
         "expires_at": datetime.now(timezone.utc) + timedelta(minutes=10)
     })
@@ -206,20 +210,30 @@ async def gmail_auth_callback(code: str = None, state: str = None, error: str = 
     
     logger.info(f"Gmail callback received - code: {code[:20] if code else None}..., state: {state}, error: {error}")
     
+    # Helper to get redirect base URL from state doc or fallback
+    def get_redirect_base(state_doc=None):
+        if state_doc and state_doc.get("frontend_origin"):
+            return state_doc["frontend_origin"].rstrip("/")
+        return (FRONTEND_URL or "").rstrip("/")
+    
     if error:
         logger.error(f"Gmail OAuth error from Google: {error}")
-        return RedirectResponse(f"{FRONTEND_URL}/settings?gmail_error={error}")
+        # Try to find state doc for origin, but it may not exist
+        state_doc = await db.oauth_states.find_one({"state": state}) if state else None
+        base = get_redirect_base(state_doc)
+        return RedirectResponse(f"{base}/settings?gmail_error={error}")
     
     if not code or not state:
         logger.error("Missing code or state in callback")
-        return RedirectResponse(f"{FRONTEND_URL}/settings?gmail_error=missing_params")
+        return RedirectResponse(f"{(FRONTEND_URL or '').rstrip('/')}/settings?gmail_error=missing_params")
     
     # Verify state and get user_id
     state_doc = await db.oauth_states.find_one({"state": state})
     if not state_doc:
         logger.error(f"State not found in database: {state}")
-        return RedirectResponse(f"{FRONTEND_URL}/settings?gmail_error=invalid_state")
+        return RedirectResponse(f"{(FRONTEND_URL or '').rstrip('/')}/settings?gmail_error=invalid_state")
     
+    base = get_redirect_base(state_doc)
     user_id = state_doc["user_id"]
     code_verifier = state_doc.get("code_verifier")
     logger.info(f"Found user_id: {user_id} for state, code_verifier present: {code_verifier is not None}")
@@ -234,7 +248,7 @@ async def gmail_auth_callback(code: str = None, state: str = None, error: str = 
     
     if datetime.now(timezone.utc) > expires_at:
         logger.error("State expired")
-        return RedirectResponse(f"{FRONTEND_URL}/settings?gmail_error=state_expired")
+        return RedirectResponse(f"{base}/settings?gmail_error=state_expired")
     
     try:
         redirect_uri = get_redirect_uri()
@@ -255,7 +269,7 @@ async def gmail_auth_callback(code: str = None, state: str = None, error: str = 
             logger.error(f"Token fetch failed: {token_error}")
             import traceback
             logger.error(traceback.format_exc())
-            return RedirectResponse(f"{FRONTEND_URL}/settings?gmail_error=token_fetch_failed")
+            return RedirectResponse(f"{base}/settings?gmail_error=token_fetch_failed")
         
         creds = flow.credentials
         logger.info("Token fetched successfully")
@@ -268,7 +282,7 @@ async def gmail_auth_callback(code: str = None, state: str = None, error: str = 
             logger.info(f"Got email address: {email_address}")
         except Exception as gmail_error:
             logger.error(f"Gmail API error: {gmail_error}")
-            return RedirectResponse(f"{FRONTEND_URL}/settings?gmail_error=gmail_api_failed")
+            return RedirectResponse(f"{base}/settings?gmail_error=gmail_api_failed")
         
         # Store tokens
         await db.gmail_tokens.update_one(
@@ -284,14 +298,14 @@ async def gmail_auth_callback(code: str = None, state: str = None, error: str = 
             upsert=True
         )
         
-        return RedirectResponse(f"{FRONTEND_URL}/settings?gmail_connected=true")
+        return RedirectResponse(f"{base}/settings?gmail_connected=true")
         
     except Exception as e:
         import traceback
         logger.error(f"Gmail OAuth error: {e}")
         logger.error(traceback.format_exc())
         error_msg = str(e).replace(" ", "_")[:50]
-        return RedirectResponse(f"{FRONTEND_URL}/settings?gmail_error={error_msg}")
+        return RedirectResponse(f"{base}/settings?gmail_error={error_msg}")
 
 
 @router.get("/status")

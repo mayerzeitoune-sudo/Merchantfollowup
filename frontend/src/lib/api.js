@@ -341,7 +341,7 @@ export const fundedApi = {
 
 // Gmail API
 export const gmailApi = {
-  getAuthUrl: (token) => `${API}/gmail/auth?token=${token}`,
+  getAuthUrl: (token) => `${API}/gmail/auth?token=${token}&origin=${encodeURIComponent(window.location.origin)}`,
   getStatus: (token) => axios.get(`${API}/gmail/status`, { params: { token } }),
   disconnect: (token) => axios.post(`${API}/gmail/disconnect`, null, { params: { token } }),
   sendEmail: (token, data) => axios.post(`${API}/gmail/send`, data, { params: { token } }),
