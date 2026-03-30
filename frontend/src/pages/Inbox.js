@@ -124,12 +124,13 @@ const Inbox = () => {
       setClients(clientsRes.data || []);
       const numbers = numbersRes.data || [];
       setOwnedNumbers(numbers);
-      // Set default from number
-      const defaultNum = numbers.find(n => n.is_default);
+      // Set default from number — only from live Twilio numbers
+      const liveNumbers = numbers.filter(n => n.twilio_purchased);
+      const defaultNum = liveNumbers.find(n => n.is_default);
       if (defaultNum) {
         setSelectedFromNumber(defaultNum.phone_number);
-      } else if (numbers.length > 0) {
-        setSelectedFromNumber(numbers[0].phone_number);
+      } else if (liveNumbers.length > 0) {
+        setSelectedFromNumber(liveNumbers[0].phone_number);
       }
       setTemplates(templatesRes.data || []);
     } catch (error) {
@@ -209,11 +210,18 @@ const Inbox = () => {
     setSending(true);
     try {
       const fromNumber = selectedFromNumber === 'default' ? null : selectedFromNumber;
-      await contactsApi.sendSms(selectedClient.id, {
+      const res = await contactsApi.sendSms(selectedClient.id, {
         message: replyText,
         from_number: fromNumber
       });
-      toast.success('Message sent!');
+      const data = res.data || {};
+      if (data.status === 'failed' || data.error) {
+        toast.error(`SMS failed: ${data.error || 'Unknown error'}`, { duration: 6000 });
+      } else if (data.status === 'queued' || data.status === 'sent' || data.twilio_sid) {
+        toast.success('Message sent!');
+      } else {
+        toast.success('Message queued');
+      }
       setReplyText('');
       
       // Refresh messages
@@ -508,18 +516,36 @@ const Inbox = () => {
                             
                             <div className={`rounded-2xl px-4 py-3 ${
                               msg.direction === 'outbound' 
-                                ? 'bg-primary text-white rounded-br-md' 
+                                ? (msg.status === 'failed' || msg.status === 'undelivered' 
+                                   ? 'bg-red-600 text-white rounded-br-md' 
+                                   : 'bg-primary text-white rounded-br-md')
                                 : 'bg-muted rounded-bl-md'
                             }`}>
                               <p className="text-sm whitespace-pre-wrap">{msg.content}</p>
+                              {msg.status === 'failed' && msg.error && (
+                                <p className="text-[10px] mt-1 opacity-80 border-t border-white/20 pt-1">
+                                  Failed: {msg.error.length > 80 ? msg.error.slice(0, 80) + '...' : msg.error}
+                                </p>
+                              )}
+                              {msg.status === 'undelivered' && (
+                                <p className="text-[10px] mt-1 opacity-80 border-t border-white/20 pt-1">
+                                  Undelivered — carrier may have blocked this message
+                                </p>
+                              )}
                             </div>
                             <div className={`flex items-center gap-1 mt-1 text-xs text-muted-foreground ${
                               msg.direction === 'outbound' ? 'justify-end' : 'justify-start'
                             }`}>
                               <Clock className="h-3 w-3" />
                               {formatTime(msg.timestamp)}
-                              {msg.direction === 'outbound' && (
+                              {msg.direction === 'outbound' && msg.status !== 'failed' && msg.status !== 'undelivered' && (
                                 <CheckCheck className="h-3 w-3 ml-1 text-blue-500" />
+                              )}
+                              {msg.direction === 'outbound' && msg.status === 'failed' && (
+                                <span className="text-red-500 ml-1 font-medium">Failed</span>
+                              )}
+                              {msg.direction === 'outbound' && msg.status === 'undelivered' && (
+                                <span className="text-amber-500 ml-1 font-medium">Undelivered</span>
                               )}
                             </div>
                           </div>
@@ -589,24 +615,30 @@ const Inbox = () => {
                         {ownedNumbers.length === 0 ? (
                           <SelectItem value="default">No numbers available</SelectItem>
                         ) : (
-                          ownedNumbers.map((num) => (
-                            <SelectItem key={num.id || num.phone_number} value={num.phone_number}>
-                              <div className="flex items-center gap-2">
-                                <span className="font-mono">{num.phone_number}</span>
-                                {num.friendly_name && num.friendly_name !== num.phone_number && (
-                                  <span className="text-muted-foreground">({num.friendly_name})</span>
-                                )}
-                                {num.is_default && (
-                                  <Badge className="ml-1 h-4 px-1 text-[10px] bg-orange-100 text-orange-700">Default</Badge>
-                                )}
-                                {num.assigned_user_name && (
-                                  <Badge variant="outline" className="ml-1 h-4 px-1 text-[10px]">
-                                    {num.assigned_user_name}
-                                  </Badge>
-                                )}
-                              </div>
-                            </SelectItem>
-                          ))
+                          ownedNumbers.filter(n => n.twilio_purchased).length === 0 ? (
+                            <SelectItem value="default" disabled>No live Twilio numbers — purchase one first</SelectItem>
+                          ) : (
+                            ownedNumbers
+                              .filter(n => n.twilio_purchased)
+                              .map((num) => (
+                                <SelectItem key={num.id || num.phone_number} value={num.phone_number}>
+                                  <div className="flex items-center gap-2">
+                                    <span className="font-mono">{num.phone_number}</span>
+                                    {num.friendly_name && num.friendly_name !== num.phone_number && (
+                                      <span className="text-muted-foreground">({num.friendly_name})</span>
+                                    )}
+                                    {num.is_default && (
+                                      <Badge className="ml-1 h-4 px-1 text-[10px] bg-orange-100 text-orange-700">Default</Badge>
+                                    )}
+                                    {num.assigned_user_name && (
+                                      <Badge variant="outline" className="ml-1 h-4 px-1 text-[10px]">
+                                        {num.assigned_user_name}
+                                      </Badge>
+                                    )}
+                                  </div>
+                                </SelectItem>
+                              ))
+                          )
                         )}
                       </SelectContent>
                     </Select>

@@ -2878,10 +2878,8 @@ async def search_available_numbers(
         return {"available_numbers": placeholder_numbers, "provider_configured": False}
     
     def _parse_capabilities(caps):
-        """Parse capabilities dict handling both upper and lowercase keys"""
         if not caps:
             return {"SMS": False, "voice": False, "MMS": False}
-        # Twilio may return 'sms', 'SMS', 'voice', 'Voice' etc.
         lower_caps = {k.lower(): v for k, v in caps.items()} if isinstance(caps, dict) else {}
         return {
             "SMS": lower_caps.get("sms", False),
@@ -2889,22 +2887,7 @@ async def search_available_numbers(
             "MMS": lower_caps.get("mms", False),
         }
 
-    try:
-        from twilio.rest import Client
-        twilio_client = Client(twilio_sid, twilio_token)
-        
-        kwargs = {"limit": min(limit, 30), "sms_enabled": True}
-        if area_code and len(area_code) == 3:
-            kwargs["area_code"] = area_code
-        
-        # Try local numbers with SMS first
-        numbers = twilio_client.available_phone_numbers(country).local.list(**kwargs)
-        
-        # If local yields no SMS-capable results, try toll-free
-        if not numbers:
-            tf_kwargs = {"limit": min(limit, 20), "sms_enabled": True}
-            numbers = twilio_client.available_phone_numbers(country).toll_free.list(**tf_kwargs)
-        
+    def _format_results(numbers):
         results = []
         for n in numbers:
             results.append({
@@ -2915,8 +2898,49 @@ async def search_available_numbers(
                 "locality": n.locality or "",
                 "postal_code": n.postal_code or "",
             })
+        return results
+
+    try:
+        from twilio.rest import Client
+        twilio_client = Client(twilio_sid, twilio_token)
         
-        return {"available_numbers": results, "provider_configured": True}
+        has_area_code = bool(area_code and len(area_code) == 3)
+        cap_limit = min(limit, 30)
+        
+        # 1) Local numbers with SMS + requested area code
+        kwargs = {"limit": cap_limit, "sms_enabled": True}
+        if has_area_code:
+            kwargs["area_code"] = area_code
+        numbers = twilio_client.available_phone_numbers(country).local.list(**kwargs)
+        if numbers:
+            return {"available_numbers": _format_results(numbers), "provider_configured": True}
+        
+        # 2) If area code specified, try mobile numbers for that area code (often SMS-capable)
+        if has_area_code:
+            try:
+                mobile_kwargs = {"limit": cap_limit, "sms_enabled": True, "area_code": area_code}
+                numbers = twilio_client.available_phone_numbers(country).mobile.list(**mobile_kwargs)
+                if numbers:
+                    return {"available_numbers": _format_results(numbers), "provider_configured": True}
+            except Exception:
+                pass  # Mobile search not available in all countries
+        
+        # 3) If area code specified, try local WITHOUT sms filter (voice-only for that area)
+        if has_area_code:
+            kwargs_no_sms = {"limit": cap_limit, "area_code": area_code}
+            numbers = twilio_client.available_phone_numbers(country).local.list(**kwargs_no_sms)
+            if numbers:
+                return {"available_numbers": _format_results(numbers), "provider_configured": True, "note": "No SMS-enabled numbers found for this area code. Showing voice-only numbers."}
+        
+        # 4) Only fall back to toll-free if NO area code was specified
+        if not has_area_code:
+            tf_kwargs = {"limit": cap_limit, "sms_enabled": True}
+            numbers = twilio_client.available_phone_numbers(country).toll_free.list(**tf_kwargs)
+            if numbers:
+                return {"available_numbers": _format_results(numbers), "provider_configured": True, "type": "toll_free"}
+        
+        # Nothing found at all
+        return {"available_numbers": [], "provider_configured": True, "note": f"No numbers available for area code {area_code}. Try a different area code."}
     except Exception as e:
         logger.error(f"Twilio number search error: {e}")
         raise HTTPException(status_code=500, detail=f"Failed to search numbers: {str(e)}")
@@ -3386,6 +3410,13 @@ async def send_sms_to_contact(
         
         if not owned_number:
             raise HTTPException(status_code=400, detail="You don't own this phone number")
+        
+        # Block sending from numbers not actually provisioned on Twilio
+        if not owned_number.get("twilio_purchased"):
+            raise HTTPException(
+                status_code=400,
+                detail=f"Number {from_number} is not a live Twilio number. Please purchase a number through the app to send real SMS."
+            )
     
     message_id = str(uuid.uuid4())
     now = datetime.now(timezone.utc).isoformat()
@@ -3451,6 +3482,7 @@ async def send_sms_to_contact(
         "from_number": from_number,
         "status": message_doc["status"],
         "twilio_sid": message_doc.get("twilio_sid"),
+        "error": message_doc.get("error"),
     }
 
 # ============== INBOUND SMS WEBHOOK (Twilio/Provider) ==============

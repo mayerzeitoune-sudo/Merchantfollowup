@@ -552,10 +552,14 @@ const PhoneNumbers = () => {
                               Default
                             </Badge>
                           )}
-                          {number.is_active && (
+                          {number.twilio_purchased ? (
                             <Badge className="bg-green-100 text-green-700">
                               <CheckCircle className="h-3 w-3 mr-1" />
-                              Active
+                              Live
+                            </Badge>
+                          ) : (
+                            <Badge className="bg-red-100 text-red-700 text-[10px]">
+                              Not on Twilio
                             </Badge>
                           )}
                         </div>
