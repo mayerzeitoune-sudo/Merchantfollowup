@@ -1,50 +1,61 @@
-# Merchant Follow Up - Product Requirements Document
+# Merchant Follow Up CRM — PRD
 
-## Core Product
-Full-stack MCA CRM with role-based access, Twilio SMS/Voice, automated drip campaigns, and credit-based billing.
+## Product Overview
+CRM platform for merchant payment follow-ups with SMS automation, credit-based billing, and multi-org support.
 
-## Credit System Rules
-- **1 dollar = 5 credits** (organization-wide, not user-specific)
-- **Credits** = platform costs: phone numbers (40 cr), texts (0.316 cr), user fees (500 cr/mo)
-- **USD** = business revenue: deal amounts, funded volumes, collections, projected revenue, pipeline values
-- **Credit Shop** = only place to buy credits (shows USD pricing)
-- **Admins** can purchase credits; non-admins can view balance only
+## Architecture
+- **Backend**: FastAPI + Motor (async MongoDB)
+- **Frontend**: React + Tailwind CSS + Shadcn/UI
+- **Database**: MongoDB
+- **Integrations**: Twilio (SMS/Voice via Messaging Service), Google OAuth
 
-## Implementation Status
+## Auth & Roles
+- `org_admin` — Super admin across all orgs (impersonation, credit grants)
+- `admin` — Org-level admin (manages team, clients, campaigns)
+- `agent` — Individual user (sees assigned clients/numbers)
 
-### Completed - Session 5 (March 27, 2026)
-**Bug Fixes:**
-- Dashboard "Shop Numbers" search fixed (extracted `available_numbers` from API response)
-- Inbox area code suggestion: "$1.00/month" → "40 credits/number"
-- Buy button in Inbox auto-fills area code + auto-searches on PhoneNumbers page via `?area=` param
+## Credit System
+- Platform costs in credits (1 USD = 5 credits)
+- Business metrics (deals, pipeline) in USD
+- Admin Credit Shop for purchasing packages
+- Org Admin can grant credits to any org
 
-**Dark Mode:**
-- ThemeContext with localStorage persistence (`mf-theme`)
-- Toggle in desktop + mobile header (sun/moon icons)
-- Tailwind `darkMode: ['class']` — sidebar, header, content area all support dark mode
+## Twilio Integration (LIVE — A2P Compliant)
+- Messaging Service SID: MGe8c2388e2bd76b308c013071f7f848a6
+- All sends route through Messaging Service for 10DLC compliance
+- New purchases auto-add to Messaging Service
+- Webhooks: /api/sms/webhook/inbound (Form data), /api/sms/webhook/status
+- Phone search: SMS-enabled only, respects area code (no toll-free fallback)
+- Mock numbers blocked from sending with clear error
 
-**Revenue Display Clarification:**
-- Reverted projected revenue, deal values, pipeline values back to USD (real business money)
-- Platform costs stay in credits (phone numbers, texts, billing fees)
-- Clear separation: Credits = platform spend, USD = business revenue
+## Completed Features
+- [x] User auth with JWT + role-based access
+- [x] Multi-org management with impersonation
+- [x] Client management with phone formatting
+- [x] Credit-based billing system with admin grants
+- [x] Phone number search/purchase (live Twilio)
+- [x] SMS sending (live, A2P compliant, delivered)
+- [x] Inbound SMS webhook (Form data, TwiML response)
+- [x] Status callback webhook
+- [x] Campaign system with trigger words
+- [x] Phone Blower auto-dialer
+- [x] Dark mode (ThemeContext)
+- [x] Privacy Policy & Terms of Service
+- [x] Message status indicators (delivered/failed/undelivered)
 
-### Completed - Session 4
-- Credit system backend, Credit Shop page, global header balance
-- Dashboard Buy Phone Numbers widget, USD→credits for platform costs
-- Phone Blower auto-dialer, campaign trigger words
+## Test Credentials
+- Org Admin: orgadmin@merchant.com / Admin123!
+- Admin: john@acmefunding.com / Password123!
+- Agent: mike@acmefunding.com / Password123!
 
-### Key Files
-- `backend/routes/credits.py`: Credit system
-- `frontend/src/context/ThemeContext.js`: Dark mode
-- `frontend/src/pages/CreditShop.js`: Credit store
-- `frontend/src/components/DashboardLayout.js`: Header + sidebar + dark mode
+## Remaining Tasks
+### P1
+- Support Email UI on Settings page
+- A2P 10DLC registration backend helper
+- Backend for bulk user uploads
 
-## Prioritized Backlog
-**P0**: Wire Stripe, configure Twilio credentials, refactor server.py
-**P1**: Support Email UI, A2P 10DLC, bulk uploads, WebSocket notifications
-**P2**: Email Inbox, auto-import leads
-
-## Credentials
-- Admin: `john@acmefunding.com` / `Password123!`
-- Agent: `mike@acmefunding.com` / `Password123!`
-- Org Admin: `orgadmin@merchant.com` / `Admin123!`
+### P2
+- Real-time notifications (WebSockets)
+- Email Inbox view
+- Auto-import leads from emails
+- Refactor server.py monolith into routes/
