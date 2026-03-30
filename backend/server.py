@@ -1,4 +1,4 @@
-from fastapi import FastAPI, APIRouter, HTTPException, Depends, status, UploadFile, Form
+from fastapi import FastAPI, APIRouter, HTTPException, Depends, status, UploadFile, Form, Request
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from dotenv import load_dotenv
 from starlette.middleware.cors import CORSMiddleware
@@ -5053,6 +5053,61 @@ try:
     logger.info("Credits routes loaded successfully")
 except Exception as e:
     logger.warning(f"Could not load Credits routes: {e}")
+
+# ============ PAYMENTS (STRIPE) ROUTES ============
+try:
+    from routes.payments import router as payments_router, set_db as payments_set_db, set_auth_dependency as payments_set_auth, set_add_credits as payments_set_add_credits
+    from routes.credits import add_credits as credits_add_credits_func
+    payments_set_db(db)
+    payments_set_auth(get_current_user)
+    payments_set_add_credits(credits_add_credits_func)
+    app.include_router(payments_router, prefix="/api")
+    logger.info("Payments routes loaded successfully")
+except Exception as e:
+    logger.warning(f"Could not load Payments routes: {e}")
+
+# ============ STRIPE WEBHOOK (No Auth) ============
+@app.post("/api/webhook/stripe")
+async def stripe_webhook(request: Request):
+    """Handle Stripe webhooks - no auth required"""
+    try:
+        from emergentintegrations.payments.stripe.checkout import StripeCheckout
+        api_key = os.environ.get("STRIPE_API_KEY")
+        if not api_key:
+            return {"status": "error", "message": "Stripe not configured"}
+        
+        stripe_checkout = StripeCheckout(api_key=api_key, webhook_url="")
+        body = await request.body()
+        sig = request.headers.get("Stripe-Signature", "")
+        
+        webhook_response = await stripe_checkout.handle_webhook(body, sig)
+        
+        if webhook_response.payment_status == "paid" and webhook_response.session_id:
+            session_id = webhook_response.session_id
+            txn = await db.payment_transactions.find_one({"session_id": session_id}, {"_id": 0})
+            
+            if txn and txn.get("payment_status") != "paid":
+                result = await db.payment_transactions.update_one(
+                    {"session_id": session_id, "payment_status": {"$ne": "paid"}},
+                    {"$set": {"payment_status": "paid", "status": "complete", "credits_granted": True, "updated_at": datetime.now(timezone.utc).isoformat()}}
+                )
+                if result.modified_count > 0:
+                    from routes.credits import add_credits
+                    await add_credits(
+                        org_id=txn["org_id"],
+                        user_id=txn["user_id"],
+                        amount=txn["credits"],
+                        source="stripe_purchase",
+                        usd_amount=txn["amount_usd"],
+                        description=f"{txn.get('package_name', 'Credit Package')} — {txn['credits']} credits (Stripe Webhook)",
+                        metadata={"session_id": session_id}
+                    )
+                    logger.info(f"Webhook: Credits granted {txn['credits']} to org {txn['org_id']}")
+        
+        return {"status": "ok"}
+    except Exception as e:
+        logger.error(f"Stripe webhook error: {e}")
+        return {"status": "error"}
 
 
 # ============== CALLING FEATURE ==============

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import DashboardLayout from '../components/DashboardLayout';
 import { Card, CardContent } from '../components/ui/card';
 import { Button } from '../components/ui/button';
@@ -12,9 +12,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '../components/ui/tabs';
 import {
   Coins, ShieldCheck, Zap, Crown, Sparkles, ArrowRight, Check,
-  Loader2, Clock, CreditCard, TrendingUp, Star, Gift, Building2
+  Loader2, Clock, CreditCard, TrendingUp, Star, Gift, Building2, ExternalLink
 } from 'lucide-react';
-import { creditsApi } from '../lib/api';
+import { creditsApi, paymentsApi } from '../lib/api';
 import { useAuth } from '../context/AuthContext';
 import { toast } from 'sonner';
 
@@ -52,6 +52,7 @@ const CreditShop = () => {
   const [purchasing, setPurchasing] = useState(false);
   const [checkoutPkg, setCheckoutPkg] = useState(null);
   const [showSuccess, setShowSuccess] = useState(null);
+  const [pollingStatus, setPollingStatus] = useState(null); // 'polling' | 'paid' | 'failed'
 
   // Org Admin Grant state
   const [orgs, setOrgs] = useState([]);
@@ -61,7 +62,65 @@ const CreditShop = () => {
   const [granting, setGranting] = useState(false);
   const [orgsLoading, setOrgsLoading] = useState(false);
 
+  // Poll Stripe checkout status on return from payment
+  const pollPaymentStatus = useCallback(async (sessionId, attempts = 0) => {
+    const maxAttempts = 10;
+    const pollInterval = 2000;
+
+    if (attempts >= maxAttempts) {
+      setPollingStatus('timeout');
+      toast.error('Payment status check timed out. Please refresh the page.');
+      return;
+    }
+
+    try {
+      const res = await paymentsApi.getCheckoutStatus(sessionId);
+      const data = res.data;
+
+      if (data.payment_status === 'paid') {
+        setPollingStatus('paid');
+        setShowSuccess({
+          credits_added: data.credits,
+          package_name: data.package_name,
+          amount_usd: data.amount_usd,
+        });
+        toast.success(`${data.credits?.toLocaleString()} credits added!`);
+        // Clean URL params
+        window.history.replaceState({}, '', window.location.pathname);
+        loadData();
+        return;
+      } else if (data.status === 'expired') {
+        setPollingStatus('failed');
+        toast.error('Payment session expired.');
+        window.history.replaceState({}, '', window.location.pathname);
+        return;
+      }
+
+      // Still pending, keep polling
+      setPollingStatus('polling');
+      setTimeout(() => pollPaymentStatus(sessionId, attempts + 1), pollInterval);
+    } catch (error) {
+      console.error('Status poll error:', error);
+      if (attempts < maxAttempts - 1) {
+        setTimeout(() => pollPaymentStatus(sessionId, attempts + 1), pollInterval);
+      } else {
+        setPollingStatus('failed');
+        toast.error('Could not verify payment. Please contact support.');
+      }
+    }
+  }, []);
+
   useEffect(() => { loadData(); }, []);
+
+  // Check for return from Stripe
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const sessionId = params.get('session_id');
+    if (sessionId) {
+      setPollingStatus('polling');
+      pollPaymentStatus(sessionId);
+    }
+  }, [pollPaymentStatus]);
 
   const loadData = async () => {
     setLoading(true);
@@ -89,16 +148,20 @@ const CreditShop = () => {
     if (!checkoutPkg) return;
     setPurchasing(true);
     try {
-      const res = await creditsApi.purchase({ package_id: checkoutPkg.id });
-      setBalance(res.data.new_balance);
-      setShowSuccess(res.data);
-      setCheckoutPkg(null);
-      toast.success(`${res.data.credits_added.toLocaleString()} credits added!`);
-      window.dispatchEvent(new CustomEvent('credits-updated', { detail: { balance: res.data.new_balance } }));
-      loadData();
+      const res = await paymentsApi.createCheckout({
+        package_id: checkoutPkg.id,
+        origin_url: window.location.origin,
+      });
+      // Redirect to Stripe Checkout
+      if (res.data?.url) {
+        window.location.href = res.data.url;
+      } else {
+        toast.error('No checkout URL received');
+      }
     } catch (e) {
-      toast.error(e.response?.data?.detail || 'Purchase failed');
-    } finally { setPurchasing(false); }
+      toast.error(e.response?.data?.detail || 'Failed to start checkout');
+      setPurchasing(false);
+    }
   };
 
   const handleGrant = async () => {
@@ -137,6 +200,17 @@ const CreditShop = () => {
   return (
     <DashboardLayout>
       <div className="space-y-8" data-testid="credit-shop-page">
+        {/* Payment Status Banner */}
+        {pollingStatus === 'polling' && (
+          <div className="rounded-xl bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800 p-4 flex items-center gap-3" data-testid="payment-polling-banner">
+            <Loader2 className="h-5 w-5 animate-spin text-blue-600" />
+            <div>
+              <p className="font-semibold text-blue-800 dark:text-blue-200">Processing your payment...</p>
+              <p className="text-sm text-blue-600 dark:text-blue-400">Please wait while we confirm your purchase with Stripe.</p>
+            </div>
+          </div>
+        )}
+
         {/* Hero Header */}
         <div className="rounded-2xl bg-gradient-to-br from-zinc-900 via-zinc-800 to-zinc-900 p-8 text-white relative overflow-hidden">
           <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_50%,rgba(255,255,255,0.04),transparent)] pointer-events-none" />
@@ -414,7 +488,7 @@ const CreditShop = () => {
                   onClick={handlePurchase}
                   data-testid="confirm-purchase-btn"
                 >
-                  {purchasing ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Processing...</> : <><CreditCard className="h-4 w-4 mr-2" /> Pay ${checkoutPkg.usd.toLocaleString()}</>}
+                  {purchasing ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Redirecting...</> : <><CreditCard className="h-4 w-4 mr-2" /> Pay ${checkoutPkg.usd.toLocaleString()} with Stripe <ExternalLink className="h-3 w-3 ml-1" /></>}
                 </Button>
               </DialogFooter>
             </div>
@@ -423,21 +497,24 @@ const CreditShop = () => {
       </Dialog>
 
       {/* Success Dialog */}
-      <Dialog open={!!showSuccess} onOpenChange={(o) => { if (!o) setShowSuccess(null); }}>
+      <Dialog open={!!showSuccess} onOpenChange={(o) => { if (!o) { setShowSuccess(null); setPollingStatus(null); } }}>
         <DialogContent className="max-w-sm text-center">
           <div className="py-4 space-y-4">
             <div className="h-16 w-16 rounded-full bg-green-100 flex items-center justify-center mx-auto">
               <Check className="h-8 w-8 text-green-600" />
             </div>
-            <h3 className="text-xl font-bold font-['Outfit']">Purchase Complete</h3>
+            <h3 className="text-xl font-bold font-['Outfit']">Payment Successful!</h3>
+            {showSuccess?.package_name && (
+              <p className="text-sm text-zinc-500">{showSuccess.package_name} Package</p>
+            )}
             <p className="text-3xl font-black font-mono text-green-600">
               +{showSuccess?.credits_added?.toLocaleString()}
             </p>
             <p className="text-sm text-zinc-500">credits added to your organization</p>
-            <p className="text-lg font-bold font-mono">
-              New Balance: {showSuccess?.new_balance?.toLocaleString()}
-            </p>
-            <Button onClick={() => setShowSuccess(null)} className="w-full" data-testid="success-close-btn">Done</Button>
+            {showSuccess?.amount_usd && (
+              <p className="text-sm text-zinc-400">Charged: ${showSuccess.amount_usd.toLocaleString()}</p>
+            )}
+            <Button onClick={() => { setShowSuccess(null); setPollingStatus(null); window.dispatchEvent(new CustomEvent('credits-updated')); loadData(); }} className="w-full" data-testid="success-close-btn">Done</Button>
           </div>
         </DialogContent>
       </Dialog>

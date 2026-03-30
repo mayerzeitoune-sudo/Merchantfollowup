@@ -119,6 +119,12 @@ export const creditsApi = {
   allOrgs: () => axios.get(`${API}/credits/all-orgs`),
 };
 
+export const paymentsApi = {
+  createCheckout: (data) => axios.post(`${API}/payments/checkout`, data),
+  getCheckoutStatus: (sessionId) => axios.get(`${API}/payments/checkout/status/${sessionId}`),
+  getHistory: () => axios.get(`${API}/payments/history`),
+};
+
 // SMS Providers API
 export const smsProvidersApi = {
   getAll: () => axios.get(`${API}/sms-providers`),
