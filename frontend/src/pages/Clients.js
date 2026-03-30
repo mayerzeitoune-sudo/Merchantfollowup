@@ -65,34 +65,24 @@ const getTagColor = (tag) => {
   return found ? found.color : "bg-gray-100 text-gray-700";
 };
 
-// Standardize phone number to +1 format
+// Standardize phone number to +1 (XXX) XXX-XXXX format
 const formatPhoneInput = (value) => {
-  // Remove all non-digits
-  const digits = value.replace(/\D/g, '');
-  
-  // If starts with 1 and has 11 digits, format as +1 (XXX) XXX-XXXX
-  if (digits.length === 11 && digits.startsWith('1')) {
-    return `+1 (${digits.slice(1, 4)}) ${digits.slice(4, 7)}-${digits.slice(7, 11)}`;
+  // Strip everything except digits
+  let digits = value.replace(/\D/g, '');
+
+  // The +1 we prepend gets re-fed on every keystroke — always strip a leading 1
+  // (No US area code starts with 1, so this is safe)
+  if (digits.startsWith('1') && digits.length > 1) {
+    digits = digits.slice(1);
   }
-  
-  // If has 10 digits, format as +1 (XXX) XXX-XXXX
-  if (digits.length === 10) {
-    return `+1 (${digits.slice(0, 3)}) ${digits.slice(3, 6)}-${digits.slice(6, 10)}`;
-  }
-  
-  // For partial input, format progressively
-  if (digits.length <= 3) {
-    return digits.length > 0 ? `+1 (${digits}` : '';
-  }
-  if (digits.length <= 6) {
-    return `+1 (${digits.slice(0, 3)}) ${digits.slice(3)}`;
-  }
-  if (digits.length <= 10) {
-    return `+1 (${digits.slice(0, 3)}) ${digits.slice(3, 6)}-${digits.slice(6)}`;
-  }
-  
-  // For longer numbers (international), just clean format
-  return `+${digits}`;
+
+  // Cap at 10 digits (US local number)
+  digits = digits.slice(0, 10);
+
+  if (digits.length === 0) return '';
+  if (digits.length <= 3) return `+1 (${digits}`;
+  if (digits.length <= 6) return `+1 (${digits.slice(0, 3)}) ${digits.slice(3)}`;
+  return `+1 (${digits.slice(0, 3)}) ${digits.slice(3, 6)}-${digits.slice(6)}`;
 };
 
 // Get raw phone number for storage (E.164 format)

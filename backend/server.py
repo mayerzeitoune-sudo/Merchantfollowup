@@ -1,4 +1,4 @@
-from fastapi import FastAPI, APIRouter, HTTPException, Depends, status, UploadFile
+from fastapi import FastAPI, APIRouter, HTTPException, Depends, status, UploadFile, Form
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from dotenv import load_dotenv
 from starlette.middleware.cors import CORSMiddleware
@@ -2863,7 +2863,6 @@ async def search_available_numbers(
     twilio_token = os.environ.get("TWILIO_AUTH_TOKEN")
     
     if not twilio_sid or not twilio_token:
-        # Fallback to placeholder if no Twilio creds
         placeholder_numbers = []
         for i in range(min(limit, 10)):
             placeholder_numbers.append({
@@ -2875,26 +2874,40 @@ async def search_available_numbers(
             })
         return {"available_numbers": placeholder_numbers, "provider_configured": False}
     
+    def _parse_capabilities(caps):
+        """Parse capabilities dict handling both upper and lowercase keys"""
+        if not caps:
+            return {"SMS": False, "voice": False, "MMS": False}
+        # Twilio may return 'sms', 'SMS', 'voice', 'Voice' etc.
+        lower_caps = {k.lower(): v for k, v in caps.items()} if isinstance(caps, dict) else {}
+        return {
+            "SMS": lower_caps.get("sms", False),
+            "voice": lower_caps.get("voice", False),
+            "MMS": lower_caps.get("mms", False),
+        }
+
     try:
         from twilio.rest import Client
-        client = Client(twilio_sid, twilio_token)
+        twilio_client = Client(twilio_sid, twilio_token)
         
-        kwargs = {"limit": min(limit, 20)}
+        kwargs = {"limit": min(limit, 30), "sms_enabled": True}
         if area_code and len(area_code) == 3:
             kwargs["area_code"] = area_code
         
-        numbers = client.available_phone_numbers(country).local.list(**kwargs)
+        # Try local numbers with SMS first
+        numbers = twilio_client.available_phone_numbers(country).local.list(**kwargs)
+        
+        # If local yields no SMS-capable results, try toll-free
+        if not numbers:
+            tf_kwargs = {"limit": min(limit, 20), "sms_enabled": True}
+            numbers = twilio_client.available_phone_numbers(country).toll_free.list(**tf_kwargs)
         
         results = []
         for n in numbers:
             results.append({
                 "phone_number": n.phone_number,
                 "friendly_name": n.friendly_name,
-                "capabilities": {
-                    "SMS": n.capabilities.get("sms", False) if n.capabilities else False,
-                    "voice": n.capabilities.get("voice", False) if n.capabilities else False,
-                    "MMS": n.capabilities.get("mms", False) if n.capabilities else False,
-                },
+                "capabilities": _parse_capabilities(n.capabilities),
                 "region": n.region or "",
                 "locality": n.locality or "",
                 "postal_code": n.postal_code or "",
@@ -2966,11 +2979,13 @@ async def purchase_phone_number(data: PhoneNumberCreate, current_user: dict = De
             client = Client(twilio_sid, twilio_token)
             
             # Buy the number
+            backend_url = os.environ.get('BACKEND_URL', '')
             incoming = client.incoming_phone_numbers.create(
                 phone_number=data.phone_number,
-                sms_url=f"{os.environ.get('BACKEND_URL', '')}/api/sms/webhook/inbound",
+                sms_url=f"{backend_url}/api/sms/webhook/inbound",
                 sms_method="POST",
-                voice_url=f"{os.environ.get('BACKEND_URL', '')}/api/phone-blower/twiml/blower-message",
+                status_callback=f"{backend_url}/api/sms/webhook/status",
+                voice_url=f"{backend_url}/api/phone-blower/twiml/blower-message",
                 voice_method="POST",
             )
             twilio_purchased = True
@@ -3399,12 +3414,15 @@ async def send_sms_to_contact(
             # Normalize the to-number
             to_phone = client["phone"]
             if not to_phone.startswith("+"):
-                to_phone = f"+1{to_phone.replace('-','').replace(' ','').replace('(','').replace(')','')}"
+                cleaned = to_phone.replace('-','').replace(' ','').replace('(','').replace(')','')
+                to_phone = f"+1{cleaned}" if len(cleaned) == 10 else f"+{cleaned}"
             
+            status_cb = os.environ.get('BACKEND_URL', '')
             msg = twilio_client.messages.create(
                 body=processed_message,
                 from_=from_number,
-                to=to_phone
+                to=to_phone,
+                status_callback=f"{status_cb}/api/sms/webhook/status" if status_cb else None,
             )
             message_doc["status"] = msg.status or "sent"
             message_doc["twilio_sid"] = msg.sid
@@ -3428,100 +3446,104 @@ async def send_sms_to_contact(
 
 # ============== INBOUND SMS WEBHOOK (Twilio/Provider) ==============
 
-class InboundSmsPayload(BaseModel):
-    """Model for inbound SMS webhook from Twilio/provider"""
-    From: str  # Customer's phone number
-    To: str  # Your Twilio number
-    Body: str  # Message content
-    MessageSid: Optional[str] = None
-
 @api_router.post("/sms/inbound")
-async def receive_inbound_sms(data: InboundSmsPayload):
+async def receive_inbound_sms_legacy(
+    From: str = Form(""),
+    To: str = Form(""),
+    Body: str = Form(""),
+    MessageSid: str = Form(""),
+):
     """
-    Public webhook endpoint to receive inbound SMS from Twilio.
-    This links incoming messages to the last outbound campaign message for context.
+    Legacy inbound SMS webhook (form-encoded).
+    Redirects to the canonical /sms/webhook/inbound handler.
     """
-    customer_phone = data.From
-    our_number = data.To
-    message_content = data.Body
-    
-    # Normalize phone numbers (strip +1 or similar)
+    from fastapi.responses import Response
+    EMPTY_TWIML = '<?xml version="1.0" encoding="UTF-8"?><Response></Response>'
+
+    if not From or not Body:
+        return Response(content=EMPTY_TWIML, media_type="application/xml")
+
+    customer_phone = From
+    our_number = To
     customer_phone_clean = customer_phone.replace("+1", "").replace("+", "").replace("-", "").replace(" ", "")
-    our_number_clean = our_number.replace("+1", "").replace("+", "").replace("-", "").replace(" ", "")
-    
+
     # Find the client by phone number
-    client = await db.clients.find_one({
-        "phone": {"$regex": customer_phone_clean[-10:]}  # Match last 10 digits
+    client_doc = await db.clients.find_one({
+        "phone": {"$regex": customer_phone_clean[-10:] if len(customer_phone_clean) >= 10 else customer_phone_clean}
     })
-    
-    if not client:
-        logger.warning(f"Inbound SMS from unknown number: {customer_phone}")
-        # Store as orphan message for manual review
+
+    # Find owner of the Twilio number
+    phone_owner = await db.phone_numbers.find_one(
+        {"phone_number": our_number},
+        {"_id": 0, "user_id": 1, "assigned_user_id": 1}
+    )
+    user_id = None
+    if phone_owner:
+        user_id = phone_owner.get("assigned_user_id") or phone_owner.get("user_id")
+    if not user_id:
+        last_outbound = await db.conversations.find_one(
+            {"from_number": our_number, "direction": "outbound"},
+            sort=[("timestamp", -1)]
+        )
+        if last_outbound:
+            user_id = last_outbound.get("user_id")
+
+    client_id = client_doc.get("id") if client_doc else None
+
+    # Find last outbound for campaign context
+    responding_to_content = None
+    campaign_name = None
+    campaign_id = None
+    if client_id:
+        our_clean = our_number.replace("+1", "").replace("+", "").replace("-", "").replace(" ", "")
+        last_outbound = await db.conversations.find_one(
+            {
+                "client_id": client_id,
+                "direction": "outbound",
+                "$or": [
+                    {"from_number": our_number},
+                    {"from_number": {"$regex": our_clean[-10:] if len(our_clean) >= 10 else our_clean}}
+                ]
+            },
+            sort=[("timestamp", -1)]
+        )
+        if last_outbound:
+            responding_to_content = last_outbound.get("content", "")
+            campaign_name = last_outbound.get("campaign_name")
+            campaign_id = last_outbound.get("campaign_id")
+
+    now = datetime.now(timezone.utc).isoformat()
+    message_id = str(uuid.uuid4())
+
+    inbound_doc = {
+        "id": message_id,
+        "user_id": user_id,
+        "client_id": client_id,
+        "direction": "inbound",
+        "content": Body,
+        "from_number": our_number,
+        "customer_phone": customer_phone,
+        "timestamp": now,
+        "status": "received",
+        "responding_to": responding_to_content,
+        "campaign_name": campaign_name,
+        "campaign_id": campaign_id,
+        "twilio_sid": MessageSid
+    }
+    await db.conversations.insert_one(inbound_doc)
+
+    if not client_doc:
         await db.orphan_messages.insert_one({
             "id": str(uuid.uuid4()),
             "from_number": customer_phone,
             "to_number": our_number,
-            "content": message_content,
-            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "content": Body,
+            "timestamp": now,
             "status": "unmatched"
         })
-        return {"status": "received", "matched": False}
-    
-    # Find the last outbound message to this client from this phone number
-    last_outbound = await db.conversations.find_one(
-        {
-            "client_id": client["id"],
-            "direction": "outbound",
-            "$or": [
-                {"from_number": our_number},
-                {"from_number": our_number_clean},
-                {"from_number": {"$regex": our_number_clean[-10:]}}
-            ]
-        },
-        sort=[("timestamp", -1)]
-    )
-    
-    # Build the responding_to context
-    responding_to_content = None
-    campaign_name = None
-    campaign_id = None
-    
-    if last_outbound:
-        responding_to_content = last_outbound.get("content", "")
-        campaign_name = last_outbound.get("campaign_name")
-        campaign_id = last_outbound.get("campaign_id")
-    
-    # Store the inbound message with context
-    message_id = str(uuid.uuid4())
-    now = datetime.now(timezone.utc).isoformat()
-    
-    inbound_doc = {
-        "id": message_id,
-        "user_id": client.get("user_id"),
-        "client_id": client["id"],
-        "direction": "inbound",
-        "content": message_content,
-        "from_number": our_number,  # The number it was sent TO (our number)
-        "customer_phone": customer_phone,
-        "timestamp": now,
-        "status": "received",
-        "responding_to": responding_to_content,  # The original outbound message they're replying to
-        "campaign_name": campaign_name,
-        "campaign_id": campaign_id,
-        "twilio_sid": data.MessageSid
-    }
-    
-    await db.conversations.insert_one(inbound_doc)
-    
-    logger.info(f"Inbound SMS from {customer_phone} to {our_number} - Client: {client['name']}")
-    
-    return {
-        "status": "received",
-        "matched": True,
-        "client_id": client["id"],
-        "message_id": message_id,
-        "has_context": responding_to_content is not None
-    }
+
+    logger.info(f"Inbound SMS from {customer_phone} to {our_number} - Client: {client_doc.get('name', 'Unknown') if client_doc else 'Unknown'}")
+    return Response(content=EMPTY_TWIML, media_type="application/xml")
 
 @api_router.post("/sms/simulate-inbound")
 async def simulate_inbound_sms(
