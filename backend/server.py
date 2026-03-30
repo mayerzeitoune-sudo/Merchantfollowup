@@ -2837,21 +2837,30 @@ async def activate_sms_provider(provider_id: str, current_user: dict = Depends(g
 @api_router.get("/platform/status")
 async def get_platform_status(current_user: dict = Depends(get_current_user)):
     """Return platform integration status (never exposes keys)"""
-    twilio_sid = os.environ.get("TWILIO_ACCOUNT_SID")
-    twilio_token = os.environ.get("TWILIO_AUTH_TOKEN")
-    twilio_ms = os.environ.get("TWILIO_MESSAGING_SERVICE_SID")
-    stripe_key = os.environ.get("STRIPE_API_KEY")
+    twilio_sid = os.environ.get("TWILIO_ACCOUNT_SID", "")
+    twilio_token = os.environ.get("TWILIO_AUTH_TOKEN", "")
+    twilio_ms = os.environ.get("TWILIO_MESSAGING_SERVICE_SID", "")
+    stripe_key = os.environ.get("STRIPE_API_KEY", "")
     
-    return {
+    # Check user role
+    user = await db.users.find_one({"id": current_user["user_id"]}, {"_id": 0, "role": 1})
+    is_org_admin = user and user.get("role") == "org_admin"
+    
+    result = {
         "twilio": {
-            "connected": bool(twilio_sid and twilio_token),
-            "messaging_service": bool(twilio_ms),
-            "a2p_10dlc": bool(twilio_ms),
-        },
-        "stripe": {
-            "connected": bool(stripe_key),
+            "connected": bool(twilio_sid.strip() and twilio_token.strip()),
+            "messaging_service": bool(twilio_ms.strip()),
+            "a2p_10dlc": bool(twilio_ms.strip()),
         },
     }
+    
+    # Only org_admin sees Stripe status
+    if is_org_admin:
+        result["stripe"] = {
+            "connected": bool(stripe_key.strip()),
+        }
+    
+    return result
 
 # ============== AI MATCHING ROUTE ==============
 
@@ -2999,55 +3008,67 @@ async def purchase_phone_number(data: PhoneNumberCreate, current_user: dict = De
         metadata={"phone_number": data.phone_number}
     )
     
-    # Actually purchase through Twilio if configured
-    twilio_sid = os.environ.get("TWILIO_ACCOUNT_SID")
-    twilio_token = os.environ.get("TWILIO_AUTH_TOKEN")
+    # Actually purchase through Twilio - REQUIRED, no fake numbers ever
+    twilio_sid = os.environ.get("TWILIO_ACCOUNT_SID", "").strip()
+    twilio_token = os.environ.get("TWILIO_AUTH_TOKEN", "").strip()
+    
+    if not twilio_sid or not twilio_token:
+        # Refund credits - Twilio not configured
+        if org_id:
+            from routes.credits import add_credits
+            await add_credits(
+                org_id=org_id,
+                user_id=current_user["user_id"],
+                amount=PHONE_NUMBER_COST_CREDITS,
+                source="refund",
+                description=f"Refund: SMS service not configured — {data.phone_number}",
+            )
+        raise HTTPException(status_code=503, detail="SMS service is not configured. Contact platform administrator.")
+    
     twilio_purchased = False
     twilio_sid_number = None
     
-    if twilio_sid and twilio_token and data.provider == "twilio":
-        try:
-            from twilio.rest import Client
-            client = Client(twilio_sid, twilio_token)
-            
-            # Buy the number
-            backend_url = os.environ.get('BACKEND_URL', '')
-            incoming = client.incoming_phone_numbers.create(
-                phone_number=data.phone_number,
-                sms_url=f"{backend_url}/api/sms/webhook/inbound",
-                sms_method="POST",
-                status_callback=f"{backend_url}/api/sms/webhook/status",
-                voice_url=f"{backend_url}/api/phone-blower/twiml/blower-message",
-                voice_method="POST",
-            )
-            twilio_purchased = True
-            twilio_sid_number = incoming.sid
-            logger.info(f"Twilio number purchased: {data.phone_number} (SID: {incoming.sid})")
-            
-            # Auto-add to Messaging Service for A2P 10DLC compliance
-            ms_sid = os.environ.get('TWILIO_MESSAGING_SERVICE_SID', '')
-            if ms_sid:
-                try:
-                    client.messaging.v1.services(ms_sid).phone_numbers.create(
-                        phone_number_sid=incoming.sid
-                    )
-                    logger.info(f"Added {data.phone_number} to Messaging Service {ms_sid}")
-                except Exception as ms_err:
-                    logger.warning(f"Could not add number to Messaging Service: {ms_err}")
-        except Exception as e:
-            logger.error(f"Twilio purchase failed: {e}")
-            # Refund credits if Twilio purchase fails
-            if org_id:
-                from routes.credits import add_credits
-                await add_credits(
-                    org_id=org_id,
-                    user_id=current_user["user_id"],
-                    amount=PHONE_NUMBER_COST_CREDITS,
-                    source="refund",
-                    description=f"Refund: Failed to purchase {data.phone_number} — {str(e)}",
+    try:
+        from twilio.rest import Client
+        client = Client(twilio_sid, twilio_token)
+        
+        # Buy the number
+        backend_url = os.environ.get('BACKEND_URL', '')
+        incoming = client.incoming_phone_numbers.create(
+            phone_number=data.phone_number,
+            sms_url=f"{backend_url}/api/sms/webhook/inbound",
+            sms_method="POST",
+            status_callback=f"{backend_url}/api/sms/webhook/status",
+            voice_url=f"{backend_url}/api/phone-blower/twiml/blower-message",
+            voice_method="POST",
+        )
+        twilio_purchased = True
+        twilio_sid_number = incoming.sid
+        logger.info(f"Twilio number purchased: {data.phone_number} (SID: {incoming.sid})")
+        
+        # Auto-add to Messaging Service for A2P 10DLC compliance
+        ms_sid = os.environ.get('TWILIO_MESSAGING_SERVICE_SID', '')
+        if ms_sid:
+            try:
+                client.messaging.v1.services(ms_sid).phone_numbers.create(
+                    phone_number_sid=incoming.sid
                 )
-                # Dispatch balance update
-            raise HTTPException(status_code=500, detail=f"Twilio purchase failed: {str(e)}")
+                logger.info(f"Added {data.phone_number} to Messaging Service {ms_sid}")
+            except Exception as ms_err:
+                logger.warning(f"Could not add number to Messaging Service: {ms_err}")
+    except Exception as e:
+        logger.error(f"Twilio purchase failed: {e}")
+        # Refund credits if Twilio purchase fails
+        if org_id:
+            from routes.credits import add_credits
+            await add_credits(
+                org_id=org_id,
+                user_id=current_user["user_id"],
+                amount=PHONE_NUMBER_COST_CREDITS,
+                source="refund",
+                description=f"Refund: Failed to purchase {data.phone_number} — {str(e)}",
+            )
+        raise HTTPException(status_code=500, detail=f"Twilio purchase failed: {str(e)}")
     
     phone_id = str(uuid.uuid4())
     now = datetime.now(timezone.utc).isoformat()

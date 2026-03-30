@@ -384,7 +384,8 @@ const Settings = () => {
                   </div>
                 </div>
 
-                {/* Stripe Payments */}
+                {/* Stripe Payments - Only visible to org_admin */}
+                {platformStatus?.stripe && (
                 <div className="flex items-center justify-between p-4 rounded-lg border" data-testid="stripe-status-card">
                   <div className="flex items-center gap-4">
                     <div className={`h-12 w-12 rounded-lg flex items-center justify-center ${platformStatus?.stripe?.connected ? 'bg-green-100 dark:bg-green-950' : 'bg-red-100 dark:bg-red-950'}`}>
@@ -407,6 +408,7 @@ const Settings = () => {
                     </Badge>
                   )}
                 </div>
+                )}
               </CardContent>
             </Card>
           </TabsContent>
