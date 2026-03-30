@@ -2874,16 +2874,7 @@ async def search_available_numbers(
     twilio_token = os.environ.get("TWILIO_AUTH_TOKEN")
     
     if not twilio_sid or not twilio_token:
-        placeholder_numbers = []
-        for i in range(min(limit, 10)):
-            placeholder_numbers.append({
-                "phone_number": f"+1{area_code or '555'}{random.randint(1000000, 9999999)}",
-                "friendly_name": f"({area_code or '555'}) {random.randint(100, 999)}-{random.randint(1000, 9999)}",
-                "capabilities": {"SMS": True, "voice": True},
-                "region": "US",
-                "locality": ""
-            })
-        return {"available_numbers": placeholder_numbers, "provider_configured": False}
+        raise HTTPException(status_code=503, detail="SMS service is not configured. Contact platform administrator.")
     
     def _parse_capabilities(caps):
         if not caps:
@@ -3416,6 +3407,30 @@ async def send_sms_to_contact(
     
     # Process the message to replace variables
     processed_message = replace_variables(message, client)
+    
+    # ===== CONTENT MODERATION: Check banned words =====
+    try:
+        from routes.moderation import check_message_content, check_recipient_number
+        
+        word_check = await check_message_content(processed_message)
+        if not word_check["allowed"]:
+            raise HTTPException(
+                status_code=400, 
+                detail=f"Message blocked: contains prohibited word '{word_check['blocked_word']}'. Please remove it and try again."
+            )
+        
+        # Check blacklisted recipient
+        client_phone = client.get("phone", "")
+        number_check = await check_recipient_number(client_phone)
+        if not number_check["allowed"]:
+            raise HTTPException(
+                status_code=400, 
+                detail=f"Cannot send to this number: {number_check['reason']}"
+            )
+    except HTTPException:
+        raise
+    except Exception as mod_err:
+        logger.warning(f"Moderation check failed (non-blocking): {mod_err}")
     
     # Check for active SMS provider
     provider = await db.sms_providers.find_one(
@@ -5085,6 +5100,16 @@ try:
     logger.info("Payments routes loaded successfully")
 except Exception as e:
     logger.warning(f"Could not load Payments routes: {e}")
+
+# ============ MODERATION ROUTES ============
+try:
+    from routes.moderation import router as moderation_router, set_db as moderation_set_db, set_auth_dependency as moderation_set_auth
+    moderation_set_db(db)
+    moderation_set_auth(get_current_user)
+    app.include_router(moderation_router, prefix="/api")
+    logger.info("Moderation routes loaded successfully")
+except Exception as e:
+    logger.warning(f"Could not load Moderation routes: {e}")
 
 # ============ STRIPE WEBHOOK (No Auth) ============
 @app.post("/api/webhook/stripe")

@@ -63,29 +63,33 @@ async def get_sms_status():
 @router.post("/send")
 async def send_sms(request: SMSRequest, user_id: str = Query(...)):
     """Send a single SMS message via Twilio"""
+    
+    # ===== CONTENT MODERATION =====
+    try:
+        from routes.moderation import check_message_content, check_recipient_number
+        
+        word_check = await check_message_content(request.message)
+        if not word_check["allowed"]:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Message blocked: contains prohibited word '{word_check['blocked_word']}'. Please remove it and try again."
+            )
+        
+        number_check = await check_recipient_number(request.to)
+        if not number_check["allowed"]:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Cannot send to this number: {number_check['reason']}"
+            )
+    except HTTPException:
+        raise
+    except Exception as mod_err:
+        logger.warning(f"Moderation check skipped: {mod_err}")
+    
     twilio_client = get_twilio_client()
 
     if not twilio_client:
-        logger.warning("SMS not sent - Twilio not configured")
-        msg_doc = {
-            "id": str(uuid.uuid4()),
-            "user_id": user_id,
-            "client_id": request.client_id,
-            "to": request.to,
-            "message": request.message,
-            "status": "mock_sent",
-            "direction": "outbound",
-            "created_at": datetime.now(timezone.utc).isoformat(),
-            "twilio_sid": None,
-            "error": "Twilio not configured - message not actually sent"
-        }
-        await db.sms_messages.insert_one(msg_doc)
-        return {
-            "success": False,
-            "message": "Twilio is not configured. Message logged but not sent.",
-            "message_id": msg_doc["id"],
-            "mock": True
-        }
+        raise HTTPException(status_code=503, detail="SMS service is not configured. Contact platform administrator.")
 
     try:
         sender = request.from_number or os.environ.get("TWILIO_PHONE_NUMBER")

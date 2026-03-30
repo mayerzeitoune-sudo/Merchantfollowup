@@ -44,6 +44,7 @@ import PrivacyPolicy from "./pages/PrivacyPolicy";
 import TermsOfService from "./pages/TermsOfService";
 import PhoneBlower from "./pages/PhoneBlower";
 import CreditShop from "./pages/CreditShop";
+import ContentModeration from "./pages/ContentModeration";
 
 // Protected Route Component
 const ProtectedRoute = ({ children }) => {
@@ -131,6 +132,7 @@ function AppRoutes() {
       <Route path="/funded/:dealId" element={<ProtectedRoute><FundedDealProfile /></ProtectedRoute>} />
       <Route path="/onboarding" element={<ProtectedRoute><OnboardingPage /></ProtectedRoute>} />
       <Route path="/organizations" element={<ProtectedRoute><Organizations /></ProtectedRoute>} />
+      <Route path="/content-moderation" element={<ProtectedRoute><ContentModeration /></ProtectedRoute>} />
       <Route path="/my-team" element={<ProtectedRoute><MyTeam /></ProtectedRoute>} />
       <Route path="/team/agent/:agentId/clients" element={<ProtectedRoute><AgentClients /></ProtectedRoute>} />
       <Route path="/activity" element={<ProtectedRoute><ActivityLog /></ProtectedRoute>} />

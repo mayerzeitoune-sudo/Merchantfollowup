@@ -137,6 +137,15 @@ export const platformApi = {
   getStatus: () => axios.get(`${API}/platform/status`),
 };
 
+export const moderationApi = {
+  getBannedWords: () => axios.get(`${API}/moderation/banned-words`),
+  addBannedWord: (data) => axios.post(`${API}/moderation/banned-words`, data),
+  removeBannedWord: (id) => axios.delete(`${API}/moderation/banned-words/${id}`),
+  getBlacklistedNumbers: () => axios.get(`${API}/moderation/blacklisted-numbers`),
+  addBlacklistedNumber: (data) => axios.post(`${API}/moderation/blacklisted-numbers`, data),
+  removeBlacklistedNumber: (id) => axios.delete(`${API}/moderation/blacklisted-numbers/${id}`),
+};
+
 // Phone Numbers API
 export const phoneNumbersApi = {
   searchAvailable: (areaCode, country = 'US', limit = 20) => 
