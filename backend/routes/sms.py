@@ -39,9 +39,20 @@ class SMSRequest(BaseModel):
 
 
 def get_twilio_client():
-    """Get Twilio client if credentials are configured"""
-    sid = os.environ.get("TWILIO_ACCOUNT_SID")
-    token = os.environ.get("TWILIO_AUTH_TOKEN")
+    """Get Twilio client — reads from twilio_creds.json first, then env vars"""
+    import json as _json
+    from pathlib import Path
+    sid = ""
+    token = ""
+    creds_path = Path(__file__).resolve().parent.parent / 'twilio_creds.json'
+    if creds_path.exists():
+        with open(creds_path) as f:
+            creds = _json.load(f)
+        sid = creds.get("TWILIO_ACCOUNT_SID", "")
+        token = creds.get("TWILIO_AUTH_TOKEN", "")
+    if not sid or not token:
+        sid = os.environ.get("TWILIO_ACCOUNT_SID", "")
+        token = os.environ.get("TWILIO_AUTH_TOKEN", "")
     if not sid or not token:
         return None
     from twilio.rest import Client

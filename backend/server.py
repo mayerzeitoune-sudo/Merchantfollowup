@@ -2919,23 +2919,24 @@ async def search_available_numbers(
     current_user: dict = Depends(get_current_user)
 ):
     """Search for available phone numbers via Twilio API"""
-    import traceback
-    twilio_sid = os.environ.get("TWILIO_ACCOUNT_SID", "")
-    twilio_token = os.environ.get("TWILIO_AUTH_TOKEN", "")
-    twilio_ms = os.environ.get("TWILIO_MESSAGING_SERVICE_SID", "")
+    # Read creds directly from twilio_creds.json — bypasses all env var issues
+    import json as _json
+    creds_path = Path(__file__).parent / 'twilio_creds.json'
+    twilio_sid = ""
+    twilio_token = ""
+    if creds_path.exists():
+        with open(creds_path) as f:
+            creds = _json.load(f)
+        twilio_sid = creds.get("TWILIO_ACCOUNT_SID", "")
+        twilio_token = creds.get("TWILIO_AUTH_TOKEN", "")
 
-    # --- DIAGNOSTIC LOG ---
-    logger.info(f"[phone-available] ENV: SID={bool(twilio_sid.strip())} TOKEN={bool(twilio_token.strip())} MS={bool(twilio_ms.strip())}")
-    logger.info(f"[phone-available] PARAMS: country={country} area_code={area_code} limit={limit}")
+    if not twilio_sid or not twilio_token:
+        # Fall back to env
+        twilio_sid = os.environ.get("TWILIO_ACCOUNT_SID", "").strip()
+        twilio_token = os.environ.get("TWILIO_AUTH_TOKEN", "").strip()
 
-    if not twilio_sid.strip() or not twilio_token.strip():
-        detail_msg = (
-            f"Twilio creds missing on this server. "
-            f"SID present={bool(twilio_sid.strip())}, TOKEN present={bool(twilio_token.strip())}. "
-            f"SID first4={twilio_sid.strip()[:4] if twilio_sid.strip() else 'EMPTY'}"
-        )
-        logger.error(f"[phone-available] {detail_msg}")
-        raise HTTPException(status_code=503, detail=detail_msg)
+    if not twilio_sid or not twilio_token:
+        raise HTTPException(status_code=503, detail=f"Twilio not configured. SID={'yes' if twilio_sid else 'no'} TOKEN={'yes' if twilio_token else 'no'}")
 
     def _parse_capabilities(caps):
         if not caps:
@@ -2962,7 +2963,7 @@ async def search_available_numbers(
 
     try:
         from twilio.rest import Client
-        twilio_client = Client(twilio_sid.strip(), twilio_token.strip())
+        twilio_client = Client(twilio_sid, twilio_token)
 
         has_area_code = bool(area_code and len(area_code) == 3)
         cap_limit = min(limit, 30)
@@ -2971,63 +2972,45 @@ async def search_available_numbers(
         kwargs = {"limit": cap_limit, "sms_enabled": True}
         if has_area_code:
             kwargs["area_code"] = area_code
-        logger.info(f"[phone-available] STEP1 local search: {kwargs}")
-        try:
-            numbers = twilio_client.available_phone_numbers(country).local.list(**kwargs)
-            logger.info(f"[phone-available] STEP1 result: {len(numbers)} numbers")
-            if numbers:
-                return {"available_numbers": _format_results(numbers), "provider_configured": True}
-        except Exception as e1:
-            logger.error(f"[phone-available] STEP1 FAILED: type={type(e1).__name__} msg={e1}")
-            logger.error(f"[phone-available] STEP1 traceback:\n{traceback.format_exc()}")
-            raise  # re-raise so outer handler catches it
+        numbers = twilio_client.available_phone_numbers(country).local.list(**kwargs)
+        if numbers:
+            return {"available_numbers": _format_results(numbers), "provider_configured": True}
 
-        # 2) Mobile numbers
+        # 2) Mobile fallback
         if has_area_code:
-            mobile_kwargs = {"limit": cap_limit, "sms_enabled": True, "area_code": area_code}
-            logger.info(f"[phone-available] STEP2 mobile search: {mobile_kwargs}")
             try:
-                numbers = twilio_client.available_phone_numbers(country).mobile.list(**mobile_kwargs)
-                logger.info(f"[phone-available] STEP2 result: {len(numbers)} numbers")
+                numbers = twilio_client.available_phone_numbers(country).mobile.list(
+                    limit=cap_limit, sms_enabled=True, area_code=area_code
+                )
                 if numbers:
                     return {"available_numbers": _format_results(numbers), "provider_configured": True}
-            except Exception as e2:
-                logger.warning(f"[phone-available] STEP2 mobile failed (non-fatal): type={type(e2).__name__} msg={e2}")
+            except Exception:
+                pass
 
         # 3) Local without area code
         if has_area_code:
-            kwargs_no_area = {"limit": cap_limit, "sms_enabled": True}
-            logger.info(f"[phone-available] STEP3 local no-area search: {kwargs_no_area}")
-            try:
-                numbers = twilio_client.available_phone_numbers(country).local.list(**kwargs_no_area)
-                logger.info(f"[phone-available] STEP3 result: {len(numbers)} numbers")
-                if numbers:
-                    return {"available_numbers": _format_results(numbers), "provider_configured": True, "note": f"No numbers found for area code {area_code}. Showing other available numbers."}
-            except Exception as e3:
-                logger.error(f"[phone-available] STEP3 FAILED: type={type(e3).__name__} msg={e3}")
-                logger.error(f"[phone-available] STEP3 traceback:\n{traceback.format_exc()}")
-                raise
+            numbers = twilio_client.available_phone_numbers(country).local.list(
+                limit=cap_limit, sms_enabled=True
+            )
+            if numbers:
+                return {"available_numbers": _format_results(numbers), "provider_configured": True,
+                        "note": f"No numbers for area code {area_code}. Showing others."}
 
         # 4) Toll-free
-        tf_kwargs = {"limit": cap_limit, "sms_enabled": True}
-        logger.info(f"[phone-available] STEP4 toll-free search: {tf_kwargs}")
-        try:
-            numbers = twilio_client.available_phone_numbers(country).toll_free.list(**tf_kwargs)
-            logger.info(f"[phone-available] STEP4 result: {len(numbers)} numbers")
-            if numbers:
-                return {"available_numbers": _format_results(numbers), "provider_configured": True, "type": "toll_free", "note": "Showing toll-free numbers."}
-        except Exception as e4:
-            logger.error(f"[phone-available] STEP4 FAILED: type={type(e4).__name__} msg={e4}")
-            logger.error(f"[phone-available] STEP4 traceback:\n{traceback.format_exc()}")
-            raise
+        numbers = twilio_client.available_phone_numbers(country).toll_free.list(
+            limit=cap_limit, sms_enabled=True
+        )
+        if numbers:
+            return {"available_numbers": _format_results(numbers), "provider_configured": True,
+                    "type": "toll_free", "note": "Showing toll-free numbers."}
 
-        return {"available_numbers": [], "provider_configured": True, "note": f"No numbers available for area code {area_code}. Try a different area code."}
+        return {"available_numbers": [], "provider_configured": True,
+                "note": f"No numbers available for area code {area_code}."}
     except HTTPException:
         raise
     except Exception as e:
-        tb = traceback.format_exc()
-        logger.error(f"[phone-available] OUTER EXCEPTION: type={type(e).__name__} msg={e}\n{tb}")
-        raise HTTPException(status_code=500, detail=f"Twilio error [{type(e).__name__}]: {str(e)}")
+        logger.error(f"Twilio search error: {type(e).__name__}: {e}")
+        raise HTTPException(status_code=500, detail=f"Twilio error: {type(e).__name__}: {str(e)}")
 
 @api_router.post("/phone-numbers/purchase")
 async def purchase_phone_number(data: PhoneNumberCreate, request: Request, current_user: dict = Depends(get_current_user)):
@@ -3086,8 +3069,19 @@ async def purchase_phone_number(data: PhoneNumberCreate, request: Request, curre
     )
     
     # Actually purchase through Twilio - REQUIRED, no fake numbers ever
-    twilio_sid = os.environ.get("TWILIO_ACCOUNT_SID", "").strip()
-    twilio_token = os.environ.get("TWILIO_AUTH_TOKEN", "").strip()
+    # Read creds directly from twilio_creds.json — bypasses env var caching issues
+    import json as _json
+    _creds_path = Path(__file__).parent / 'twilio_creds.json'
+    twilio_sid = ""
+    twilio_token = ""
+    if _creds_path.exists():
+        with open(_creds_path) as _f:
+            _creds = _json.load(_f)
+        twilio_sid = _creds.get("TWILIO_ACCOUNT_SID", "")
+        twilio_token = _creds.get("TWILIO_AUTH_TOKEN", "")
+    if not twilio_sid or not twilio_token:
+        twilio_sid = os.environ.get("TWILIO_ACCOUNT_SID", "").strip()
+        twilio_token = os.environ.get("TWILIO_AUTH_TOKEN", "").strip()
     
     if not twilio_sid or not twilio_token:
         # Refund credits - Twilio not configured
