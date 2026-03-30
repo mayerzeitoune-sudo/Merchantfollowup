@@ -179,10 +179,16 @@ async def handle_inbound_sms(
     })
 
     # Find the owner of the Twilio number that received this message
+    # Prefer the record that has an org_id (real org ownership) over orphaned records
     phone_owner = await db.phone_numbers.find_one(
-        {"phone_number": To},
+        {"phone_number": To, "org_id": {"$ne": None}},
         {"_id": 0, "user_id": 1, "assigned_user_id": 1, "org_id": 1}
     )
+    if not phone_owner:
+        phone_owner = await db.phone_numbers.find_one(
+            {"phone_number": To},
+            {"_id": 0, "user_id": 1, "assigned_user_id": 1, "org_id": 1}
+        )
 
     # Determine user_id — prefer assigned user, then purchaser, then last outbound sender
     user_id = None

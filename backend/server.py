@@ -1015,14 +1015,7 @@ async def get_client(client_id: str, current_user: dict = Depends(get_current_us
         {"_id": 0}
     )
     if not client:
-        # Check if user has conversations with this client (cross-org created client)
-        has_convo = await db.conversations.find_one(
-            {"client_id": client_id, "user_id": {"$in": accessible_ids}}
-        )
-        if has_convo:
-            client = await db.clients.find_one({"id": client_id}, {"_id": 0})
-        if not client:
-            raise HTTPException(status_code=404, detail="Client not found")
+        raise HTTPException(status_code=404, detail="Client not found")
     return client
 
 @api_router.put("/clients/{client_id}", response_model=ClientResponse)
@@ -2946,6 +2939,11 @@ async def purchase_phone_number(data: PhoneNumberCreate, current_user: dict = De
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
     
+    # CRITICAL: Prevent duplicate phone number purchases across ALL orgs
+    existing = await db.phone_numbers.find_one({"phone_number": data.phone_number, "twilio_purchased": True})
+    if existing:
+        raise HTTPException(status_code=409, detail=f"Phone number {data.phone_number} is already owned by another organization. Choose a different number.")
+    
     role = user.get("role", "agent")
     org_id = user.get("org_id")
     
@@ -3282,14 +3280,7 @@ async def get_conversation(
         {"_id": 0}
     )
     if not client:
-        # Also check if user has conversations with this client (cross-org created client)
-        has_convo = await db.conversations.find_one(
-            {"client_id": client_id, "user_id": {"$in": accessible_ids}}
-        )
-        if has_convo:
-            client = await db.clients.find_one({"id": client_id}, {"_id": 0})
-        if not client:
-            raise HTTPException(status_code=404, detail="Client not found")
+        raise HTTPException(status_code=404, detail="Client not found")
     
     # Build query - filter by from_number if specified
     query = {"user_id": {"$in": accessible_ids}, "client_id": client_id}
