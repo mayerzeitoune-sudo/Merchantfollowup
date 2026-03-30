@@ -1479,7 +1479,7 @@ const DripCampaigns = () => {
                 {/* Current trigger words */}
                 <div className="space-y-2">
                   <Label className="text-sm">Active Trigger Words ({triggerWords.length})</Label>
-                  <div className="flex flex-wrap gap-1.5 max-h-40 overflow-y-auto p-2 border rounded-lg bg-zinc-50">
+                  <div className="flex flex-wrap gap-1.5 max-h-40 overflow-y-auto p-2 border rounded-lg bg-zinc-50 dark:bg-zinc-800">
                     {triggerWords.map((word) => (
                       <Badge 
                         key={word}
@@ -1562,7 +1562,7 @@ const DripCampaigns = () => {
                   />
                 </div>
 
-                <div className="p-3 rounded-lg bg-blue-50 border border-blue-200">
+                <div className="p-3 rounded-lg bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800">
                   <p className="text-sm font-medium text-blue-800">
                     Auto-enrolls all clients tagged "{selectedPrebuilt.target_tag}"
                   </p>
@@ -1599,28 +1599,28 @@ const DripCampaigns = () => {
                   const revLow = convLow * dealValue;
                   const revHigh = convHigh * dealValue;
                   return (
-                    <div className="rounded-lg border border-zinc-200 bg-white p-4 space-y-3 shadow-sm" data-testid="campaign-cost-preview">
+                    <div className="rounded-lg border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 p-4 space-y-3 shadow-sm" data-testid="campaign-cost-preview">
                       <div className="flex items-center gap-2">
                         <BarChart3 className="h-4 w-4 text-emerald-600" />
                         <h4 className="text-sm font-semibold text-zinc-900">Estimated Credits & Projected Returns</h4>
                       </div>
                       <div className="grid grid-cols-2 gap-2">
-                        <div className="rounded bg-zinc-50 border border-zinc-200 p-3">
+                        <div className="rounded bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 p-3">
                           <p className="text-[10px] text-zinc-500 uppercase tracking-wider">Total Texts</p>
                           <p className="text-lg font-bold text-zinc-900 font-mono">{totalTexts.toLocaleString()}</p>
                           <p className="text-[10px] text-zinc-400">{matchingClients} leads x {totalMsgs} msgs</p>
                         </div>
-                        <div className="rounded bg-zinc-50 border border-zinc-200 p-3">
+                        <div className="rounded bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 p-3">
                           <p className="text-[10px] text-zinc-500 uppercase tracking-wider">Campaign Credit Cost</p>
                           <p className="text-lg font-bold text-amber-600 font-mono">{totalCreditCost.toLocaleString()}</p>
                           <p className="text-[10px] text-zinc-400">{creditsPerText} credits/text</p>
                         </div>
-                        <div className="rounded bg-zinc-50 border border-zinc-200 p-3">
+                        <div className="rounded bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 p-3">
                           <p className="text-[10px] text-zinc-500 uppercase tracking-wider">Est. Conversions</p>
                           <p className="text-lg font-bold text-amber-600 font-mono">{convLow} <span className="text-xs font-normal text-zinc-400">to</span> {convHigh}</p>
                           <p className="text-[10px] text-zinc-400">5% - 12% conversion rate</p>
                         </div>
-                        <div className="rounded bg-zinc-50 border border-zinc-200 p-3">
+                        <div className="rounded bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 p-3">
                           <p className="text-[10px] text-zinc-500 uppercase tracking-wider">Projected Revenue</p>
                           <p className="text-lg font-bold text-emerald-600 font-mono">${revLow.toLocaleString()} <span className="text-xs font-normal text-zinc-400">to</span> ${revHigh.toLocaleString()}</p>
                           <p className="text-[10px] text-zinc-400">$5,000 avg per closed deal</p>

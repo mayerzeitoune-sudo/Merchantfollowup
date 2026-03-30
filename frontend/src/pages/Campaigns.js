@@ -425,7 +425,7 @@ const Campaigns = () => {
         </div>
 
         {/* AI Test Card */}
-        <Card className="bg-gradient-to-br from-purple-50 to-white border-purple-100">
+        <Card className="bg-gradient-to-br from-purple-50 to-white dark:from-purple-950/30 dark:to-zinc-900 border-purple-100 dark:border-purple-900">
           <CardHeader className="pb-3">
             <div className="flex items-center gap-2">
               <Sparkles className="h-5 w-5 text-purple-600" />

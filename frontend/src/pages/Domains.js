@@ -431,7 +431,7 @@ const Domains = () => {
 
           {/* Marketplace Tab */}
           <TabsContent value="marketplace" className="space-y-4">
-            <Card className="bg-gradient-to-br from-blue-50 to-white border-blue-100">
+            <Card className="bg-gradient-to-br from-blue-50 to-white dark:from-blue-950/30 dark:to-zinc-900 border-blue-100 dark:border-blue-900">
               <CardHeader>
                 <div className="flex items-center gap-2">
                   <ShoppingCart className="h-5 w-5 text-blue-600" />
@@ -446,7 +446,7 @@ const Domains = () => {
                   {marketplace.available_domains?.map((domain, index) => (
                     <div 
                       key={index}
-                      className="flex items-center justify-between p-3 bg-white border rounded-lg"
+                      className="flex items-center justify-between p-3 bg-white dark:bg-zinc-800 border rounded-lg"
                     >
                       <div className="flex items-center gap-3">
                         <Globe className="h-5 w-5 text-muted-foreground" />

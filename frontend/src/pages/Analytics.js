@@ -60,7 +60,7 @@ const Analytics = () => {
       value: analytics.total_messages_sent,
       icon: MessageSquare,
       color: 'text-blue-600',
-      bgColor: 'bg-blue-50',
+      bgColor: 'bg-blue-50 dark:bg-blue-950/40',
       change: '+12%'
     },
     {
@@ -68,7 +68,7 @@ const Analytics = () => {
       value: analytics.total_replies,
       icon: Mail,
       color: 'text-green-600',
-      bgColor: 'bg-green-50',
+      bgColor: 'bg-green-50 dark:bg-green-950/40',
       change: '+8%'
     },
     {
@@ -76,7 +76,7 @@ const Analytics = () => {
       value: `${analytics.response_rate}%`,
       icon: Target,
       color: 'text-purple-600',
-      bgColor: 'bg-purple-50',
+      bgColor: 'bg-purple-50 dark:bg-purple-950/40',
       change: '+2.3%'
     },
     {
@@ -84,7 +84,7 @@ const Analytics = () => {
       value: analytics.campaigns_active,
       icon: Zap,
       color: 'text-orange-600',
-      bgColor: 'bg-orange-50',
+      bgColor: 'bg-orange-50 dark:bg-orange-950/40',
       change: '0'
     }
   ] : [];
@@ -294,21 +294,21 @@ const Analytics = () => {
               </CardHeader>
               <CardContent>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div className="p-4 rounded-lg bg-blue-50">
-                    <h4 className="font-medium text-blue-900 mb-2">Personalize Messages</h4>
-                    <p className="text-sm text-blue-700">
+                  <div className="p-4 rounded-lg bg-blue-50 dark:bg-blue-950/40">
+                    <h4 className="font-medium text-blue-900 dark:text-blue-200 mb-2">Personalize Messages</h4>
+                    <p className="text-sm text-blue-700 dark:text-blue-300">
                       Use {'{name}'} and {'{company}'} variables to make messages feel personal
                     </p>
                   </div>
-                  <div className="p-4 rounded-lg bg-green-50">
-                    <h4 className="font-medium text-green-900 mb-2">Optimal Timing</h4>
-                    <p className="text-sm text-green-700">
+                  <div className="p-4 rounded-lg bg-green-50 dark:bg-green-950/40">
+                    <h4 className="font-medium text-green-900 dark:text-green-200 mb-2">Optimal Timing</h4>
+                    <p className="text-sm text-green-700 dark:text-green-300">
                       Send messages between 10am-2pm for highest response rates
                     </p>
                   </div>
-                  <div className="p-4 rounded-lg bg-purple-50">
-                    <h4 className="font-medium text-purple-900 mb-2">Follow Up Consistently</h4>
-                    <p className="text-sm text-purple-700">
+                  <div className="p-4 rounded-lg bg-purple-50 dark:bg-purple-950/40">
+                    <h4 className="font-medium text-purple-900 dark:text-purple-200 mb-2">Follow Up Consistently</h4>
+                    <p className="text-sm text-purple-700 dark:text-purple-300">
                       Most responses come after 2-3 follow-ups. Use drip campaigns!
                     </p>
                   </div>

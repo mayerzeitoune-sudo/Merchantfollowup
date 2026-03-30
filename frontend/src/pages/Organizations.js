@@ -494,7 +494,7 @@ const Organizations = () => {
                 </div>
               </CardContent>
             </Card>
-            <Card className="border-dashed border-orange-300 bg-orange-50/50 cursor-pointer hover:shadow-md transition-shadow" onClick={openUnassignedUsersDialog} data-testid="stat-unassigned-users">
+            <Card className="border-dashed border-orange-300 dark:border-orange-700 bg-orange-50/50 dark:bg-orange-950/30 cursor-pointer hover:shadow-md transition-shadow" onClick={openUnassignedUsersDialog} data-testid="stat-unassigned-users">
               <CardContent className="pt-6">
                 <div className="flex items-center gap-3">
                   <div className="h-10 w-10 rounded-lg bg-orange-100 flex items-center justify-center">

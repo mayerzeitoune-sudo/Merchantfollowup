@@ -31,7 +31,7 @@ import {
   Sparkles,
   Plus
 } from 'lucide-react';
-import { clientsApi, contactsApi, phoneNumbersApi, templatesApi, enhancedCampaignsApi } from '../lib/api';
+import { clientsApi, contactsApi, phoneNumbersApi, templatesApi, enhancedCampaignsApi, messagesApi } from '../lib/api';
 import { toast } from 'sonner';
 import {
   Dialog,
@@ -83,7 +83,8 @@ const Inbox = () => {
   const [ownedNumbers, setOwnedNumbers] = useState([]);
   const [templates, setTemplates] = useState([]);
   const [selectedFromNumber, setSelectedFromNumber] = useState('default');
-  const [campaignPopup, setCampaignPopup] = useState(null); // { clientId, clientName, campaigns }
+  const [campaignPopup, setCampaignPopup] = useState(null);
+  const [unreadClientIds, setUnreadClientIds] = useState(new Set()); // { clientId, clientName, campaigns }
   const [areCodePopup, setAreaCodePopup] = useState(null); // { areaCode, clientName }
 
   useEffect(() => {
@@ -109,6 +110,18 @@ const Inbox = () => {
     scrollToBottom();
   }, [messages]);
 
+  // Poll for new unread messages every 10 seconds
+  useEffect(() => {
+    const interval = setInterval(async () => {
+      try {
+        const unreadRes = await messagesApi.getUnread();
+        const ids = new Set((unreadRes.data?.messages || []).map(m => m.client_id).filter(Boolean));
+        setUnreadClientIds(ids);
+      } catch (e) { /* silent */ }
+    }, 10000);
+    return () => clearInterval(interval);
+  }, []);
+
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   };
@@ -133,6 +146,13 @@ const Inbox = () => {
         setSelectedFromNumber(liveNumbers[0].phone_number);
       }
       setTemplates(templatesRes.data || []);
+      
+      // Fetch unread message client IDs
+      try {
+        const unreadRes = await messagesApi.getUnread();
+        const ids = new Set((unreadRes.data?.messages || []).map(m => m.client_id).filter(Boolean));
+        setUnreadClientIds(ids);
+      } catch (e) { /* silent */ }
     } catch (error) {
       toast.error('Failed to fetch data');
     } finally {
@@ -180,8 +200,16 @@ const Inbox = () => {
   const fetchMessages = async (clientId, fromNumber) => {
     try {
       const response = await contactsApi.getConversation(clientId, fromNumber === 'default' ? null : fromNumber);
-      const msgs = (response.data.messages || []).reverse();
+      const msgs = response.data.messages || [];
       setMessages(msgs);
+      
+      // Mark inbound messages as read
+      const unreadInbound = msgs.filter(m => m.direction === 'inbound' && !m.read);
+      if (unreadInbound.length > 0) {
+        try {
+          await Promise.all(unreadInbound.map(m => messagesApi.markRead(m.id)));
+        } catch (e) { /* silent */ }
+      }
       
       // Check if client has incoming messages and is in an active campaign
       const hasIncoming = msgs.some(m => m.direction === 'inbound');
@@ -364,19 +392,28 @@ const Inbox = () => {
                     {sortedClients.map((client) => {
                       const stageInfo = getStageInfo(client.pipeline_stage);
                       const isSelected = selectedClient?.id === client.id;
+                      const hasUnread = unreadClientIds.has(client.id);
                       
                       return (
                         <div
                           key={client.id}
                           className={`p-4 cursor-pointer transition-all hover:bg-muted/50 ${
                             isSelected ? 'bg-primary/5 border-l-2 border-l-primary' : ''
-                          }`}
+                          } ${hasUnread && !isSelected ? 'bg-green-50/50 dark:bg-green-950/20' : ''}`}
                           onClick={() => handleSelectClient(client)}
                           data-testid={`inbox-client-${client.id}`}
                         >
                           <div className="flex items-start gap-3">
-                            <div className="h-10 w-10 rounded-full bg-gradient-to-br from-primary/20 to-primary/10 flex items-center justify-center shrink-0">
-                              <User className="h-5 w-5 text-primary" />
+                            <div className="relative">
+                              <div className="h-10 w-10 rounded-full bg-gradient-to-br from-primary/20 to-primary/10 flex items-center justify-center shrink-0">
+                                <User className="h-5 w-5 text-primary" />
+                              </div>
+                              {hasUnread && (
+                                <span className="absolute -top-0.5 -right-0.5 flex h-3.5 w-3.5" data-testid={`unread-dot-${client.id}`}>
+                                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                                  <span className="relative inline-flex rounded-full h-3.5 w-3.5 bg-green-500"></span>
+                                </span>
+                              )}
                             </div>
                             
                             <div className="flex-1 min-w-0">

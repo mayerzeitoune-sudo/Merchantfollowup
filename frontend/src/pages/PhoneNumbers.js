@@ -316,7 +316,7 @@ const PhoneNumbers = () => {
 
         {/* Search for Numbers */}
         {purchaseStatus.can_purchase ? (
-        <Card className="bg-gradient-to-br from-blue-50 to-white border-blue-100">
+        <Card className="bg-gradient-to-br from-blue-50 to-white dark:from-blue-950/30 dark:to-zinc-900 border-blue-100 dark:border-blue-900">
           <CardHeader>
             <CardTitle className="font-['Outfit'] flex items-center gap-2">
               <ShoppingCart className="h-5 w-5 text-blue-600" />
@@ -406,7 +406,7 @@ const PhoneNumbers = () => {
           </CardContent>
         </Card>
         ) : (
-        <Card className="bg-gradient-to-br from-gray-50 to-white border-gray-200">
+        <Card className="bg-gradient-to-br from-gray-50 to-white dark:from-zinc-800 dark:to-zinc-900 border-gray-200 dark:border-zinc-700">
           <CardHeader>
             <CardTitle className="font-['Outfit'] flex items-center gap-2 text-muted-foreground">
               <ShoppingCart className="h-5 w-5" />

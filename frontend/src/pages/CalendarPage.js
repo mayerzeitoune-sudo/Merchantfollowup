@@ -216,7 +216,7 @@ const CalendarPage = () => {
       <div className={`group flex items-center gap-3 p-3 rounded-xl border transition-all hover:shadow-sm ${
         isCompleted ? 'bg-green-50/50 border-green-200' : 
         isOverdue ? 'bg-red-50/50 border-red-200' : 
-        'bg-white border-border hover:border-primary/30'
+        'bg-white dark:bg-zinc-800 border-border hover:border-primary/30'
       }`}>
         <div className={`h-10 w-10 rounded-xl ${typeInfo.color} flex items-center justify-center shrink-0`}>
           <TypeIcon className="h-5 w-5 text-white" />
@@ -377,7 +377,7 @@ const CalendarPage = () => {
 
         {/* Stats Row */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-          <Card className={overdueFollowups.length > 0 ? 'border-red-200 bg-gradient-to-br from-red-50 to-white' : 'bg-gradient-to-br from-orange-50 to-white'}>
+          <Card className={overdueFollowups.length > 0 ? 'border-red-200 dark:border-red-800 bg-gradient-to-br from-red-50 to-white dark:from-red-950/30 dark:to-zinc-900' : 'bg-gradient-to-br from-orange-50 to-white dark:from-orange-950/30 dark:to-zinc-900'}>
             <CardContent className="p-4">
               <div className="flex items-center gap-3">
                 <div className={`h-12 w-12 rounded-xl ${overdueFollowups.length > 0 ? 'bg-red-500' : 'bg-orange-500'} flex items-center justify-center`}>
@@ -391,7 +391,7 @@ const CalendarPage = () => {
             </CardContent>
           </Card>
           
-          <Card className="bg-gradient-to-br from-blue-50 to-white">
+          <Card className="bg-gradient-to-br from-blue-50 to-white dark:from-blue-950/30 dark:to-zinc-900">
             <CardContent className="p-4">
               <div className="flex items-center gap-3">
                 <div className="h-12 w-12 rounded-xl bg-blue-500 flex items-center justify-center">
@@ -405,7 +405,7 @@ const CalendarPage = () => {
             </CardContent>
           </Card>
           
-          <Card className="bg-gradient-to-br from-purple-50 to-white">
+          <Card className="bg-gradient-to-br from-purple-50 to-white dark:from-purple-950/30 dark:to-zinc-900">
             <CardContent className="p-4">
               <div className="flex items-center gap-3">
                 <div className="h-12 w-12 rounded-xl bg-purple-500 flex items-center justify-center">
@@ -419,7 +419,7 @@ const CalendarPage = () => {
             </CardContent>
           </Card>
           
-          <Card className="bg-gradient-to-br from-green-50 to-white">
+          <Card className="bg-gradient-to-br from-green-50 to-white dark:from-green-950/30 dark:to-zinc-900">
             <CardContent className="p-4">
               <div className="flex items-center gap-3">
                 <div className="h-12 w-12 rounded-xl bg-green-500 flex items-center justify-center">

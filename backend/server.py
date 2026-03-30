@@ -2983,16 +2983,18 @@ async def purchase_phone_number(data: PhoneNumberCreate, current_user: dict = De
     
     # Deduct credits from org balance (40 credits per number)
     PHONE_NUMBER_COST_CREDITS = 40
-    if org_id:
-        from routes.credits import deduct_credits
-        await deduct_credits(
-            org_id=org_id,
-            user_id=current_user["user_id"],
-            amount=PHONE_NUMBER_COST_CREDITS,
-            source="phone_number",
-            description=f"Phone number purchase: {data.phone_number}",
-            metadata={"phone_number": data.phone_number}
-        )
+    if not org_id:
+        raise HTTPException(status_code=400, detail="Cannot purchase numbers without an organization. Use impersonation to act on behalf of an org.")
+    
+    from routes.credits import deduct_credits
+    await deduct_credits(
+        org_id=org_id,
+        user_id=current_user["user_id"],
+        amount=PHONE_NUMBER_COST_CREDITS,
+        source="phone_number",
+        description=f"Phone number purchase: {data.phone_number}",
+        metadata={"phone_number": data.phone_number}
+    )
     
     # Actually purchase through Twilio if configured
     twilio_sid = os.environ.get("TWILIO_ACCOUNT_SID")
@@ -3450,6 +3452,25 @@ async def send_sms_to_contact(
     # Send via Twilio if configured
     twilio_sid = os.environ.get("TWILIO_ACCOUNT_SID")
     twilio_token = os.environ.get("TWILIO_AUTH_TOKEN")
+    
+    # Deduct credits for the SMS
+    org_id = user.get("org_id")
+    if org_id:
+        try:
+            from routes.credits import deduct_credits, TEXT_COST_CREDITS
+            import math
+            credit_amount = max(1, math.ceil(TEXT_COST_CREDITS))  # Round up to at least 1 credit
+            await deduct_credits(
+                org_id=org_id,
+                user_id=current_user["user_id"],
+                amount=credit_amount,
+                source="sms_send",
+                description=f"SMS to {client.get('name', 'Unknown')}",
+            )
+        except HTTPException as he:
+            if he.status_code == 402:
+                raise HTTPException(status_code=402, detail="Insufficient credits to send SMS. Please purchase more credits.")
+            raise
     
     if twilio_sid and twilio_token and from_number and client.get("phone"):
         try:

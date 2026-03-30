@@ -189,7 +189,7 @@ const Dashboard = () => {
       value: stats.total_clients, 
       icon: Users, 
       color: 'text-blue-600',
-      bgColor: 'bg-blue-50',
+      bgColor: 'bg-blue-50 dark:bg-blue-950/40',
       link: '/clients'
     },
     { 
@@ -197,7 +197,7 @@ const Dashboard = () => {
       value: stats.pending_reminders, 
       icon: Bell, 
       color: 'text-orange-600',
-      bgColor: 'bg-orange-50',
+      bgColor: 'bg-orange-50 dark:bg-orange-950/40',
       link: '/reminders'
     },
     { 
@@ -205,7 +205,7 @@ const Dashboard = () => {
       value: todayFollowups.length, 
       icon: Calendar, 
       color: 'text-green-600',
-      bgColor: 'bg-green-50',
+      bgColor: 'bg-green-50 dark:bg-green-950/40',
       link: '/calendar'
     },
     { 
@@ -213,7 +213,7 @@ const Dashboard = () => {
       value: stats.active_campaigns, 
       icon: Zap, 
       color: 'text-purple-600',
-      bgColor: 'bg-purple-50',
+      bgColor: 'bg-purple-50 dark:bg-purple-950/40',
       link: '/campaigns'
     },
   ];
@@ -299,7 +299,7 @@ const Dashboard = () => {
 
                   {/* Steps */}
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                    <div className={`p-3 rounded-lg border ${onboardingStatus?.status !== 'not_started' ? 'bg-green-50 border-green-200' : 'bg-white border-gray-200'}`}>
+                    <div className={`p-3 rounded-lg border ${onboardingStatus?.status !== 'not_started' ? 'bg-green-50 dark:bg-green-950/30 border-green-200 dark:border-green-800' : 'bg-white dark:bg-zinc-800 border-gray-200 dark:border-zinc-700'}`}>
                       <div className="flex items-center gap-2 mb-1">
                         {onboardingStatus?.status !== 'not_started' ? (
                           <CheckCircle className="h-4 w-4 text-green-600" />
@@ -309,7 +309,7 @@ const Dashboard = () => {
                         <span className="font-medium text-xs">Business Info</span>
                       </div>
                     </div>
-                    <div className={`p-3 rounded-lg border ${onboardingStatus?.brand_status === 'approved' ? 'bg-green-50 border-green-200' : onboardingStatus?.brand_status === 'pending' ? 'bg-yellow-50 border-yellow-200' : 'bg-white border-gray-200'}`}>
+                    <div className={`p-3 rounded-lg border ${onboardingStatus?.brand_status === 'approved' ? 'bg-green-50 dark:bg-green-950/30 border-green-200 dark:border-green-800' : onboardingStatus?.brand_status === 'pending' ? 'bg-yellow-50 dark:bg-yellow-950/30 border-yellow-200 dark:border-yellow-800' : 'bg-white dark:bg-zinc-800 border-gray-200 dark:border-zinc-700'}`}>
                       <div className="flex items-center gap-2 mb-1">
                         {onboardingStatus?.brand_status === 'approved' ? (
                           <CheckCircle className="h-4 w-4 text-green-600" />
@@ -321,7 +321,7 @@ const Dashboard = () => {
                         <span className="font-medium text-xs">Brand</span>
                       </div>
                     </div>
-                    <div className={`p-3 rounded-lg border ${onboardingStatus?.campaign_status === 'approved' ? 'bg-green-50 border-green-200' : onboardingStatus?.campaign_status === 'pending' ? 'bg-yellow-50 border-yellow-200' : 'bg-white border-gray-200'}`}>
+                    <div className={`p-3 rounded-lg border ${onboardingStatus?.campaign_status === 'approved' ? 'bg-green-50 dark:bg-green-950/30 border-green-200 dark:border-green-800' : onboardingStatus?.campaign_status === 'pending' ? 'bg-yellow-50 dark:bg-yellow-950/30 border-yellow-200 dark:border-yellow-800' : 'bg-white dark:bg-zinc-800 border-gray-200 dark:border-zinc-700'}`}>
                       <div className="flex items-center gap-2 mb-1">
                         {onboardingStatus?.campaign_status === 'approved' ? (
                           <CheckCircle className="h-4 w-4 text-green-600" />
@@ -333,7 +333,7 @@ const Dashboard = () => {
                         <span className="font-medium text-xs">Campaign</span>
                       </div>
                     </div>
-                    <div className={`p-3 rounded-lg border ${onboardingStatus?.phone_number ? 'bg-green-50 border-green-200' : 'bg-white border-gray-200'}`}>
+                    <div className={`p-3 rounded-lg border ${onboardingStatus?.phone_number ? 'bg-green-50 dark:bg-green-950/30 border-green-200 dark:border-green-800' : 'bg-white dark:bg-zinc-800 border-gray-200 dark:border-zinc-700'}`}>
                       <div className="flex items-center gap-2 mb-1">
                         {onboardingStatus?.phone_number ? (
                           <CheckCircle className="h-4 w-4 text-green-600" />
@@ -507,7 +507,7 @@ const Dashboard = () => {
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <Card>
               <CardContent className="p-4 flex items-center gap-4">
-                <div className="h-10 w-10 rounded-lg bg-blue-50 flex items-center justify-center">
+                <div className="h-10 w-10 rounded-lg bg-blue-50 dark:bg-blue-950/40 flex items-center justify-center">
                   <MessageSquare className="h-5 w-5 text-blue-600" />
                 </div>
                 <div>
@@ -518,7 +518,7 @@ const Dashboard = () => {
             </Card>
             <Card>
               <CardContent className="p-4 flex items-center gap-4">
-                <div className="h-10 w-10 rounded-lg bg-green-50 flex items-center justify-center">
+                <div className="h-10 w-10 rounded-lg bg-green-50 dark:bg-green-950/40 flex items-center justify-center">
                   <Mail className="h-5 w-5 text-green-600" />
                 </div>
                 <div>
@@ -649,7 +649,7 @@ const Dashboard = () => {
             <CardContent className="space-y-3">
               <Link to="/clients" className="block">
                 <Button variant="outline" className="w-full justify-start h-auto py-3">
-                  <div className="h-8 w-8 rounded-lg bg-blue-50 flex items-center justify-center mr-3">
+                  <div className="h-8 w-8 rounded-lg bg-blue-50 dark:bg-blue-950/40 flex items-center justify-center mr-3">
                     <Users className="h-4 w-4 text-blue-600" />
                   </div>
                   <div className="text-left">
@@ -685,7 +685,7 @@ const Dashboard = () => {
 
               <Link to="/contacts" className="block">
                 <Button variant="outline" className="w-full justify-start h-auto py-3">
-                  <div className="h-8 w-8 rounded-lg bg-green-50 flex items-center justify-center mr-3">
+                  <div className="h-8 w-8 rounded-lg bg-green-50 dark:bg-green-950/40 flex items-center justify-center mr-3">
                     <MessageSquare className="h-4 w-4 text-green-600" />
                   </div>
                   <div className="text-left">
@@ -792,7 +792,7 @@ const Dashboard = () => {
             </DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
-            <div className="flex items-center justify-between p-3 rounded-lg bg-zinc-50 border">
+            <div className="flex items-center justify-between p-3 rounded-lg bg-zinc-50 dark:bg-zinc-800 border">
               <div className="flex items-center gap-2">
                 <Coins className="h-4 w-4 text-amber-500" />
                 <span className="text-sm text-zinc-600">Your balance:</span>
@@ -817,7 +817,7 @@ const Dashboard = () => {
             {availableNumbers.length > 0 && (
               <div className="space-y-2 max-h-60 overflow-y-auto">
                 {availableNumbers.map((num, i) => (
-                  <div key={i} className="flex items-center justify-between p-3 border rounded-lg hover:bg-zinc-50 transition-colors" data-testid={`avail-number-${i}`}>
+                  <div key={i} className="flex items-center justify-between p-3 border rounded-lg hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors" data-testid={`avail-number-${i}`}>
                     <div>
                       <p className="font-mono font-semibold text-sm">{num.phone_number || num.phoneNumber}</p>
                       <p className="text-xs text-zinc-500">{num.locality || num.region || 'US'} {num.capabilities?.SMS ? '• SMS' : ''} {num.capabilities?.voice ? '• Voice' : ''}</p>

@@ -334,7 +334,7 @@ const FundedDeals = () => {
         </div>
 
         {/* System-Wide Projections Panel */}
-        <div className="rounded-xl border border-zinc-200 bg-white p-6 space-y-5 shadow-sm" data-testid="projections-panel">
+        <div className="rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 p-6 space-y-5 shadow-sm" data-testid="projections-panel">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <div className="h-10 w-10 rounded-lg bg-emerald-50 flex items-center justify-center">
@@ -353,7 +353,7 @@ const FundedDeals = () => {
           {/* KPI Cards Row */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
             {/* Total Leads */}
-            <div className="rounded-lg bg-zinc-50 border border-zinc-200 p-4" data-testid="kpi-total-leads">
+            <div className="rounded-lg bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 p-4" data-testid="kpi-total-leads">
               <div className="flex items-center gap-2 mb-2">
                 <Users className="h-4 w-4 text-blue-500" />
                 <span className="text-xs text-zinc-500 uppercase tracking-wider">Total Leads</span>
@@ -363,7 +363,7 @@ const FundedDeals = () => {
             </div>
 
             {/* Estimated Conversions */}
-            <div className="rounded-lg bg-zinc-50 border border-zinc-200 p-4" data-testid="kpi-est-conversions">
+            <div className="rounded-lg bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 p-4" data-testid="kpi-est-conversions">
               <div className="flex items-center gap-2 mb-2">
                 <Target className="h-4 w-4 text-amber-500" />
                 <span className="text-xs text-zinc-500 uppercase tracking-wider">Est. Conversions</span>
@@ -375,7 +375,7 @@ const FundedDeals = () => {
             </div>
 
             {/* Projected Revenue */}
-            <div className="rounded-lg bg-zinc-50 border border-zinc-200 p-4" data-testid="kpi-projected-revenue">
+            <div className="rounded-lg bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 p-4" data-testid="kpi-projected-revenue">
               <div className="flex items-center gap-2 mb-2">
                 <DollarSign className="h-4 w-4 text-emerald-500" />
                 <span className="text-xs text-zinc-500 uppercase tracking-wider">Projected Revenue</span>
@@ -387,7 +387,7 @@ const FundedDeals = () => {
             </div>
 
             {/* Net Profit (after text costs) */}
-            <div className="rounded-lg bg-zinc-50 border border-zinc-200 p-4" data-testid="kpi-net-profit">
+            <div className="rounded-lg bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 p-4" data-testid="kpi-net-profit">
               <div className="flex items-center gap-2 mb-2">
                 <Zap className="h-4 w-4 text-green-500" />
                 <span className="text-xs text-zinc-500 uppercase tracking-wider">Net Profit (USD)</span>
@@ -402,7 +402,7 @@ const FundedDeals = () => {
           {/* Detailed Breakdown */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
             {/* Cost Breakdown */}
-            <div className="rounded-lg bg-zinc-50/80 border border-zinc-100 p-4">
+            <div className="rounded-lg bg-zinc-50/80 dark:bg-zinc-800/80 border border-zinc-100 dark:border-zinc-700 p-4">
               <h3 className="text-xs text-zinc-500 uppercase tracking-wider mb-3">Cost Breakdown</h3>
               <div className="space-y-2">
                 <div className="flex justify-between text-sm">
@@ -429,7 +429,7 @@ const FundedDeals = () => {
             </div>
 
             {/* Pipeline Summary */}
-            <div className="rounded-lg bg-zinc-50/80 border border-zinc-100 p-4">
+            <div className="rounded-lg bg-zinc-50/80 dark:bg-zinc-800/80 border border-zinc-100 dark:border-zinc-700 p-4">
               <h3 className="text-xs text-zinc-500 uppercase tracking-wider mb-3">Pipeline Summary</h3>
               <div className="space-y-2">
                 {projections?.pipeline_stages && Object.entries(projections.pipeline_stages)
@@ -455,7 +455,7 @@ const FundedDeals = () => {
             </div>
 
             {/* Campaign Activity */}
-            <div className="rounded-lg bg-zinc-50/80 border border-zinc-100 p-4">
+            <div className="rounded-lg bg-zinc-50/80 dark:bg-zinc-800/80 border border-zinc-100 dark:border-zinc-700 p-4">
               <h3 className="text-xs text-zinc-500 uppercase tracking-wider mb-3">Campaign Activity</h3>
               <div className="space-y-2">
                 <div className="flex justify-between text-sm">
@@ -563,7 +563,7 @@ const FundedDeals = () => {
 
         {/* Milestones Alert */}
         {milestones.length > 0 && (
-          <Card className="border-yellow-200 bg-yellow-50">
+          <Card className="border-yellow-200 dark:border-yellow-800 bg-yellow-50 dark:bg-yellow-950/30">
             <CardContent className="py-4">
               <div className="flex items-center gap-3">
                 <Award className="h-6 w-6 text-yellow-600" />
@@ -643,7 +643,7 @@ const FundedDeals = () => {
                     <ScrollArea className="h-[300px]">
                       <div className="space-y-3">
                         {recentDeals.map((deal) => (
-                          <div key={deal.id} className="flex items-center justify-between p-3 rounded-lg bg-green-50 border border-green-200">
+                          <div key={deal.id} className="flex items-center justify-between p-3 rounded-lg bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-800">
                             <div>
                               <p className="font-medium text-green-800">{deal.client_name}</p>
                               <p className="text-sm text-green-600">{deal.business_name}</p>
@@ -749,10 +749,10 @@ const FundedDeals = () => {
               <CardHeader><CardTitle>Collections Summary</CardTitle></CardHeader>
               <CardContent>
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-                  <div className="p-4 rounded-lg bg-blue-50"><p className="text-sm text-blue-600">Auto-Cleared Today</p><p className="text-2xl font-bold text-blue-700">{collectionsQueue.filter(q => q.status === 'cleared').length}</p></div>
+                  <div className="p-4 rounded-lg bg-blue-50 dark:bg-blue-950/40"><p className="text-sm text-blue-600 dark:text-blue-400">Auto-Cleared Today</p><p className="text-2xl font-bold text-blue-700 dark:text-blue-300">{collectionsQueue.filter(q => q.status === 'cleared').length}</p></div>
                   <div className="p-4 rounded-lg bg-red-50"><p className="text-sm text-red-600">Payments Overdue</p><p className="text-2xl font-bold text-red-700">{collectionsQueue.filter(q => q.days_diff < 0).length}</p></div>
-                  <div className="p-4 rounded-lg bg-yellow-50"><p className="text-sm text-yellow-600">Due Today</p><p className="text-2xl font-bold text-yellow-700">{collectionsQueue.filter(q => q.days_diff === 0).length}</p></div>
-                  <div className="p-4 rounded-lg bg-green-50"><p className="text-sm text-green-600">50% Milestones</p><p className="text-2xl font-bold text-green-700">{milestones.length}</p></div>
+                  <div className="p-4 rounded-lg bg-yellow-50 dark:bg-yellow-950/40"><p className="text-sm text-yellow-600 dark:text-yellow-400">Due Today</p><p className="text-2xl font-bold text-yellow-700 dark:text-yellow-300">{collectionsQueue.filter(q => q.days_diff === 0).length}</p></div>
+                  <div className="p-4 rounded-lg bg-green-50 dark:bg-green-950/40"><p className="text-sm text-green-600 dark:text-green-400">50% Milestones</p><p className="text-2xl font-bold text-green-700 dark:text-green-300">{milestones.length}</p></div>
                 </div>
                 <h3 className="font-medium mb-3">Action Required</h3>
                 {collectionsQueue.length === 0 ? (

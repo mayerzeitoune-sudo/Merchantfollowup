@@ -36,7 +36,7 @@ import {
 import GlobalSearch from './GlobalSearch';
 import NotificationBell from './NotificationBell';
 import PhoneDialer from './PhoneDialer';
-import { creditsApi } from '../lib/api';
+import { creditsApi, messagesApi } from '../lib/api';
 import { useTheme } from '../context/ThemeContext';
 import { Sun, Moon } from 'lucide-react';
 
@@ -74,6 +74,7 @@ const navItems = [
 const DashboardLayout = ({ children }) => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [creditBalance, setCreditBalance] = useState(null);
+  const [unreadCount, setUnreadCount] = useState(0);
   const location = useLocation();
   const navigate = useNavigate();
   const { user, logout, isImpersonating, impersonator, stopImpersonation } = useAuth();
@@ -84,10 +85,24 @@ const DashboardLayout = ({ children }) => {
   useEffect(() => {
     if (user) {
       creditsApi.getBalance().then(res => setCreditBalance(res.data?.balance ?? 0)).catch(() => {});
+      // Fetch unread count immediately
+      messagesApi.getUnread().then(res => setUnreadCount(res.data?.count || 0)).catch(() => {});
     }
     const handler = (e) => setCreditBalance(e.detail?.balance ?? 0);
     window.addEventListener('credits-updated', handler);
     return () => window.removeEventListener('credits-updated', handler);
+  }, [user]);
+
+  // Poll for unread messages every 15 seconds
+  useEffect(() => {
+    if (!user) return;
+    const interval = setInterval(() => {
+      messagesApi.getUnread().then(res => {
+        const count = res.data?.count || 0;
+        setUnreadCount(count);
+      }).catch(() => {});
+    }, 15000);
+    return () => clearInterval(interval);
   }, [user]);
 
   const handleLogout = () => {
@@ -247,7 +262,13 @@ const DashboardLayout = ({ children }) => {
                 >
                   <Icon className="h-5 w-5" />
                   {item.label}
-                  {item.badge && !isActive && (
+                  {/* Unread message badge for Inbox */}
+                  {item.path === '/inbox' && unreadCount > 0 && (
+                    <span className="ml-auto flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full bg-red-500 text-white text-[10px] font-bold animate-pulse" data-testid="inbox-unread-badge">
+                      {unreadCount > 99 ? '99+' : unreadCount}
+                    </span>
+                  )}
+                  {item.badge && !isActive && item.path !== '/inbox' && (
                     <Badge className="ml-auto bg-orange-500 text-white text-[10px] px-1.5 py-0">
                       {item.badge}
                     </Badge>
