@@ -5044,6 +5044,75 @@ except Exception as e:
 
 # ============== CALLING FEATURE ==============
 
+
+@api_router.get("/inbox/threads")
+async def get_inbox_threads(current_user: dict = Depends(get_current_user)):
+    """
+    Get inbox threads: one entry per client, sorted by latest message activity.
+    Returns client info + last_message_at + unread_count.
+    """
+    accessible_ids = await get_accessible_user_ids(current_user)
+
+    # Aggregate conversations grouped by client_id
+    pipeline = [
+        {"$match": {"user_id": {"$in": accessible_ids}, "client_id": {"$exists": True, "$ne": None}}},
+        {"$sort": {"timestamp": -1}},
+        {"$group": {
+            "_id": "$client_id",
+            "last_message_at": {"$first": "$timestamp"},
+            "last_message_content": {"$first": "$content"},
+            "last_message_direction": {"$first": "$direction"},
+            "unread_count": {
+                "$sum": {
+                    "$cond": [
+                        {"$and": [
+                            {"$eq": ["$direction", "inbound"]},
+                            {"$or": [
+                                {"$eq": ["$read", False]},
+                                {"$not": {"$ifNull": ["$read", False]}}
+                            ]}
+                        ]},
+                        1,
+                        0
+                    ]
+                }
+            }
+        }},
+        {"$sort": {"last_message_at": -1}},
+        {"$limit": 200}
+    ]
+
+    threads_raw = await db.conversations.aggregate(pipeline).to_list(200)
+
+    # Build client lookup
+    client_ids = [t["_id"] for t in threads_raw if t["_id"]]
+    clients_docs = await db.clients.find(
+        {"id": {"$in": client_ids}},
+        {"_id": 0, "id": 1, "name": 1, "phone": 1, "company": 1, "pipeline_stage": 1, "updated_at": 1}
+    ).to_list(500)
+    clients_map = {c["id"]: c for c in clients_docs}
+
+    threads = []
+    for t in threads_raw:
+        cid = t["_id"]
+        c = clients_map.get(cid)
+        if not c:
+            continue
+        threads.append({
+            "client_id": cid,
+            "client_name": c.get("name", "Unknown"),
+            "client_phone": c.get("phone", ""),
+            "client_company": c.get("company", ""),
+            "pipeline_stage": c.get("pipeline_stage", "new"),
+            "last_message_at": t.get("last_message_at"),
+            "last_message_content": (t.get("last_message_content") or "")[:80],
+            "last_message_direction": t.get("last_message_direction"),
+            "unread_count": t.get("unread_count", 0),
+        })
+
+    return {"threads": threads}
+
+
 @api_router.get("/messages/unread")
 async def get_unread_messages(current_user: dict = Depends(get_current_user)):
     """Get unread inbound messages"""

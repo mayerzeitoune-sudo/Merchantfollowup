@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import DashboardLayout from '../components/DashboardLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
@@ -7,436 +7,407 @@ import { Input } from '../components/ui/input';
 import { Badge } from '../components/ui/badge';
 import { Textarea } from '../components/ui/textarea';
 import { ScrollArea } from '../components/ui/scroll-area';
-import { Tabs, TabsList, TabsTrigger } from '../components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
 import { Label } from '../components/ui/label';
 import { 
-  Search, 
-  Inbox as InboxIcon,
-  Send,
-  Archive,
-  Clock,
-  User,
-  Phone,
-  MessageSquare,
-  RefreshCw,
-  CheckCheck,
-  ArrowLeft,
-  ChevronRight,
-  Smartphone,
-  Zap,
-  Filter,
-  MoreVertical,
-  ExternalLink,
-  Sparkles,
-  Plus
+  Search, Inbox as InboxIcon, Send, Clock, User, Phone, MessageSquare,
+  RefreshCw, CheckCheck, ArrowLeft, Smartphone, Zap, MoreVertical,
+  ExternalLink, Sparkles, Plus, Check, AlertTriangle
 } from 'lucide-react';
 import { clientsApi, contactsApi, phoneNumbersApi, templatesApi, enhancedCampaignsApi, messagesApi } from '../lib/api';
 import { toast } from 'sonner';
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-  DialogFooter
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter
 } from '../components/ui/dialog';
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
+  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger
 } from '../components/ui/dropdown-menu';
-
-const PIPELINE_STAGES = [
-  { value: "new_lead", label: "New Lead", color: "bg-blue-100 text-blue-700" },
-  { value: "interested", label: "Interested", color: "bg-cyan-100 text-cyan-700" },
-  { value: "application_sent", label: "Application Sent", color: "bg-indigo-100 text-indigo-700" },
-  { value: "docs_submitted", label: "Docs Submitted", color: "bg-orange-100 text-orange-700" },
-  { value: "approved", label: "Approved", color: "bg-emerald-100 text-emerald-700" },
-  { value: "funded", label: "Funded", color: "bg-green-100 text-green-800" },
-  { value: "dead", label: "Dead", color: "bg-red-100 text-red-700" },
-  { value: "future", label: "Future", color: "bg-gray-100 text-gray-700" },
-];
-
-const getStageInfo = (stage) => {
-  return PIPELINE_STAGES.find(s => s.value === stage) || PIPELINE_STAGES[0];
-};
+import { useAuth } from '../context/AuthContext';
 
 const Inbox = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
+  const { user } = useAuth();
   const messagesEndRef = useRef(null);
-  
-  // State
+
+  // Core state
   const [loading, setLoading] = useState(true);
-  const [clients, setClients] = useState([]);
+  const [threads, setThreads] = useState([]);
+  const [allClients, setAllClients] = useState([]);
   const [selectedClient, setSelectedClient] = useState(null);
   const [messages, setMessages] = useState([]);
-  const [conversationChains, setConversationChains] = useState([]);
-  const [activeChain, setActiveChain] = useState('default');
-  const [search, setSearch] = useState('');
-  const [stageFilter, setStageFilter] = useState('all');
   const [replyText, setReplyText] = useState('');
   const [sending, setSending] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
   const [ownedNumbers, setOwnedNumbers] = useState([]);
+  const [selectedFromNumber, setSelectedFromNumber] = useState('');
   const [templates, setTemplates] = useState([]);
-  const [selectedFromNumber, setSelectedFromNumber] = useState('default');
+
+  // Conversation chains
+  const [conversationChains, setConversationChains] = useState([]);
+  const [activeChain, setActiveChain] = useState(null);
+
+  // Mismatch modal
+  const [mismatchModal, setMismatchModal] = useState(null);
+  const [pendingSend, setPendingSend] = useState(null);
+
+  // Area code popup & campaign popup
+  const [areCodePopup, setAreaCodePopup] = useState(null);
   const [campaignPopup, setCampaignPopup] = useState(null);
-  const [unreadClientIds, setUnreadClientIds] = useState(new Set()); // { clientId, clientName, campaigns }
-  const [areCodePopup, setAreaCodePopup] = useState(null); // { areaCode, clientName }
 
-  useEffect(() => {
-    fetchData();
+  const scrollToBottom = useCallback(() => {
+    setTimeout(() => messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' }), 100);
   }, []);
 
-  // Filter clients when stageFilter changes
-  useEffect(() => {
-    // Re-filter is handled in filteredClients computed value
-  }, [stageFilter]);
-
-  useEffect(() => {
-    const clientId = searchParams.get('client');
-    if (clientId && clients.length > 0) {
-      const client = clients.find(c => c.id === clientId);
-      if (client) {
-        handleSelectClient(client);
-      }
-    }
-  }, [searchParams, clients]);
-
-  useEffect(() => {
-    scrollToBottom();
-  }, [messages]);
-
-  // Poll for new unread messages every 10 seconds
-  useEffect(() => {
-    const interval = setInterval(async () => {
-      try {
-        const unreadRes = await messagesApi.getUnread();
-        const ids = new Set((unreadRes.data?.messages || []).map(m => m.client_id).filter(Boolean));
-        setUnreadClientIds(ids);
-      } catch (e) { /* silent */ }
-    }, 10000);
-    return () => clearInterval(interval);
-  }, []);
-
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  const formatTime = (ts) => {
+    if (!ts) return '';
+    const d = new Date(ts);
+    const now = new Date();
+    const diff = now - d;
+    if (diff < 60000) return 'Just now';
+    if (diff < 3600000) return `${Math.floor(diff / 60000)}m ago`;
+    if (diff < 86400000) return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    if (diff < 604800000) return d.toLocaleDateString([], { weekday: 'short', hour: '2-digit', minute: '2-digit' });
+    return d.toLocaleDateString([], { month: 'short', day: 'numeric' });
   };
 
-  const fetchData = async () => {
+  const getStageInfo = (stage) => {
+    const stages = {
+      new: { label: 'New', color: 'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300' },
+      contacted: { label: 'Contacted', color: 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-300' },
+      negotiating: { label: 'Negotiating', color: 'bg-purple-100 text-purple-700 dark:bg-purple-900 dark:text-purple-300' },
+      closed: { label: 'Closed', color: 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300' },
+      lost: { label: 'Lost', color: 'bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300' },
+    };
+    return stages[stage] || stages.new;
+  };
+
+  // ─── Data Loading ─────────────────────────────────────────
+  const fetchData = useCallback(async () => {
     try {
-      const [clientsRes, numbersRes, templatesRes] = await Promise.all([
-        clientsApi.getAll(), // Get all clients, filter on frontend
+      const [threadsRes, clientsRes, numbersRes, templatesRes] = await Promise.all([
+        messagesApi.getInboxThreads(),
+        clientsApi.getAll(),
         phoneNumbersApi.getOwned(),
-        templatesApi.getAll()
+        templatesApi.getAll().catch(() => ({ data: [] })),
       ]);
-      
-      setClients(clientsRes.data || []);
+
+      const threadData = threadsRes.data?.threads || [];
+      setThreads(threadData);
+
+      const clientData = clientsRes.data || [];
+      setAllClients(clientData);
+
       const numbers = numbersRes.data || [];
       setOwnedNumbers(numbers);
-      // Set default from number — only from live Twilio numbers
       const liveNumbers = numbers.filter(n => n.twilio_purchased);
       const defaultNum = liveNumbers.find(n => n.is_default);
-      if (defaultNum) {
-        setSelectedFromNumber(defaultNum.phone_number);
-      } else if (liveNumbers.length > 0) {
-        setSelectedFromNumber(liveNumbers[0].phone_number);
+      if (!selectedFromNumber) {
+        setSelectedFromNumber(defaultNum?.phone_number || liveNumbers[0]?.phone_number || '');
       }
+
       setTemplates(templatesRes.data || []);
-      
-      // Fetch unread message client IDs
-      try {
-        const unreadRes = await messagesApi.getUnread();
-        const ids = new Set((unreadRes.data?.messages || []).map(m => m.client_id).filter(Boolean));
-        setUnreadClientIds(ids);
-      } catch (e) { /* silent */ }
     } catch (error) {
       toast.error('Failed to fetch data');
     } finally {
       setLoading(false);
     }
-  };
+  }, [selectedFromNumber]);
 
-  const handleSelectClient = async (client) => {
-    setSelectedClient(client);
-    setMessages([]);
-    
-    try {
-      // Fetch conversation chains
-      const chainsRes = await contactsApi.getChains(client.id);
-      const chains = chainsRes.data.chains || [];
-      setConversationChains(chains);
-      
-      // Set active chain
-      const firstChain = chains.length > 0 ? chains[0].from_number : 'default';
-      setActiveChain(firstChain);
-      
-      // Check if we have a number matching the client's area code
-      const clientPhone = client.phone?.replace(/\D/g, '') || '';
-      const clientAreaCode = clientPhone.length >= 10 ? clientPhone.slice(clientPhone.length === 11 ? 1 : 0, clientPhone.length === 11 ? 4 : 3) : '';
-      if (clientAreaCode && ownedNumbers.length > 0) {
-        const hasMatchingNumber = ownedNumbers.some(n => {
-          const numDigits = n.phone_number.replace(/\D/g, '');
-          const numAC = numDigits.length >= 10 ? numDigits.slice(numDigits.length === 11 ? 1 : 0, numDigits.length === 11 ? 4 : 3) : '';
-          return numAC === clientAreaCode;
-        });
-        if (!hasMatchingNumber) {
-          setAreaCodePopup({ areaCode: clientAreaCode, clientName: client.name });
-        }
-      }
-      
-      // Fetch messages
-      await fetchMessages(client.id, firstChain);
-    } catch (error) {
-      console.error('Failed to fetch conversation:', error);
-      setConversationChains([]);
-      setMessages([]);
-    }
-  };
+  useEffect(() => { fetchData(); }, []);
 
-  const fetchMessages = async (clientId, fromNumber) => {
+  // Poll threads every 8 seconds for real-time ordering
+  useEffect(() => {
+    const interval = setInterval(async () => {
+      try {
+        const res = await messagesApi.getInboxThreads();
+        setThreads(res.data?.threads || []);
+      } catch (e) { /* silent */ }
+    }, 8000);
+    return () => clearInterval(interval);
+  }, []);
+
+  useEffect(() => { scrollToBottom(); }, [messages, scrollToBottom]);
+
+  // ─── Merge threads with clients for complete display ──────
+  const getDisplayList = useCallback(() => {
+    const threadMap = new Map();
+    threads.forEach(t => threadMap.set(t.client_id, t));
+
+    // Build ordered list: threads first (sorted by last_message_at DESC), then unthreaded clients
+    const threaded = threads.map(t => {
+      const client = allClients.find(c => c.id === t.client_id);
+      return {
+        ...client,
+        id: t.client_id,
+        name: t.client_name || client?.name || 'Unknown',
+        phone: t.client_phone || client?.phone || '',
+        company: t.client_company || client?.company || '',
+        pipeline_stage: t.pipeline_stage || client?.pipeline_stage || 'new',
+        last_message_at: t.last_message_at,
+        last_message_content: t.last_message_content,
+        last_message_direction: t.last_message_direction,
+        unread_count: t.unread_count || 0,
+      };
+    });
+
+    // Clients without any threads
+    const threadedIds = new Set(threads.map(t => t.client_id));
+    const unthreaded = allClients
+      .filter(c => !threadedIds.has(c.id))
+      .map(c => ({ ...c, last_message_at: null, unread_count: 0 }));
+
+    // Filter by search
+    const all = [...threaded, ...unthreaded];
+    if (!searchQuery) return all;
+    const q = searchQuery.toLowerCase();
+    return all.filter(c =>
+      (c.name || '').toLowerCase().includes(q) ||
+      (c.phone || '').includes(q) ||
+      (c.company || '').toLowerCase().includes(q)
+    );
+  }, [threads, allClients, searchQuery]);
+
+  const displayClients = getDisplayList();
+
+  // ─── Conversation Loading ─────────────────────────────────
+  const loadConversation = useCallback(async (clientId, fromNumber) => {
     try {
       const response = await contactsApi.getConversation(clientId, fromNumber === 'default' ? null : fromNumber);
       const msgs = response.data.messages || [];
       setMessages(msgs);
-      
+
       // Mark inbound messages as read
       const unreadInbound = msgs.filter(m => m.direction === 'inbound' && !m.read);
       if (unreadInbound.length > 0) {
-        try {
-          await Promise.all(unreadInbound.map(m => messagesApi.markRead(m.id)));
-        } catch (e) { /* silent */ }
+        await Promise.all(unreadInbound.map(m => messagesApi.markRead(m.id))).catch(() => {});
+        // Refresh threads to update unread counts (without full reload)
+        messagesApi.getInboxThreads().then(res => setThreads(res.data?.threads || [])).catch(() => {});
       }
-      
-      // Check if client has incoming messages and is in an active campaign
-      const hasIncoming = msgs.some(m => m.direction === 'inbound');
-      if (hasIncoming) {
-        try {
-          const campaignsRes = await enhancedCampaignsApi.getClientActiveCampaigns(clientId);
-          if (campaignsRes.data && campaignsRes.data.length > 0) {
-            const client = clients.find(c => c.id === clientId);
-            setCampaignPopup({
-              clientId,
-              clientName: client?.name || 'Client',
-              campaigns: campaignsRes.data
-            });
-          }
-        } catch (e) { /* silent */ }
+
+      if (response.data.chains) {
+        setConversationChains(response.data.chains);
       }
     } catch (error) {
-      console.error('Failed to fetch messages:', error);
-      setMessages([]);
+      toast.error('Failed to load conversation');
     }
-  };
+  }, []);
 
-  const handleSendReply = async () => {
-    if (!replyText.trim() || !selectedClient) return;
-    
+  const handleSelectClient = useCallback((client) => {
+    setSelectedClient(client);
+    setActiveChain(null);
+    loadConversation(client.id);
+
+    // Check area code match
+    if (client.phone && selectedFromNumber) {
+      const clientArea = client.phone.replace(/\D/g, '').slice(-10, -7);
+      const ownedAreas = ownedNumbers.filter(n => n.twilio_purchased).map(n => n.phone_number.replace(/\D/g, '').slice(-10, -7));
+      if (clientArea && !ownedAreas.includes(clientArea)) {
+        setAreaCodePopup({ areaCode: clientArea, clientName: client.name });
+      }
+    }
+  }, [loadConversation, selectedFromNumber, ownedNumbers]);
+
+  const handleChainSelect = useCallback((fromNumber) => {
+    setActiveChain(fromNumber);
+    if (selectedClient) {
+      loadConversation(selectedClient.id, fromNumber);
+    }
+  }, [selectedClient, loadConversation]);
+
+  // ─── Send Logic with Mismatch Check ──────────────────────
+  const executeSend = useCallback(async (message, fromNumber) => {
+    if (!selectedClient || !message.trim()) return;
     setSending(true);
     try {
-      const fromNumber = selectedFromNumber === 'default' ? null : selectedFromNumber;
       const res = await contactsApi.sendSms(selectedClient.id, {
-        message: replyText,
+        message: message.trim(),
         from_number: fromNumber
       });
       const data = res.data || {};
       if (data.status === 'failed' || data.error) {
         toast.error(`SMS failed: ${data.error || 'Unknown error'}`, { duration: 6000 });
-      } else if (data.status === 'queued' || data.status === 'sent' || data.twilio_sid) {
-        toast.success('Message sent!');
       } else {
-        toast.success('Message queued');
+        toast.success('Message sent!');
       }
       setReplyText('');
-      
-      // Refresh messages
-      await fetchMessages(selectedClient.id, activeChain);
-      
-      // Refresh chains
-      const chainsRes = await contactsApi.getChains(selectedClient.id);
-      setConversationChains(chainsRes.data.chains || []);
+      loadConversation(selectedClient.id, activeChain);
+      // Refresh threads for reordering
+      messagesApi.getInboxThreads().then(r => setThreads(r.data?.threads || [])).catch(() => {});
     } catch (error) {
-      toast.error(error.response?.data?.detail || 'Failed to send message');
+      const detail = error.response?.data?.detail || 'Failed to send message';
+      toast.error(detail, { duration: 6000 });
     } finally {
       setSending(false);
     }
-  };
+  }, [selectedClient, activeChain, loadConversation]);
 
-  const handleSendTemplate = async (template) => {
-    if (!selectedClient) return;
-    
-    setSending(true);
-    try {
-      const variables = {
-        client_name: selectedClient.name,
-        client_company: selectedClient.company || '',
-        client_balance: selectedClient.balance?.toString() || '0'
+  const handleSendReply = useCallback(() => {
+    if (!replyText.trim() || !selectedFromNumber || selectedFromNumber === 'default') {
+      toast.error('Select a Twilio number to send from');
+      return;
+    }
+
+    // Check for number mismatch
+    const viewingNumber = activeChain && activeChain !== 'default' ? activeChain : null;
+    if (viewingNumber && viewingNumber !== selectedFromNumber) {
+      const fmt = (n) => {
+        const d = n.replace(/\D/g, '').slice(-10);
+        return d.length === 10 ? `${d.slice(0,3)}-${d.slice(3,6)}-${d.slice(6)}` : n;
       };
-      
-      const fromNumber = selectedFromNumber === 'default' ? null : selectedFromNumber;
-      await templatesApi.sendToContact(selectedClient.id, template.id, variables, fromNumber);
-      toast.success('Template sent!');
-      
-      // Refresh messages
-      await fetchMessages(selectedClient.id, activeChain);
-      
-      // Refresh chains
-      const chainsRes = await contactsApi.getChains(selectedClient.id);
-      setConversationChains(chainsRes.data.chains || []);
-    } catch (error) {
-      toast.error('Failed to send template');
-    } finally {
-      setSending(false);
+      setMismatchModal({ viewing: fmt(viewingNumber), sending: fmt(selectedFromNumber), viewingRaw: viewingNumber, sendingRaw: selectedFromNumber });
+      setPendingSend(replyText);
+      return;
     }
-  };
 
-  const handleChainSelect = async (fromNumber) => {
-    setActiveChain(fromNumber);
+    executeSend(replyText, selectedFromNumber);
+  }, [replyText, selectedFromNumber, activeChain, executeSend]);
+
+  const handleMismatchConfirm = useCallback(() => {
+    if (pendingSend && mismatchModal) {
+      executeSend(pendingSend, mismatchModal.sendingRaw);
+    }
+    setMismatchModal(null);
+    setPendingSend(null);
+  }, [pendingSend, mismatchModal, executeSend]);
+
+  const handleMismatchChangeNumber = useCallback(() => {
+    setMismatchModal(null);
+    setPendingSend(null);
+  }, []);
+
+  const handleSendTemplate = useCallback(async (template) => {
+    if (!selectedClient || !selectedFromNumber || selectedFromNumber === 'default') return;
+    let msg = template.content;
+    msg = msg.replace(/{name}/g, selectedClient.name || '');
+    msg = msg.replace(/{company}/g, selectedClient.company || '');
+    msg = msg.replace(/{phone}/g, selectedClient.phone || '');
+    executeSend(msg, selectedFromNumber);
+  }, [selectedClient, selectedFromNumber, executeSend]);
+
+  const handleRefresh = useCallback(async () => {
+    setLoading(true);
+    await fetchData();
     if (selectedClient) {
-      await fetchMessages(selectedClient.id, fromNumber);
+      loadConversation(selectedClient.id, activeChain);
     }
-  };
+    setLoading(false);
+  }, [fetchData, selectedClient, activeChain, loadConversation]);
 
-  const formatTime = (timestamp) => {
-    if (!timestamp) return '';
-    const date = new Date(timestamp);
-    const now = new Date();
-    const diff = now - date;
-    
-    if (diff < 86400000) {
-      return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-    } else if (diff < 604800000) {
-      return date.toLocaleDateString([], { weekday: 'short' });
-    } else {
-      return date.toLocaleDateString([], { month: 'short', day: 'numeric' });
-    }
-  };
+  if (loading) {
+    return (
+      <DashboardLayout>
+        <div className="flex items-center justify-center h-64">
+          <RefreshCw className="h-8 w-8 animate-spin text-muted-foreground" />
+        </div>
+      </DashboardLayout>
+    );
+  }
 
-  const filteredClients = clients.filter(client => {
-    const matchesSearch = client.name?.toLowerCase().includes(search.toLowerCase()) ||
-                         client.phone?.includes(search);
-    const matchesStage = stageFilter === 'all' || client.pipeline_stage === stageFilter;
-    return matchesSearch && matchesStage;
-  });
-
-  // Sort by most recent activity (you could enhance this with actual last message time)
-  const sortedClients = [...filteredClients].sort((a, b) => {
-    return new Date(b.updated_at || 0) - new Date(a.updated_at || 0);
-  });
+  const liveNumbers = ownedNumbers.filter(n => n.twilio_purchased);
 
   return (
     <DashboardLayout>
-      <div className="h-[calc(100vh-120px)] flex flex-col" data-testid="inbox-page">
+      <div className="space-y-4" data-testid="inbox-page">
         {/* Header */}
-        <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-bold font-['Outfit']">Inbox</h1>
-            <p className="text-muted-foreground">Manage all your client conversations</p>
+            <h1 className="text-2xl font-bold font-['Outfit']" data-testid="inbox-title">Inbox</h1>
+            <p className="text-sm text-muted-foreground">
+              {threads.filter(t => t.unread_count > 0).length > 0
+                ? `${threads.reduce((s, t) => s + t.unread_count, 0)} unread messages`
+                : 'All caught up'}
+            </p>
           </div>
-          <Button variant="outline" onClick={fetchData} data-testid="refresh-inbox-btn">
-            <RefreshCw className="h-4 w-4 mr-2" />
-            Refresh
+          <Button variant="outline" size="sm" onClick={handleRefresh} data-testid="inbox-refresh">
+            <RefreshCw className="h-4 w-4 mr-2" /> Refresh
           </Button>
         </div>
 
-        {/* Main Content - Split View */}
-        <div className="flex-1 flex gap-4 min-h-0 overflow-hidden">
-          {/* Left Panel - Conversation List */}
-          <Card className="w-full max-w-sm flex flex-col shrink-0">
-            <CardHeader className="pb-3 space-y-3 shrink-0">
-              {/* Search */}
+        {/* Main Layout */}
+        <div className="flex gap-4 h-[calc(100vh-220px)]">
+          {/* Left Panel - Thread List */}
+          <Card className={`w-[380px] shrink-0 flex flex-col ${selectedClient ? 'hidden md:flex' : 'flex'}`}>
+            <CardHeader className="pb-3 shrink-0">
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
                   placeholder="Search conversations..."
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  className="pl-10"
+                  className="pl-9"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
                   data-testid="inbox-search"
                 />
               </div>
-              
-              {/* Stage Filter */}
-              <Select value={stageFilter} onValueChange={setStageFilter}>
-                <SelectTrigger className="w-full" data-testid="inbox-stage-filter">
-                  <Filter className="h-4 w-4 mr-2" />
-                  <SelectValue placeholder="Filter by stage" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Stages</SelectItem>
-                  {PIPELINE_STAGES.map((stage) => (
-                    <SelectItem key={stage.value} value={stage.value}>
-                      {stage.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
             </CardHeader>
-
             <CardContent className="p-0 flex-1 overflow-hidden">
               <ScrollArea className="h-full">
-                {loading ? (
-                  <div className="flex items-center justify-center py-12">
-                    <div className="h-6 w-6 border-2 border-primary border-t-transparent rounded-full animate-spin" />
-                  </div>
-                ) : sortedClients.length === 0 ? (
-                  <div className="text-center py-12 text-muted-foreground">
-                    <InboxIcon className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                    <p>No conversations found</p>
+                {displayClients.length === 0 ? (
+                  <div className="p-8 text-center text-muted-foreground">
+                    <MessageSquare className="h-10 w-10 mx-auto mb-3 opacity-40" />
+                    <p className="text-sm font-medium">No conversations</p>
                   </div>
                 ) : (
-                  <div className="divide-y">
-                    {sortedClients.map((client) => {
-                      const stageInfo = getStageInfo(client.pipeline_stage);
-                      const isSelected = selectedClient?.id === client.id;
-                      const hasUnread = unreadClientIds.has(client.id);
-                      
-                      return (
-                        <div
-                          key={client.id}
-                          className={`p-4 cursor-pointer transition-all hover:bg-muted/50 ${
-                            isSelected ? 'bg-primary/5 border-l-2 border-l-primary' : ''
-                          } ${hasUnread && !isSelected ? 'bg-green-50/50 dark:bg-green-950/20' : ''}`}
-                          onClick={() => handleSelectClient(client)}
-                          data-testid={`inbox-client-${client.id}`}
-                        >
-                          <div className="flex items-start gap-3">
-                            <div className="relative">
-                              <div className="h-10 w-10 rounded-full bg-gradient-to-br from-primary/20 to-primary/10 flex items-center justify-center shrink-0">
-                                <User className="h-5 w-5 text-primary" />
-                              </div>
-                              {hasUnread && (
-                                <span className="absolute -top-0.5 -right-0.5 flex h-3.5 w-3.5" data-testid={`unread-dot-${client.id}`}>
-                                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
-                                  <span className="relative inline-flex rounded-full h-3.5 w-3.5 bg-green-500"></span>
+                  displayClients.map((client) => {
+                    const isSelected = selectedClient?.id === client.id;
+                    const hasUnread = client.unread_count > 0;
+                    return (
+                      <div
+                        key={client.id}
+                        className={`p-4 cursor-pointer transition-all border-b border-border/50 hover:bg-muted/50 ${
+                          isSelected ? 'bg-primary/5 border-l-2 border-l-primary' : ''
+                        } ${hasUnread && !isSelected ? 'bg-green-50/50 dark:bg-green-950/20' : ''}`}
+                        onClick={() => handleSelectClient(client)}
+                        data-testid={`inbox-client-${client.id}`}
+                      >
+                        <div className="flex items-start gap-3">
+                          <div className="relative">
+                            <div className="h-10 w-10 rounded-full bg-gradient-to-br from-primary/20 to-primary/10 flex items-center justify-center shrink-0">
+                              <User className="h-5 w-5 text-primary" />
+                            </div>
+                            {hasUnread && (
+                              <span className="absolute -top-0.5 -right-0.5 flex h-3.5 w-3.5" data-testid={`unread-dot-${client.id}`}>
+                                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                                <span className="relative inline-flex rounded-full h-3.5 w-3.5 bg-green-500"></span>
+                              </span>
+                            )}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center justify-between">
+                              <h3 className={`text-sm truncate ${hasUnread ? 'font-bold' : 'font-medium'}`}>
+                                {client.name}
+                              </h3>
+                              {client.last_message_at && (
+                                <span className={`text-[11px] shrink-0 ml-2 ${hasUnread ? 'text-green-600 dark:text-green-400 font-semibold' : 'text-muted-foreground'}`}>
+                                  {formatTime(client.last_message_at)}
                                 </span>
                               )}
                             </div>
-                            
-                            <div className="flex-1 min-w-0">
-                              <div className="flex items-center justify-between mb-1">
-                                <span className="font-medium truncate">{client.name}</span>
-                                {client.balance > 0 && (
-                                  <Badge variant="outline" className="text-xs ml-2 shrink-0">
-                                    ${client.balance.toLocaleString()}
-                                  </Badge>
-                                )}
-                              </div>
-                              <p className="text-sm text-muted-foreground truncate mb-2">
+                            {client.last_message_content ? (
+                              <p className={`text-xs truncate mt-0.5 ${hasUnread ? 'text-foreground font-medium' : 'text-muted-foreground'}`}>
+                                {client.last_message_direction === 'outbound' && <span className="text-muted-foreground">You: </span>}
+                                {client.last_message_content}
+                              </p>
+                            ) : (
+                              <p className="text-xs text-muted-foreground truncate mt-0.5">
                                 {client.phone}
                               </p>
-                              <Badge className={`text-xs ${stageInfo.color}`}>
-                                {stageInfo.label}
-                              </Badge>
+                            )}
+                            <div className="flex items-center gap-2 mt-1">
+                              {client.company && (
+                                <span className="text-[10px] text-muted-foreground truncate">{client.company}</span>
+                              )}
+                              {hasUnread && (
+                                <Badge className="h-4 min-w-[18px] px-1 text-[10px] bg-green-500 text-white font-bold ml-auto">
+                                  {client.unread_count}
+                                </Badge>
+                              )}
                             </div>
                           </div>
                         </div>
-                      );
-                    })}
-                  </div>
+                      </div>
+                    );
+                  })
                 )}
               </ScrollArea>
             </CardContent>
@@ -450,12 +421,7 @@ const Inbox = () => {
                 <CardHeader className="border-b pb-4 shrink-0">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
-                      <Button 
-                        variant="ghost" 
-                        size="icon" 
-                        className="md:hidden" 
-                        onClick={() => setSelectedClient(null)}
-                      >
+                      <Button variant="ghost" size="icon" className="md:hidden" onClick={() => setSelectedClient(null)}>
                         <ArrowLeft className="h-5 w-5" />
                       </Button>
                       <div className="h-12 w-12 rounded-full bg-gradient-to-br from-primary/20 to-primary/10 flex items-center justify-center">
@@ -466,9 +432,7 @@ const Inbox = () => {
                         <p className="text-sm text-muted-foreground flex items-center gap-2">
                           <Phone className="h-3 w-3" />
                           {selectedClient.phone}
-                          {selectedClient.company && (
-                            <span className="ml-2">• {selectedClient.company}</span>
-                          )}
+                          {selectedClient.company && <span className="ml-2">• {selectedClient.company}</span>}
                         </p>
                       </div>
                     </div>
@@ -478,47 +442,50 @@ const Inbox = () => {
                       </Badge>
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="icon">
-                            <MoreVertical className="h-4 w-4" />
-                          </Button>
+                          <Button variant="ghost" size="icon"><MoreVertical className="h-4 w-4" /></Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
                           <DropdownMenuItem onClick={() => navigate(`/clients/${selectedClient.id}`)}>
-                            <ExternalLink className="h-4 w-4 mr-2" />
-                            View Full Profile
+                            <ExternalLink className="h-4 w-4 mr-2" /> View Full Profile
                           </DropdownMenuItem>
                           <DropdownMenuSeparator />
                           <DropdownMenuItem onClick={() => navigate(`/pipeline`)}>
-                            <Sparkles className="h-4 w-4 mr-2" />
-                            Open Pipeline
+                            <Sparkles className="h-4 w-4 mr-2" /> Open Pipeline
                           </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
                     </div>
                   </div>
 
-                  {/* Conversation Chains - Show existing conversations */}
+                  {/* Conversation Chains with Viewing Indicator */}
                   {conversationChains.length > 0 && (
                     <div className="flex items-center gap-2 mt-4 pt-4 border-t overflow-x-auto">
-                      <span className="text-xs text-muted-foreground whitespace-nowrap">History:</span>
-                      {conversationChains.map((chain) => (
-                        <Button
-                          key={chain.from_number}
-                          variant={activeChain === chain.from_number ? "default" : "outline"}
-                          size="sm"
-                          className="whitespace-nowrap h-8"
-                          onClick={() => handleChainSelect(chain.from_number)}
-                          data-testid={`chain-${chain.from_number}`}
-                        >
-                          <Smartphone className="h-3 w-3 mr-1" />
-                          {chain.from_number !== 'default' ? chain.from_number : 'Default'}
-                          {chain.message_count > 0 && (
-                            <Badge variant="secondary" className="ml-2 h-5 px-1.5 text-xs">
-                              {chain.message_count}
-                            </Badge>
-                          )}
-                        </Button>
-                      ))}
+                      <span className="text-xs text-muted-foreground whitespace-nowrap">View from:</span>
+                      {conversationChains.map((chain) => {
+                        const isActive = activeChain === chain.from_number;
+                        return (
+                          <Button
+                            key={chain.from_number}
+                            variant={isActive ? "default" : "outline"}
+                            size="sm"
+                            className={`whitespace-nowrap h-8 gap-1.5 ${isActive ? 'ring-2 ring-green-500/50' : ''}`}
+                            onClick={() => handleChainSelect(chain.from_number)}
+                            data-testid={`chain-${chain.from_number}`}
+                          >
+                            {isActive && <Check className="h-3.5 w-3.5 text-green-400" />}
+                            <Smartphone className="h-3 w-3" />
+                            {chain.from_number !== 'default' ? chain.from_number : 'All'}
+                            {chain.message_count > 0 && (
+                              <Badge variant="secondary" className="ml-1 h-5 px-1.5 text-xs">
+                                {chain.message_count}
+                              </Badge>
+                            )}
+                            {isActive && (
+                              <span className="text-[9px] text-green-400 font-medium ml-0.5">Viewing</span>
+                            )}
+                          </Button>
+                        );
+                      })}
                     </div>
                   )}
                 </CardHeader>
@@ -536,25 +503,19 @@ const Inbox = () => {
                   ) : (
                     <div className="space-y-4 pb-4">
                       {messages.map((msg, index) => (
-                        <div
-                          key={index}
-                          className={`flex ${msg.direction === 'outbound' ? 'justify-end' : 'justify-start'}`}
-                        >
+                        <div key={index} className={`flex ${msg.direction === 'outbound' ? 'justify-end' : 'justify-start'}`}>
                           <div className={`max-w-[75%] ${msg.direction === 'outbound' ? 'order-2' : 'order-1'}`}>
-                            {/* Campaign badge for outbound */}
                             {msg.direction === 'outbound' && msg.campaign_name && (
                               <div className="flex justify-end mb-1">
                                 <Badge variant="secondary" className="text-[10px] px-2 py-0.5">
-                                  <Zap className="h-3 w-3 mr-1" />
-                                  {msg.campaign_name}
+                                  <Zap className="h-3 w-3 mr-1" />{msg.campaign_name}
                                 </Badge>
                               </div>
                             )}
-                            
                             <div className={`rounded-2xl px-4 py-3 ${
-                              msg.direction === 'outbound' 
-                                ? (msg.status === 'failed' || msg.status === 'undelivered' 
-                                   ? 'bg-red-600 text-white rounded-br-md' 
+                              msg.direction === 'outbound'
+                                ? (msg.status === 'failed' || msg.status === 'undelivered'
+                                   ? 'bg-red-600 text-white rounded-br-md'
                                    : 'bg-primary text-white rounded-br-md')
                                 : 'bg-muted rounded-bl-md'
                             }`}>
@@ -595,52 +556,31 @@ const Inbox = () => {
 
                 {/* Reply Input */}
                 <div className="p-4 border-t shrink-0 space-y-3">
-                  {/* Quick Templates */}
                   {templates.length > 0 && (
                     <div className="flex gap-2 overflow-x-auto pb-2">
                       {templates.slice(0, 4).map((template) => (
-                        <Button
-                          key={template.id}
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleSendTemplate(template)}
-                          disabled={sending}
-                          className="whitespace-nowrap shrink-0"
-                          data-testid={`quick-template-${template.id}`}
-                        >
-                          <Zap className="h-3 w-3 mr-1" />
-                          {template.name}
+                        <Button key={template.id} variant="outline" size="sm" onClick={() => handleSendTemplate(template)} disabled={sending} className="whitespace-nowrap shrink-0" data-testid={`quick-template-${template.id}`}>
+                          <Zap className="h-3 w-3 mr-1" />{template.name}
                         </Button>
                       ))}
                     </div>
                   )}
-                  
-                  {/* Message Input */}
+
                   <div className="flex gap-2">
                     <Textarea
                       placeholder="Type your message..."
                       value={replyText}
                       onChange={(e) => setReplyText(e.target.value)}
                       className="resize-none min-h-[80px]"
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter' && !e.shiftKey) {
-                          e.preventDefault();
-                          handleSendReply();
-                        }
-                      }}
+                      onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSendReply(); } }}
                       data-testid="inbox-reply-input"
                     />
-                    <Button
-                      onClick={handleSendReply}
-                      disabled={sending || !replyText.trim()}
-                      className="h-auto px-6"
-                      data-testid="inbox-send-btn"
-                    >
+                    <Button onClick={handleSendReply} disabled={sending || !replyText.trim()} className="h-auto px-6" data-testid="inbox-send-btn">
                       <Send className="h-4 w-4" />
                     </Button>
                   </div>
-                  
-                  {/* Phone Number Selector */}
+
+                  {/* Send From Number Selector */}
                   <div className="flex items-center gap-3">
                     <Label className="text-xs text-muted-foreground whitespace-nowrap">Send from:</Label>
                     <Select value={selectedFromNumber} onValueChange={setSelectedFromNumber}>
@@ -649,33 +589,24 @@ const Inbox = () => {
                         <SelectValue placeholder="Select a number" />
                       </SelectTrigger>
                       <SelectContent>
-                        {ownedNumbers.length === 0 ? (
-                          <SelectItem value="default">No numbers available</SelectItem>
+                        {liveNumbers.length === 0 ? (
+                          <SelectItem value="default" disabled>No live Twilio numbers — purchase one first</SelectItem>
                         ) : (
-                          ownedNumbers.filter(n => n.twilio_purchased).length === 0 ? (
-                            <SelectItem value="default" disabled>No live Twilio numbers — purchase one first</SelectItem>
-                          ) : (
-                            ownedNumbers
-                              .filter(n => n.twilio_purchased)
-                              .map((num) => (
-                                <SelectItem key={num.id || num.phone_number} value={num.phone_number}>
-                                  <div className="flex items-center gap-2">
-                                    <span className="font-mono">{num.phone_number}</span>
-                                    {num.friendly_name && num.friendly_name !== num.phone_number && (
-                                      <span className="text-muted-foreground">({num.friendly_name})</span>
-                                    )}
-                                    {num.is_default && (
-                                      <Badge className="ml-1 h-4 px-1 text-[10px] bg-orange-100 text-orange-700">Default</Badge>
-                                    )}
-                                    {num.assigned_user_name && (
-                                      <Badge variant="outline" className="ml-1 h-4 px-1 text-[10px]">
-                                        {num.assigned_user_name}
-                                      </Badge>
-                                    )}
-                                  </div>
-                                </SelectItem>
-                              ))
-                          )
+                          liveNumbers.map((num) => {
+                            const isViewing = activeChain === num.phone_number;
+                            return (
+                              <SelectItem key={num.id || num.phone_number} value={num.phone_number}>
+                                <div className="flex items-center gap-2">
+                                  {isViewing && <Check className="h-3.5 w-3.5 text-green-500 shrink-0" />}
+                                  <span className="font-mono">{num.phone_number}</span>
+                                  {isViewing && <span className="text-[10px] text-green-600 dark:text-green-400">Currently viewing</span>}
+                                  {num.assigned_user_name && (
+                                    <Badge variant="outline" className="ml-1 h-4 px-1 text-[10px]">{num.assigned_user_name}</Badge>
+                                  )}
+                                </div>
+                              </SelectItem>
+                            );
+                          })
                         )}
                       </SelectContent>
                     </Select>
@@ -695,36 +626,68 @@ const Inbox = () => {
         </div>
       </div>
 
-      {/* Area Code Purchase Suggestion Popup */}
+      {/* ─── Number Mismatch Confirmation Modal ──────────────── */}
+      <Dialog open={!!mismatchModal} onOpenChange={(o) => { if (!o) { setMismatchModal(null); setPendingSend(null); } }}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="font-['Outfit'] flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5 text-amber-500" />
+              Different Send Number
+            </DialogTitle>
+            <DialogDescription>
+              Please confirm you'd like to send from a different number than the one you're viewing.
+            </DialogDescription>
+          </DialogHeader>
+          {mismatchModal && (
+            <div className="space-y-3 py-2">
+              <div className="grid grid-cols-2 gap-3">
+                <div className="p-3 rounded-lg border bg-muted/50 text-center">
+                  <p className="text-[10px] text-muted-foreground uppercase tracking-wider font-semibold mb-1">Viewing through</p>
+                  <p className="font-mono font-bold text-sm">{mismatchModal.viewing}</p>
+                </div>
+                <div className="p-3 rounded-lg border-2 border-amber-300 dark:border-amber-700 bg-amber-50 dark:bg-amber-950/30 text-center">
+                  <p className="text-[10px] text-amber-600 dark:text-amber-400 uppercase tracking-wider font-semibold mb-1">Sending from</p>
+                  <p className="font-mono font-bold text-sm">{mismatchModal.sending}</p>
+                </div>
+              </div>
+              <p className="text-xs text-muted-foreground text-center">
+                The recipient will see your message as coming from <strong>{mismatchModal.sending}</strong>
+              </p>
+            </div>
+          )}
+          <DialogFooter className="flex-col sm:flex-row gap-2">
+            <Button variant="outline" onClick={() => { setMismatchModal(null); setPendingSend(null); }} data-testid="mismatch-cancel-btn">
+              Cancel
+            </Button>
+            <Button variant="outline" onClick={handleMismatchChangeNumber} data-testid="mismatch-change-btn">
+              <Smartphone className="h-4 w-4 mr-2" /> Change Number
+            </Button>
+            <Button onClick={handleMismatchConfirm} className="bg-amber-600 hover:bg-amber-700 text-white" data-testid="mismatch-confirm-btn">
+              <Send className="h-4 w-4 mr-2" /> Confirm Send
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Area Code Purchase Suggestion */}
       <Dialog open={!!areCodePopup} onOpenChange={(open) => !open && setAreaCodePopup(null)}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle className="font-['Outfit'] flex items-center gap-2">
-              <Smartphone className="h-5 w-5 text-blue-600" />
-              Local Number Suggestion
+              <Smartphone className="h-5 w-5 text-blue-600" /> Local Number Suggestion
             </DialogTitle>
             <DialogDescription>
-              You don't have a phone number with area code ({areCodePopup?.areaCode}) matching {areCodePopup?.clientName}'s location. A local number can increase response rates.
+              You don't have a phone number with area code ({areCodePopup?.areaCode}) matching {areCodePopup?.clientName}'s location.
             </DialogDescription>
           </DialogHeader>
-          <div className="p-4 rounded-lg bg-blue-50 border border-blue-200 text-center">
-            <p className="font-semibold text-blue-800">Buy a ({areCodePopup?.areaCode}) number</p>
-            <p className="text-sm text-blue-600 mt-1">40 credits/number — familiar area codes get more replies</p>
+          <div className="p-4 rounded-lg bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800 text-center">
+            <p className="font-semibold text-blue-800 dark:text-blue-200">Buy a ({areCodePopup?.areaCode}) number</p>
+            <p className="text-sm text-blue-600 dark:text-blue-400 mt-1">40 credits/number — familiar area codes get more replies</p>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setAreaCodePopup(null)}>
-              Not Now
-            </Button>
-            <Button 
-              onClick={() => {
-                const ac = areCodePopup?.areaCode;
-                setAreaCodePopup(null);
-                window.location.href = `/phone-numbers?area=${ac || ''}`;
-              }}
-              data-testid="buy-area-code-btn"
-            >
-              <Plus className="h-4 w-4 mr-2" />
-              Buy Number
+            <Button variant="outline" onClick={() => setAreaCodePopup(null)}>Not Now</Button>
+            <Button onClick={() => { setAreaCodePopup(null); window.location.href = `/phone-numbers?area=${areCodePopup?.areaCode || ''}`; }} data-testid="buy-area-code-btn">
+              <Plus className="h-4 w-4 mr-2" /> Buy Number
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -735,11 +698,10 @@ const Inbox = () => {
         <DialogContent>
           <DialogHeader>
             <DialogTitle className="font-['Outfit'] flex items-center gap-2">
-              <MessageSquare className="h-5 w-5 text-green-600" />
-              Response Recorded
+              <MessageSquare className="h-5 w-5 text-green-600" /> Response Recorded
             </DialogTitle>
             <DialogDescription>
-              {campaignPopup?.clientName} has responded to a message. Remove them from the campaign to avoid daily texts?
+              {campaignPopup?.clientName} has responded. Remove from campaign?
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-2 py-2">
@@ -747,31 +709,20 @@ const Inbox = () => {
               <div key={c.enrollment_id} className="p-3 rounded-lg border bg-muted/30 flex items-center justify-between">
                 <div>
                   <p className="font-medium text-sm">{c.campaign_name}</p>
-                  <p className="text-xs text-muted-foreground">Step {c.current_step} of campaign</p>
+                  <p className="text-xs text-muted-foreground">Step {c.current_step}</p>
                 </div>
-                <Button
-                  size="sm"
-                  variant="destructive"
-                  onClick={async () => {
-                    try {
-                      await enhancedCampaignsApi.removeClient(c.campaign_id, campaignPopup.clientId);
-                      toast.success(`${campaignPopup.clientName} removed from campaign and tagged as Responded`);
-                      setCampaignPopup(null);
-                    } catch (error) {
-                      toast.error('Failed to remove from campaign');
-                    }
-                  }}
-                  data-testid="remove-from-campaign-btn"
-                >
-                  Remove from Campaign
-                </Button>
+                <Button size="sm" variant="destructive" onClick={async () => {
+                  try {
+                    await enhancedCampaignsApi.removeClient(c.campaign_id, campaignPopup.clientId);
+                    toast.success(`${campaignPopup.clientName} removed from campaign`);
+                    setCampaignPopup(null);
+                  } catch { toast.error('Failed to remove'); }
+                }} data-testid="remove-from-campaign-btn">Remove</Button>
               </div>
             ))}
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setCampaignPopup(null)}>
-              Keep in Campaign
-            </Button>
+            <Button variant="outline" onClick={() => setCampaignPopup(null)}>Keep in Campaign</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

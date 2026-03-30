@@ -272,7 +272,8 @@ export const notificationsApi = {
 export const messagesApi = {
   getUnread: () => axios.get(`${API}/messages/unread`),
   markRead: (messageId) => axios.put(`${API}/messages/${messageId}/read`),
-  markAllRead: () => axios.put(`${API}/messages/mark-all-read`)
+  markAllRead: () => axios.put(`${API}/messages/mark-all-read`),
+  getInboxThreads: () => axios.get(`${API}/inbox/threads`),
 };
 
 // Segments/Tags API
