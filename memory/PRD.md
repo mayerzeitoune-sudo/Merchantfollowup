@@ -1,68 +1,108 @@
-# Merchant Follow Up CRM — PRD
+# Merchant Follow Up CRM — Product Requirements Document
 
-## Product Overview
-CRM platform for merchant payment follow-ups with SMS automation, credit-based billing, and multi-org support.
+## Original Problem Statement
+Full-stack CRM for merchant follow-up with SMS (Twilio), credit-based economy, multi-org support, and role-based access control.
+
+## User Personas
+- **Org Admin**: Super admin who sees all orgs, grants credits, manages platform
+- **Admin**: Manages their own organization, buys credits, assigns numbers
+- **Agent/User**: Works within their assigned org, uses assigned phone numbers
+
+## Core Requirements
+- JWT authentication with role-based access (org_admin, admin, agent)
+- Client management with pipeline stages
+- SMS messaging via Twilio (10DLC compliant via Messaging Service SID)
+- Credit-based economy for platform features
+- Phone number purchasing and assignment
+- Dark mode support
 
 ## Architecture
-- **Backend**: FastAPI + Motor (async MongoDB)
-- **Frontend**: React + Tailwind CSS + Shadcn/UI
-- **Database**: MongoDB
-- **Integrations**: Twilio (SMS/Voice via Messaging Service), Google OAuth
+```
+/app/
+├── backend/
+│   ├── routes/
+│   │   ├── credits.py    — Credit packages, balance, purchases, grants
+│   │   ├── payments.py   — Stripe Checkout integration
+│   │   ├── sms.py        — Twilio SMS send/receive/webhook
+│   │   ├── enhanced.py   — Enhanced campaigns
+│   │   ├── gmail.py      — Gmail OAuth
+│   │   ├── organizations.py
+│   │   └── phone_blower.py
+│   ├── server.py          — Main FastAPI app (monolith ~5900 lines)
+│   └── .env               — MONGO_URL, TWILIO_*, STRIPE_API_KEY
+├── frontend/
+│   ├── src/
+│   │   ├── pages/         — Inbox, CreditShop, PhoneNumbers, etc.
+│   │   ├── components/    — DashboardLayout, UI components
+│   │   ├── context/       — AuthContext, ThemeContext
+│   │   └── lib/api.js     — API client
+└── memory/
+    └── PRD.md
+```
 
-## Auth & Roles
-- `org_admin` — Super admin across all orgs (impersonation, credit grants)
-- `admin` — Org-level admin (manages team, clients, campaigns)
-- `agent` — Individual user (sees assigned clients/numbers)
+## What's Been Implemented
 
-## Credit System
-- Platform costs in credits (1 USD = 5 credits)
-- Business metrics (deals, pipeline) in USD
-- Admin Credit Shop for purchasing packages
-- Org Admin can grant credits to any org
-- Phone number purchase: 40 credits
-- SMS send: 1 credit per message
-- org_admin without org_id cannot bypass credits
+### Session — March 30, 2026
+- **Stripe Live Integration**: Real Stripe Checkout for credit purchases using user's live keys. Backend creates checkout sessions, frontend redirects to Stripe, polls status on return, credits granted atomically with double-credit prevention. Webhook handler also processes payments.
+- **Data Isolation Overhaul (15+ endpoints)**: Fixed `update_client`, `delete_client`, `bulk_delete_clients`, `update_client_pipeline`, `phone-numbers update/delete`, `dashboard/stats`, `reminders`, `followups`, `campaigns`, `funded/stats`, `funded/deals`, `funded/analytics`, `lead_forms`, `team/stats` — all now use `get_accessible_user_ids` for proper org scoping.
+- **Duplicate Phone Number Prevention**: Purchase endpoint rejects numbers already owned by any org (HTTP 409).
+- **Inbound SMS Routing Fix**: Webhook now prefers phone number records with org_id to prevent cross-org message routing.
+- **Area Code Popup Removed**: Removed from Inbox per user request.
+- **Conversation Data Cleanup**: Fixed misrouted inbound messages attributed to wrong org.
 
-## Twilio Integration (LIVE — A2P Compliant)
-- Messaging Service SID: MGe8c2388e2bd76b308c013071f7f848a6
-- All sends route through Messaging Service for 10DLC compliance
-- New purchases auto-add to Messaging Service
-- Webhooks: /api/sms/webhook/inbound (Form data + TwiML), /api/sms/webhook/status
-- Phone search: SMS-enabled only, respects area code (no toll-free fallback)
-- Mock numbers blocked from sending with clear error
-- Status callback on all outbound messages
+### Previous Sessions (completed)
+- Twilio Live Integration (10DLC via Messaging Service SID)
+- Org Admin Credit Granting UI
+- Phone number formatting fix
+- Credit bypass fix
+- Dark mode UI fixes
+- Unread message notifications
+- Inbox smart sorting rewrite
+- Google OAuth, Privacy Policy, Terms of Service pages
+- Signup form overhaul, branding updates
+- Org admin impersonation feature
+- Billing system
 
-## Completed Features
-- [x] User auth with JWT + role-based access
-- [x] Multi-org management with impersonation
-- [x] Client management with phone formatting (fixed)
-- [x] Credit-based billing system with admin grants
-- [x] Phone number search/purchase (live Twilio, SMS-enabled filter)
-- [x] SMS sending (live, A2P compliant, delivered)
-- [x] Inbound SMS webhook (Form data, TwiML response)
-- [x] Status callback webhook
-- [x] Campaign system with trigger words
-- [x] Phone Blower auto-dialer
-- [x] Dark mode (ThemeContext) — comprehensive fix across all pages
-- [x] Privacy Policy & Terms of Service
-- [x] Message status indicators (delivered/failed/undelivered)
-- [x] Credit bypass fix (mandatory deduction for all purchases)
-- [x] Unread message notification badge (sidebar + client dots)
-- [x] Message ordering fix (chronological: oldest top, newest bottom)
+## Prioritized Backlog
+
+### P0
+- Test end-to-end Stripe purchase flow (live)
+- Continue refactoring server.py monolith
+
+### P1
+- Support Email UI on Settings page
+- Real email sending for OTPs (SendGrid/Resend integration)
+- Bulk user upload backend
+
+### P2
+- Email Inbox view
+- Auto-import leads from emails
+- Voice call functionality (Twilio)
+
+## Key DB Collections
+- `users`: id, name, email, phone, role, org_id
+- `clients`: id, name, user_id, org_id, phone, tags, pipeline_stage
+- `organizations`: id, name, owner_id, credit_balance
+- `phone_numbers`: id, phone_number, assigned_user_id, org_id, twilio_sid, twilio_purchased
+- `conversations`: id, user_id, client_id, direction, content, from_number, timestamp
+- `credit_transactions`: id, org_id, user_id, type, source, credits_delta, usd_amount
+- `payment_transactions`: id, session_id, org_id, user_id, package_id, amount_usd, credits, payment_status, status
+
+## Key API Endpoints
+- `POST /api/payments/checkout` — Create Stripe checkout session
+- `GET /api/payments/checkout/status/{session_id}` — Poll payment status
+- `POST /api/webhook/stripe` — Stripe webhook (no auth)
+- `GET /api/inbox/threads` — Org-scoped inbox threads
+- `POST /api/sms/send` — Send SMS via Twilio Messaging Service
+- `GET /api/phone-numbers/owned` — Role-scoped phone numbers
+- `GET /api/dashboard/stats` — Org-scoped dashboard stats
+
+## 3rd Party Integrations
+- **Twilio** (Live): SMS via Messaging Service SID for 10DLC compliance
+- **Stripe** (Live): Credit purchases via Checkout Sessions
+- **MongoDB**: Primary database
+- **Google OAuth**: Gmail linking (requires user Google Cloud config)
 
 ## Test Credentials
 - Org Admin: orgadmin@merchant.com / Admin123!
-- Admin: john@acmefunding.com / Password123!
-- Agent: mike@acmefunding.com / Password123!
-
-## Remaining Tasks
-### P1
-- Support Email UI on Settings page
-- A2P 10DLC registration backend helper
-- Backend for bulk user uploads
-
-### P2
-- Real-time notifications (WebSockets)
-- Email Inbox view
-- Auto-import leads from emails
-- Refactor server.py monolith into routes/
+- Admin (Acme): john@acmefunding.com / Password123!
