@@ -311,7 +311,7 @@ class PhoneNumberUpdate(BaseModel):
 class PhoneNumberResponse(BaseModel):
     model_config = ConfigDict(extra="ignore")
     id: str
-    user_id: str  # Who created/purchased it
+    user_id: str
     org_id: Optional[str] = None
     phone_number: str
     friendly_name: Optional[str] = None
@@ -321,6 +321,9 @@ class PhoneNumberResponse(BaseModel):
     assigned_user_id: Optional[str] = None
     assigned_user_name: Optional[str] = None
     monthly_cost: float = 1.00
+    credit_cost: Optional[int] = None
+    twilio_sid: Optional[str] = None
+    twilio_purchased: Optional[bool] = None
     created_at: str
 
 # Contact/Conversation Models
@@ -3411,11 +3414,17 @@ async def send_sms_to_contact(
             from twilio.rest import Client
             twilio_client = Client(twilio_sid, twilio_token)
             
-            # Normalize the to-number
-            to_phone = client["phone"]
-            if not to_phone.startswith("+"):
-                cleaned = to_phone.replace('-','').replace(' ','').replace('(','').replace(')','')
-                to_phone = f"+1{cleaned}" if len(cleaned) == 10 else f"+{cleaned}"
+            # Normalize the to-number to E.164 format
+            raw = client["phone"]
+            digits = ''.join(c for c in raw if c.isdigit())
+            if len(digits) == 10:
+                to_phone = f"+1{digits}"
+            elif len(digits) == 11 and digits.startswith('1'):
+                to_phone = f"+{digits}"
+            elif digits:
+                to_phone = f"+{digits}"
+            else:
+                raise ValueError(f"Client has no valid phone digits: {raw}")
             
             status_cb = os.environ.get('BACKEND_URL', '')
             msg = twilio_client.messages.create(

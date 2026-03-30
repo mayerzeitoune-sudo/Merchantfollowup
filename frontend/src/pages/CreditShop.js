@@ -3,11 +3,16 @@ import DashboardLayout from '../components/DashboardLayout';
 import { Card, CardContent } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import { Badge } from '../components/ui/badge';
+import { Input } from '../components/ui/input';
+import { Label } from '../components/ui/label';
+import { Textarea } from '../components/ui/textarea';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '../components/ui/dialog';
 import { ScrollArea } from '../components/ui/scroll-area';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '../components/ui/tabs';
 import {
   Coins, ShieldCheck, Zap, Crown, Sparkles, ArrowRight, Check,
-  Loader2, Clock, User, CreditCard, TrendingUp, Star
+  Loader2, Clock, CreditCard, TrendingUp, Star, Gift, Building2
 } from 'lucide-react';
 import { creditsApi } from '../lib/api';
 import { useAuth } from '../context/AuthContext';
@@ -38,6 +43,8 @@ const TIER_ACCENTS = {
 const CreditShop = () => {
   const { user } = useAuth();
   const isAdmin = ['admin', 'org_admin'].includes(user?.role);
+  const isOrgAdmin = user?.role === 'org_admin';
+
   const [packages, setPackages] = useState([]);
   const [balance, setBalance] = useState(0);
   const [history, setHistory] = useState([]);
@@ -45,6 +52,14 @@ const CreditShop = () => {
   const [purchasing, setPurchasing] = useState(false);
   const [checkoutPkg, setCheckoutPkg] = useState(null);
   const [showSuccess, setShowSuccess] = useState(null);
+
+  // Org Admin Grant state
+  const [orgs, setOrgs] = useState([]);
+  const [grantOrgId, setGrantOrgId] = useState('');
+  const [grantAmount, setGrantAmount] = useState('');
+  const [grantReason, setGrantReason] = useState('');
+  const [granting, setGranting] = useState(false);
+  const [orgsLoading, setOrgsLoading] = useState(false);
 
   useEffect(() => { loadData(); }, []);
 
@@ -59,6 +74,13 @@ const CreditShop = () => {
       setPackages(pkgRes.data || []);
       setBalance(balRes.data?.balance || 0);
       setHistory(histRes.data || []);
+
+      if (isOrgAdmin) {
+        setOrgsLoading(true);
+        const orgsRes = await creditsApi.allOrgs();
+        setOrgs(orgsRes.data || []);
+        setOrgsLoading(false);
+      }
     } catch (e) { console.error(e); }
     finally { setLoading(false); }
   };
@@ -72,12 +94,34 @@ const CreditShop = () => {
       setShowSuccess(res.data);
       setCheckoutPkg(null);
       toast.success(`${res.data.credits_added.toLocaleString()} credits added!`);
-      // Dispatch event so header updates
       window.dispatchEvent(new CustomEvent('credits-updated', { detail: { balance: res.data.new_balance } }));
       loadData();
     } catch (e) {
       toast.error(e.response?.data?.detail || 'Purchase failed');
     } finally { setPurchasing(false); }
+  };
+
+  const handleGrant = async () => {
+    if (!grantOrgId || !grantAmount || parseInt(grantAmount) <= 0) {
+      toast.error('Select an organization and enter a valid amount');
+      return;
+    }
+    setGranting(true);
+    try {
+      const res = await creditsApi.grant({
+        org_id: grantOrgId,
+        amount: parseInt(grantAmount),
+        reason: grantReason || 'Org Admin Grant',
+      });
+      toast.success(`Granted ${parseInt(grantAmount).toLocaleString()} credits to ${res.data.org_name}`);
+      setGrantAmount('');
+      setGrantReason('');
+      setGrantOrgId('');
+      // Refresh orgs list and history
+      loadData();
+    } catch (e) {
+      toast.error(e.response?.data?.detail || 'Grant failed');
+    } finally { setGranting(false); }
   };
 
   if (loading) return (
@@ -87,6 +131,8 @@ const CreditShop = () => {
       </div>
     </DashboardLayout>
   );
+
+  const selectedOrg = orgs.find(o => o.id === grantOrgId);
 
   return (
     <DashboardLayout>
@@ -113,74 +159,173 @@ const CreditShop = () => {
           </div>
         </div>
 
-        {/* Packages Grid */}
-        <div>
-          <h2 className="text-lg font-bold font-['Outfit'] mb-4">Select a Package</h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            {packages.map((pkg) => {
-              const Icon = TIER_ICONS[pkg.id] || Coins;
-              const gradientClass = TIER_COLORS[pkg.id] || 'from-zinc-700 to-zinc-800';
-              const accentClass = TIER_ACCENTS[pkg.id] || 'border-zinc-600';
-              return (
-                <Card
-                  key={pkg.id}
-                  className={`relative overflow-hidden border-2 ${accentClass} bg-gradient-to-br ${gradientClass} text-white cursor-pointer transition-all hover:scale-[1.02] hover:shadow-xl group`}
-                  onClick={() => isAdmin ? setCheckoutPkg(pkg) : null}
-                  data-testid={`package-${pkg.id}`}
-                >
-                  <CardContent className="p-5 space-y-3">
-                    {pkg.discount > 0 && (
-                      <Badge className="absolute top-3 right-3 bg-green-500/90 text-white text-[10px] font-bold">
-                        SAVE {pkg.discount}%
-                      </Badge>
-                    )}
-                    <div className="flex items-center gap-2">
-                      <div className={`h-8 w-8 rounded-lg bg-white/10 flex items-center justify-center`}>
-                        <Icon className="h-4 w-4" />
+        {/* Tabs for org_admin: Shop + Grant */}
+        {isOrgAdmin ? (
+          <Tabs defaultValue="shop" className="w-full">
+            <TabsList className="mb-6">
+              <TabsTrigger value="shop" data-testid="tab-shop">
+                <CreditCard className="h-4 w-4 mr-2" />
+                Buy Packages
+              </TabsTrigger>
+              <TabsTrigger value="grant" data-testid="tab-grant">
+                <Gift className="h-4 w-4 mr-2" />
+                Grant Credits
+              </TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="shop">
+              <PackagesGrid packages={packages} isAdmin={isAdmin} balance={balance} onSelect={setCheckoutPkg} />
+            </TabsContent>
+
+            <TabsContent value="grant">
+              <div className="space-y-6">
+                <Card className="border-2 border-amber-200 bg-amber-50/50 dark:bg-amber-950/20 dark:border-amber-800">
+                  <CardContent className="p-6 space-y-5">
+                    <div className="flex items-center gap-3">
+                      <div className="h-10 w-10 rounded-xl bg-amber-100 dark:bg-amber-900 flex items-center justify-center">
+                        <Gift className="h-5 w-5 text-amber-600" />
                       </div>
                       <div>
-                        <p className="font-bold text-sm">{pkg.name}</p>
-                        <p className="text-[10px] text-white/50 uppercase tracking-wider">{pkg.id === 'black' ? 'Elite' : 'Package'}</p>
+                        <h3 className="font-bold font-['Outfit'] text-lg">Grant Credits to Organization</h3>
+                        <p className="text-sm text-muted-foreground">Manually add credits to any org's balance</p>
                       </div>
                     </div>
-                    <div>
-                      <p className="text-3xl font-black font-mono">{pkg.credits.toLocaleString()}</p>
-                      <p className="text-xs text-white/50">credits</p>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label>Organization</Label>
+                        <Select value={grantOrgId} onValueChange={setGrantOrgId}>
+                          <SelectTrigger data-testid="grant-org-select">
+                            <Building2 className="h-4 w-4 mr-2 text-muted-foreground" />
+                            <SelectValue placeholder="Select organization..." />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {orgsLoading ? (
+                              <SelectItem value="_loading" disabled>Loading...</SelectItem>
+                            ) : orgs.length === 0 ? (
+                              <SelectItem value="_none" disabled>No organizations</SelectItem>
+                            ) : (
+                              orgs.map(org => (
+                                <SelectItem key={org.id} value={org.id}>
+                                  <div className="flex items-center gap-2">
+                                    <span className="font-medium">{org.name}</span>
+                                    <span className="text-xs text-muted-foreground">
+                                      ({org.credit_balance.toLocaleString()} cr | {org.user_count} users)
+                                    </span>
+                                  </div>
+                                </SelectItem>
+                              ))
+                            )}
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label>Credits to Grant</Label>
+                        <Input
+                          type="number"
+                          min="1"
+                          placeholder="e.g. 1000"
+                          value={grantAmount}
+                          onChange={(e) => setGrantAmount(e.target.value)}
+                          data-testid="grant-amount-input"
+                        />
+                      </div>
                     </div>
-                    <div className="border-t border-white/10 pt-2">
-                      <p className="text-lg font-bold">${pkg.usd.toLocaleString()}</p>
-                      <p className="text-[10px] text-white/40">{pkg.description}</p>
+
+                    <div className="space-y-2">
+                      <Label>Reason (optional)</Label>
+                      <Textarea
+                        placeholder="e.g. Initial setup bonus, promotional credits..."
+                        value={grantReason}
+                        onChange={(e) => setGrantReason(e.target.value)}
+                        className="resize-none h-20"
+                        data-testid="grant-reason-input"
+                      />
                     </div>
-                    {isAdmin ? (
-                      <Button
-                        className="w-full bg-white/10 hover:bg-white/20 border border-white/20 text-white text-sm font-semibold"
-                        onClick={(e) => { e.stopPropagation(); setCheckoutPkg(pkg); }}
-                        data-testid={`buy-${pkg.id}`}
-                      >
-                        Purchase <ArrowRight className="h-3.5 w-3.5 ml-1" />
-                      </Button>
-                    ) : (
-                      <Button disabled className="w-full bg-white/5 text-white/30 text-sm border border-white/10" data-testid={`buy-${pkg.id}-disabled`}>
-                        Admins Only
-                      </Button>
+
+                    {/* Preview */}
+                    {selectedOrg && grantAmount && parseInt(grantAmount) > 0 && (
+                      <div className="rounded-lg bg-white dark:bg-zinc-900 border p-4 space-y-2 text-sm">
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">Organization</span>
+                          <span className="font-bold">{selectedOrg.name}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">Current Balance</span>
+                          <span className="font-mono">{selectedOrg.credit_balance.toLocaleString()}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">Granting</span>
+                          <span className="font-mono font-bold text-green-600">+{parseInt(grantAmount).toLocaleString()}</span>
+                        </div>
+                        <div className="flex justify-between border-t pt-2">
+                          <span className="text-muted-foreground">New Balance</span>
+                          <span className="font-mono font-bold">
+                            {(selectedOrg.credit_balance + parseInt(grantAmount)).toLocaleString()}
+                          </span>
+                        </div>
+                      </div>
                     )}
+
+                    <Button
+                      className="w-full bg-amber-600 hover:bg-amber-700 text-white"
+                      disabled={granting || !grantOrgId || !grantAmount || parseInt(grantAmount) <= 0}
+                      onClick={handleGrant}
+                      data-testid="grant-credits-btn"
+                    >
+                      {granting ? (
+                        <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Granting...</>
+                      ) : (
+                        <><Gift className="h-4 w-4 mr-2" /> Grant Credits</>
+                      )}
+                    </Button>
                   </CardContent>
                 </Card>
-              );
-            })}
-          </div>
-        </div>
+
+                {/* Org Balances Overview */}
+                <div>
+                  <h3 className="text-base font-bold font-['Outfit'] mb-3">All Organization Balances</h3>
+                  <Card>
+                    <CardContent className="p-0">
+                      <table className="w-full text-sm" data-testid="org-balances-table">
+                        <thead>
+                          <tr className="border-b bg-zinc-50 dark:bg-zinc-900 text-zinc-500 text-xs uppercase tracking-wider">
+                            <th className="text-left p-3 font-semibold">Organization</th>
+                            <th className="text-right p-3 font-semibold">Users</th>
+                            <th className="text-right p-3 font-semibold">Credit Balance</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {orgs.map(org => (
+                            <tr key={org.id} className="border-b last:border-0 hover:bg-zinc-50 dark:hover:bg-zinc-900 transition-colors">
+                              <td className="p-3 font-medium">{org.name}</td>
+                              <td className="p-3 text-right text-zinc-500">{org.user_count}</td>
+                              <td className="p-3 text-right font-mono font-bold">{org.credit_balance.toLocaleString()}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </CardContent>
+                  </Card>
+                </div>
+              </div>
+            </TabsContent>
+          </Tabs>
+        ) : (
+          <PackagesGrid packages={packages} isAdmin={isAdmin} balance={balance} onSelect={setCheckoutPkg} />
+        )}
 
         {/* Purchase History (Admin Only) */}
         {isAdmin && history.length > 0 && (
           <div>
-            <h2 className="text-lg font-bold font-['Outfit'] mb-4">Purchase History</h2>
+            <h2 className="text-lg font-bold font-['Outfit'] mb-4">Transaction History</h2>
             <Card className="border-zinc-200">
               <CardContent className="p-0">
                 <ScrollArea className="max-h-80">
                   <table className="w-full text-sm" data-testid="credit-history-table">
                     <thead>
-                      <tr className="border-b bg-zinc-50 text-zinc-500 text-xs uppercase tracking-wider">
+                      <tr className="border-b bg-zinc-50 dark:bg-zinc-900 text-zinc-500 text-xs uppercase tracking-wider">
                         <th className="text-left p-3 font-semibold">Date</th>
                         <th className="text-left p-3 font-semibold">Type</th>
                         <th className="text-left p-3 font-semibold">Description</th>
@@ -191,22 +336,25 @@ const CreditShop = () => {
                     </thead>
                     <tbody>
                       {history.map((txn) => (
-                        <tr key={txn.id} className="border-b last:border-0 hover:bg-zinc-50 transition-colors">
+                        <tr key={txn.id} className="border-b last:border-0 hover:bg-zinc-50 dark:hover:bg-zinc-900 transition-colors">
                           <td className="p-3 text-zinc-500 font-mono text-xs">
                             {new Date(txn.created_at).toLocaleDateString()}
                           </td>
                           <td className="p-3">
-                            <Badge variant={txn.type === 'purchase' ? 'default' : 'secondary'} className={`text-[10px] ${txn.type === 'purchase' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
-                              {txn.type}
+                            <Badge variant="secondary" className={`text-[10px] ${
+                              txn.source === 'org_admin_grant' ? 'bg-amber-100 text-amber-700' :
+                              txn.type === 'purchase' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
+                            }`}>
+                              {txn.source === 'org_admin_grant' ? 'grant' : txn.type}
                             </Badge>
                           </td>
-                          <td className="p-3 text-zinc-700">{txn.description}</td>
+                          <td className="p-3 text-zinc-700 dark:text-zinc-300">{txn.description}</td>
                           <td className="p-3 text-zinc-500">{txn.user_name}</td>
                           <td className={`p-3 text-right font-mono font-bold ${txn.credits_delta > 0 ? 'text-green-600' : 'text-red-500'}`}>
                             {txn.credits_delta > 0 ? '+' : ''}{txn.credits_delta.toLocaleString()}
                           </td>
                           <td className="p-3 text-right font-mono text-zinc-400">
-                            {txn.usd_amount ? `$${txn.usd_amount.toLocaleString()}` : '—'}
+                            {txn.usd_amount ? `$${txn.usd_amount.toLocaleString()}` : '--'}
                           </td>
                         </tr>
                       ))}
@@ -296,5 +444,65 @@ const CreditShop = () => {
     </DashboardLayout>
   );
 };
+
+// Extracted packages grid component
+const PackagesGrid = ({ packages, isAdmin, balance, onSelect }) => (
+  <div>
+    <h2 className="text-lg font-bold font-['Outfit'] mb-4">Select a Package</h2>
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      {packages.map((pkg) => {
+        const Icon = TIER_ICONS[pkg.id] || Coins;
+        const gradientClass = TIER_COLORS[pkg.id] || 'from-zinc-700 to-zinc-800';
+        const accentClass = TIER_ACCENTS[pkg.id] || 'border-zinc-600';
+        return (
+          <Card
+            key={pkg.id}
+            className={`relative overflow-hidden border-2 ${accentClass} bg-gradient-to-br ${gradientClass} text-white cursor-pointer transition-all hover:scale-[1.02] hover:shadow-xl group`}
+            onClick={() => isAdmin ? onSelect(pkg) : null}
+            data-testid={`package-${pkg.id}`}
+          >
+            <CardContent className="p-5 space-y-3">
+              {pkg.discount > 0 && (
+                <Badge className="absolute top-3 right-3 bg-green-500/90 text-white text-[10px] font-bold">
+                  SAVE {pkg.discount}%
+                </Badge>
+              )}
+              <div className="flex items-center gap-2">
+                <div className="h-8 w-8 rounded-lg bg-white/10 flex items-center justify-center">
+                  <Icon className="h-4 w-4" />
+                </div>
+                <div>
+                  <p className="font-bold text-sm">{pkg.name}</p>
+                  <p className="text-[10px] text-white/50 uppercase tracking-wider">{pkg.id === 'black' ? 'Elite' : 'Package'}</p>
+                </div>
+              </div>
+              <div>
+                <p className="text-3xl font-black font-mono">{pkg.credits.toLocaleString()}</p>
+                <p className="text-xs text-white/50">credits</p>
+              </div>
+              <div className="border-t border-white/10 pt-2">
+                <p className="text-lg font-bold">${pkg.usd.toLocaleString()}</p>
+                <p className="text-[10px] text-white/40">{pkg.description}</p>
+              </div>
+              {isAdmin ? (
+                <Button
+                  className="w-full bg-white/10 hover:bg-white/20 border border-white/20 text-white text-sm font-semibold"
+                  onClick={(e) => { e.stopPropagation(); onSelect(pkg); }}
+                  data-testid={`buy-${pkg.id}`}
+                >
+                  Purchase <ArrowRight className="h-3.5 w-3.5 ml-1" />
+                </Button>
+              ) : (
+                <Button disabled className="w-full bg-white/5 text-white/30 text-sm border border-white/10" data-testid={`buy-${pkg.id}-disabled`}>
+                  Admins Only
+                </Button>
+              )}
+            </CardContent>
+          </Card>
+        );
+      })}
+    </div>
+  </div>
+);
 
 export default CreditShop;

@@ -115,6 +115,8 @@ export const creditsApi = {
   purchase: (data) => axios.post(`${API}/credits/purchase`, data),
   getHistory: () => axios.get(`${API}/credits/history`),
   getConstants: () => axios.get(`${API}/credits/constants`),
+  grant: (data) => axios.post(`${API}/credits/grant`, data),
+  allOrgs: () => axios.get(`${API}/credits/all-orgs`),
 };
 
 // SMS Providers API

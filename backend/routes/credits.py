@@ -243,3 +243,66 @@ async def get_credit_constants():
         "phone_number_cost_credits": PHONE_NUMBER_COST_CREDITS,
         "text_cost_credits": TEXT_COST_CREDITS,
     }
+
+
+class GrantCreditsRequest(BaseModel):
+    org_id: str
+    amount: int
+    reason: Optional[str] = "Org Admin Grant"
+
+
+@router.post("/grant")
+async def grant_credits(data: GrantCreditsRequest, current_user: dict = Depends(get_current_user)):
+    """Org Admin only: manually grant credits to any organization"""
+    user = await db.users.find_one({"id": current_user["user_id"]}, {"_id": 0})
+    if not user or user.get("role") != "org_admin":
+        raise HTTPException(status_code=403, detail="Only org_admin can grant credits")
+
+    if data.amount <= 0:
+        raise HTTPException(status_code=400, detail="Amount must be positive")
+
+    org = await db.organizations.find_one({"id": data.org_id}, {"_id": 0})
+    if not org:
+        raise HTTPException(status_code=404, detail="Organization not found")
+
+    # Ensure org has credit_balance field
+    if "credit_balance" not in org:
+        await db.organizations.update_one({"id": data.org_id}, {"$set": {"credit_balance": 0}})
+
+    result = await add_credits(
+        org_id=data.org_id,
+        user_id=current_user["user_id"],
+        amount=data.amount,
+        source="org_admin_grant",
+        description=data.reason or f"Manual grant by org admin",
+        metadata={"granted_by": current_user["user_id"], "org_name": org.get("name", "")}
+    )
+
+    return {
+        "status": "success",
+        "org_id": data.org_id,
+        "org_name": org.get("name", ""),
+        "credits_added": data.amount,
+        "new_balance": result["new_balance"],
+        "transaction_id": result["transaction"]["id"],
+    }
+
+
+@router.get("/all-orgs")
+async def list_all_orgs_for_grant(current_user: dict = Depends(get_current_user)):
+    """Org Admin only: list all organizations with balances for granting"""
+    user = await db.users.find_one({"id": current_user["user_id"]}, {"_id": 0})
+    if not user or user.get("role") != "org_admin":
+        raise HTTPException(status_code=403, detail="Only org_admin can view all organizations")
+
+    orgs = await db.organizations.find({}, {"_id": 0}).to_list(500)
+    result = []
+    for org in orgs:
+        user_count = await db.users.count_documents({"org_id": org["id"]})
+        result.append({
+            "id": org["id"],
+            "name": org.get("name", "Unnamed"),
+            "credit_balance": org.get("credit_balance", 0),
+            "user_count": user_count,
+        })
+    return result
