@@ -51,8 +51,7 @@ const Inbox = () => {
   const [mismatchModal, setMismatchModal] = useState(null);
   const [pendingSend, setPendingSend] = useState(null);
 
-  // Area code popup & campaign popup
-  const [areCodePopup, setAreaCodePopup] = useState(null);
+  // Campaign popup
   const [campaignPopup, setCampaignPopup] = useState(null);
 
   const scrollToBottom = useCallback(() => {
@@ -197,16 +196,7 @@ const Inbox = () => {
     setSelectedClient(client);
     setActiveChain(null);
     loadConversation(client.id);
-
-    // Check area code match
-    if (client.phone && selectedFromNumber) {
-      const clientArea = client.phone.replace(/\D/g, '').slice(-10, -7);
-      const ownedAreas = ownedNumbers.filter(n => n.twilio_purchased).map(n => n.phone_number.replace(/\D/g, '').slice(-10, -7));
-      if (clientArea && !ownedAreas.includes(clientArea)) {
-        setAreaCodePopup({ areaCode: clientArea, clientName: client.name });
-      }
-    }
-  }, [loadConversation, selectedFromNumber, ownedNumbers]);
+  }, [loadConversation]);
 
   const handleChainSelect = useCallback((fromNumber) => {
     setActiveChain(fromNumber);
@@ -664,30 +654,6 @@ const Inbox = () => {
             </Button>
             <Button onClick={handleMismatchConfirm} className="bg-amber-600 hover:bg-amber-700 text-white" data-testid="mismatch-confirm-btn">
               <Send className="h-4 w-4 mr-2" /> Confirm Send
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Area Code Purchase Suggestion */}
-      <Dialog open={!!areCodePopup} onOpenChange={(open) => !open && setAreaCodePopup(null)}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle className="font-['Outfit'] flex items-center gap-2">
-              <Smartphone className="h-5 w-5 text-blue-600" /> Local Number Suggestion
-            </DialogTitle>
-            <DialogDescription>
-              You don't have a phone number with area code ({areCodePopup?.areaCode}) matching {areCodePopup?.clientName}'s location.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="p-4 rounded-lg bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800 text-center">
-            <p className="font-semibold text-blue-800 dark:text-blue-200">Buy a ({areCodePopup?.areaCode}) number</p>
-            <p className="text-sm text-blue-600 dark:text-blue-400 mt-1">40 credits/number — familiar area codes get more replies</p>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setAreaCodePopup(null)}>Not Now</Button>
-            <Button onClick={() => { setAreaCodePopup(null); window.location.href = `/phone-numbers?area=${areCodePopup?.areaCode || ''}`; }} data-testid="buy-area-code-btn">
-              <Plus className="h-4 w-4 mr-2" /> Buy Number
             </Button>
           </DialogFooter>
         </DialogContent>

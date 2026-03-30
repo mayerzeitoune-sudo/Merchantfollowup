@@ -1015,7 +1015,14 @@ async def get_client(client_id: str, current_user: dict = Depends(get_current_us
         {"_id": 0}
     )
     if not client:
-        raise HTTPException(status_code=404, detail="Client not found")
+        # Check if user has conversations with this client (cross-org created client)
+        has_convo = await db.conversations.find_one(
+            {"client_id": client_id, "user_id": {"$in": accessible_ids}}
+        )
+        if has_convo:
+            client = await db.clients.find_one({"id": client_id}, {"_id": 0})
+        if not client:
+            raise HTTPException(status_code=404, detail="Client not found")
     return client
 
 @api_router.put("/clients/{client_id}", response_model=ClientResponse)
@@ -1043,8 +1050,10 @@ async def update_client(client_id: str, data: ClientUpdate, current_user: dict =
                 update_data['pipeline_stage'] = TAG_TO_STAGE[tag]
                 break  # Use the first stage tag found
     
+    # Use role-based access: admins can update any client in their org
+    accessible_ids = await get_accessible_user_ids(current_user)
     result = await db.clients.update_one(
-        {"id": client_id, "user_id": current_user["user_id"]},
+        {"id": client_id, "user_id": {"$in": accessible_ids}},
         {"$set": update_data}
     )
     
@@ -1056,30 +1065,22 @@ async def update_client(client_id: str, data: ClientUpdate, current_user: dict =
 
 @api_router.delete("/clients/{client_id}")
 async def delete_client(client_id: str, current_user: dict = Depends(get_current_user)):
-    # First, delete all funded deals associated with this client
-    await db.funded_deals.delete_many(
-        {"client_id": client_id, "user_id": current_user["user_id"]}
-    )
+    # Use role-based access
+    accessible_ids = await get_accessible_user_ids(current_user)
     
-    # Delete all payments associated with deals for this client
-    await db.deal_payments.delete_many(
-        {"client_id": client_id, "user_id": current_user["user_id"]}
-    )
+    # Verify client belongs to accessible scope before deleting
+    client = await db.clients.find_one({"id": client_id, "user_id": {"$in": accessible_ids}})
+    if not client:
+        raise HTTPException(status_code=404, detail="Client not found")
     
-    # Delete conversations
-    await db.conversations.delete_many(
-        {"client_id": client_id}
-    )
+    # Delete all associated data
+    await db.funded_deals.delete_many({"client_id": client_id, "user_id": {"$in": accessible_ids}})
+    await db.deal_payments.delete_many({"client_id": client_id, "user_id": {"$in": accessible_ids}})
+    await db.conversations.delete_many({"client_id": client_id, "user_id": {"$in": accessible_ids}})
+    await db.reminders.delete_many({"client_id": client_id, "user_id": {"$in": accessible_ids}})
     
-    # Delete reminders
-    await db.reminders.delete_many(
-        {"client_id": client_id, "user_id": current_user["user_id"]}
-    )
-    
-    # Finally delete the client
-    result = await db.clients.delete_one(
-        {"id": client_id, "user_id": current_user["user_id"]}
-    )
+    # Delete the client
+    result = await db.clients.delete_one({"id": client_id, "user_id": {"$in": accessible_ids}})
     if result.deleted_count == 0:
         raise HTTPException(status_code=404, detail="Client not found")
     return {"message": "Client and all associated data deleted"}
@@ -1097,16 +1098,15 @@ async def bulk_delete_clients(data: BulkDeleteRequest, current_user: dict = Depe
         raise HTTPException(status_code=400, detail="Cannot delete more than 100 clients at once")
     
     # Build query based on user role
-    if current_user.get("role") in ["org_admin", "admin"]:
-        query = {"id": {"$in": data.client_ids}}
-    else:
-        query = {"id": {"$in": data.client_ids}, "user_id": current_user["user_id"]}
+    # Use role-based access to scope deletion to accessible data
+    accessible_ids = await get_accessible_user_ids(current_user)
+    query = {"id": {"$in": data.client_ids}, "user_id": {"$in": accessible_ids}}
     
-    # Delete associated data first
-    await db.funded_deals.delete_many({"client_id": {"$in": data.client_ids}})
-    await db.deal_payments.delete_many({"client_id": {"$in": data.client_ids}})
-    await db.conversations.delete_many({"client_id": {"$in": data.client_ids}})
-    await db.reminders.delete_many({"client_id": {"$in": data.client_ids}})
+    # Delete associated data scoped to accessible users
+    await db.funded_deals.delete_many({"client_id": {"$in": data.client_ids}, "user_id": {"$in": accessible_ids}})
+    await db.deal_payments.delete_many({"client_id": {"$in": data.client_ids}, "user_id": {"$in": accessible_ids}})
+    await db.conversations.delete_many({"client_id": {"$in": data.client_ids}, "user_id": {"$in": accessible_ids}})
+    await db.reminders.delete_many({"client_id": {"$in": data.client_ids}, "user_id": {"$in": accessible_ids}})
     
     # Delete the clients
     result = await db.clients.delete_many(query)
@@ -1143,11 +1143,9 @@ async def update_client_pipeline(client_id: str, stage: str, current_user: dict 
         'future': 'Future',
     }
     
-    # Build query based on user role (org_admin/admin can update any client)
-    if current_user.get("role") in ["org_admin", "admin"]:
-        query = {"id": client_id}
-    else:
-        query = {"id": client_id, "user_id": current_user["user_id"]}
+    # Build query based on user role with proper org scoping
+    accessible_ids = await get_accessible_user_ids(current_user)
+    query = {"id": client_id, "user_id": {"$in": accessible_ids}}
     
     logger.info(f"Pipeline query: {query}")
     
@@ -1688,8 +1686,9 @@ Provide analysis in this JSON format:
 @api_router.get("/leads/forms")
 async def get_lead_forms(current_user: dict = Depends(get_current_user)):
     """Get all lead capture forms"""
+    accessible_ids = await get_accessible_user_ids(current_user)
     forms = await db.lead_forms.find(
-        {"user_id": current_user["user_id"]},
+        {"user_id": {"$in": accessible_ids}},
         {"_id": 0}
     ).to_list(100)
     return forms
@@ -1875,30 +1874,22 @@ async def get_team_invites(current_user: dict = Depends(get_current_user)):
 @api_router.get("/team/stats")
 async def get_team_stats(current_user: dict = Depends(get_current_user)):
     """Get team statistics"""
-    user = await db.users.find_one({"id": current_user["user_id"]}, {"_id": 0})
-    team_id = user.get("team_id") or current_user["user_id"]
+    accessible_ids = await get_accessible_user_ids(current_user)
     
-    # Get team member IDs
-    members = await db.users.find(
-        {"$or": [{"team_id": team_id}, {"id": team_id}]},
-        {"id": 1}
-    ).to_list(100)
-    member_ids = [m["id"] for m in members]
-    
-    total_deals = await db.clients.count_documents({"user_id": {"$in": member_ids}})
+    total_deals = await db.clients.count_documents({"user_id": {"$in": accessible_ids}})
     messages_sent = await db.conversations.count_documents(
-        {"user_id": {"$in": member_ids}, "direction": "outbound"}
+        {"user_id": {"$in": accessible_ids}, "direction": "outbound"}
     )
     
     # Calculate pipeline value
     pipeline = await db.clients.aggregate([
-        {"$match": {"user_id": {"$in": member_ids}}},
+        {"$match": {"user_id": {"$in": accessible_ids}}},
         {"$group": {"_id": None, "total": {"$sum": "$balance"}}}
     ]).to_list(1)
     pipeline_value = pipeline[0]["total"] if pipeline else 0
     
     return {
-        "total_members": len(member_ids),
+        "total_members": len(accessible_ids),
         "total_deals": total_deals,
         "messages_sent": messages_sent,
         "pipeline_value": pipeline_value
@@ -2541,7 +2532,8 @@ async def create_reminder(data: ReminderCreate, current_user: dict = Depends(get
 
 @api_router.get("/reminders", response_model=List[ReminderResponse])
 async def get_reminders(status: Optional[str] = None, current_user: dict = Depends(get_current_user)):
-    query = {"user_id": current_user["user_id"]}
+    accessible_ids = await get_accessible_user_ids(current_user)
+    query = {"user_id": {"$in": accessible_ids}}
     if status:
         query["status"] = status
     
@@ -2655,7 +2647,8 @@ async def create_followup(data: FollowUpCreate, current_user: dict = Depends(get
 
 @api_router.get("/followups", response_model=List[FollowUpResponse])
 async def get_followups(date: Optional[str] = None, current_user: dict = Depends(get_current_user)):
-    query = {"user_id": current_user["user_id"]}
+    accessible_ids = await get_accessible_user_ids(current_user)
+    query = {"user_id": {"$in": accessible_ids}}
     if date:
         query["scheduled_date"] = date
     
@@ -2724,8 +2717,9 @@ async def create_campaign(data: CampaignCreate, current_user: dict = Depends(get
 
 @api_router.get("/campaigns", response_model=List[CampaignResponse])
 async def get_campaigns(current_user: dict = Depends(get_current_user)):
+    accessible_ids = await get_accessible_user_ids(current_user)
     campaigns = await db.campaigns.find(
-        {"user_id": current_user["user_id"]},
+        {"user_id": {"$in": accessible_ids}},
         {"_id": 0}
     ).to_list(1000)
     return campaigns
@@ -3130,10 +3124,17 @@ async def get_owned_numbers(current_user: dict = Depends(get_current_user)):
 
 @api_router.put("/phone-numbers/{phone_id}")
 async def update_phone_number(phone_id: str, data: PhoneNumberUpdate, current_user: dict = Depends(get_current_user)):
-    """Update a phone number (admin only)"""
+    """Update a phone number (admin only, scoped to their org)"""
     user = await db.users.find_one({"id": current_user["user_id"]})
     if user.get("role") not in ["admin", "org_admin"]:
         raise HTTPException(status_code=403, detail="Only admins can update phone numbers")
+    
+    # Verify phone number belongs to admin's org (or any for org_admin)
+    phone = await db.phone_numbers.find_one({"id": phone_id}, {"_id": 0})
+    if not phone:
+        raise HTTPException(status_code=404, detail="Phone number not found")
+    if user.get("role") == "admin" and phone.get("org_id") and phone["org_id"] != user.get("org_id"):
+        raise HTTPException(status_code=403, detail="Cannot modify phone numbers from another organization")
     
     update_data = {}
     if data.friendly_name is not None:
@@ -3142,15 +3143,15 @@ async def update_phone_number(phone_id: str, data: PhoneNumberUpdate, current_us
     # Handle assignment: sentinel "___UNSET___" means not provided, None means unassign, string means assign
     if data.assigned_user_id != "___UNSET___":
         if data.assigned_user_id:
-            # Assigning to a user
+            # Assigning to a user - verify user belongs to same org for admin
             assigned_user = await db.users.find_one({"id": data.assigned_user_id})
+            if user.get("role") == "admin" and assigned_user and assigned_user.get("org_id") != user.get("org_id"):
+                raise HTTPException(status_code=403, detail="Cannot assign to user from another organization")
             update_data["assigned_user_id"] = data.assigned_user_id
             update_data["assigned_user_name"] = assigned_user.get("name") if assigned_user else None
-            # Also update org_id to match the assigned user's org so admins in the same org can see it
             if assigned_user and assigned_user.get("org_id"):
                 update_data["org_id"] = assigned_user["org_id"]
         else:
-            # Unassigning (null was sent)
             update_data["assigned_user_id"] = None
             update_data["assigned_user_name"] = None
     
@@ -3170,10 +3171,17 @@ async def update_phone_number(phone_id: str, data: PhoneNumberUpdate, current_us
 
 @api_router.delete("/phone-numbers/{phone_id}")
 async def release_phone_number(phone_id: str, current_user: dict = Depends(get_current_user)):
-    """Release a phone number (admin only)"""
+    """Release a phone number (admin only, scoped to their org)"""
     user = await db.users.find_one({"id": current_user["user_id"]})
     if user.get("role") not in ["admin", "org_admin"]:
         raise HTTPException(status_code=403, detail="Only admins can release phone numbers")
+    
+    # Verify phone belongs to admin's org
+    phone = await db.phone_numbers.find_one({"id": phone_id}, {"_id": 0})
+    if not phone:
+        raise HTTPException(status_code=404, detail="Phone number not found")
+    if user.get("role") == "admin" and phone.get("org_id") and phone["org_id"] != user.get("org_id"):
+        raise HTTPException(status_code=403, detail="Cannot release phone numbers from another organization")
     
     result = await db.phone_numbers.delete_one({"id": phone_id})
     if result.deleted_count == 0:
@@ -3274,7 +3282,14 @@ async def get_conversation(
         {"_id": 0}
     )
     if not client:
-        raise HTTPException(status_code=404, detail="Client not found")
+        # Also check if user has conversations with this client (cross-org created client)
+        has_convo = await db.conversations.find_one(
+            {"client_id": client_id, "user_id": {"$in": accessible_ids}}
+        )
+        if has_convo:
+            client = await db.clients.find_one({"id": client_id}, {"_id": 0})
+        if not client:
+            raise HTTPException(status_code=404, detail="Client not found")
     
     # Build query - filter by from_number if specified
     query = {"user_id": {"$in": accessible_ids}, "client_id": client_id}
@@ -4452,18 +4467,20 @@ async def use_template(template_id: str, current_user: dict = Depends(get_curren
 
 @api_router.get("/dashboard/stats")
 async def get_dashboard_stats(current_user: dict = Depends(get_current_user)):
-    user_id = current_user["user_id"]
+    # Use role-based access for proper org scoping
+    accessible_ids = await get_accessible_user_ids(current_user)
+    user_filter = {"user_id": {"$in": accessible_ids}}
     
     # Get counts
-    total_clients = await db.clients.count_documents({"user_id": user_id})
-    total_reminders = await db.reminders.count_documents({"user_id": user_id})
-    pending_reminders = await db.reminders.count_documents({"user_id": user_id, "status": "pending"})
-    sent_reminders = await db.reminders.count_documents({"user_id": user_id, "status": "sent"})
-    active_campaigns = await db.campaigns.count_documents({"user_id": user_id, "status": "active"})
+    total_clients = await db.clients.count_documents(user_filter)
+    total_reminders = await db.reminders.count_documents(user_filter)
+    pending_reminders = await db.reminders.count_documents({**user_filter, "status": "pending"})
+    sent_reminders = await db.reminders.count_documents({**user_filter, "status": "sent"})
+    active_campaigns = await db.campaigns.count_documents({**user_filter, "status": "active"})
     
     # Get total balance owed
     pipeline = [
-        {"$match": {"user_id": user_id}},
+        {"$match": user_filter},
         {"$group": {"_id": None, "total": {"$sum": "$balance"}}}
     ]
     balance_result = await db.clients.aggregate(pipeline).to_list(1)
@@ -4472,13 +4489,13 @@ async def get_dashboard_stats(current_user: dict = Depends(get_current_user)):
     # Get today's followups
     today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
     todays_followups = await db.followups.count_documents({
-        "user_id": user_id,
+        **user_filter,
         "scheduled_date": today
     })
     
     # Get recent activity (last 5 reminders)
     recent_reminders = await db.reminders.find(
-        {"user_id": user_id},
+        user_filter,
         {"_id": 0}
     ).sort("created_at", -1).limit(5).to_list(5)
     
@@ -4583,7 +4600,8 @@ async def get_funded_deals(
     current_user: dict = Depends(get_current_user)
 ):
     """Get all funded deals with filters"""
-    query = {"user_id": current_user["user_id"]}
+    accessible_ids = await get_accessible_user_ids(current_user)
+    query = {"user_id": {"$in": accessible_ids}}
     
     if status:
         query["status"] = status
@@ -4611,8 +4629,9 @@ async def get_funded_deals(
 @api_router.get("/funded/deals/{deal_id}")
 async def get_funded_deal(deal_id: str, current_user: dict = Depends(get_current_user)):
     """Get a single funded deal with full details"""
+    accessible_ids = await get_accessible_user_ids(current_user)
     deal = await db.funded_deals.find_one(
-        {"id": deal_id, "user_id": current_user["user_id"]},
+        {"id": deal_id, "user_id": {"$in": accessible_ids}},
         {"_id": 0}
     )
     if not deal:
@@ -4758,8 +4777,9 @@ async def update_payment(
 @api_router.get("/funded/stats")
 async def get_funded_stats(current_user: dict = Depends(get_current_user)):
     """Get funded deals statistics and book value"""
+    accessible_ids = await get_accessible_user_ids(current_user)
     deals = await db.funded_deals.find(
-        {"user_id": current_user["user_id"]},
+        {"user_id": {"$in": accessible_ids}},
         {"_id": 0}
     ).to_list(1000)
     
@@ -4807,8 +4827,9 @@ async def get_funded_stats(current_user: dict = Depends(get_current_user)):
 @api_router.get("/funded/collections-queue")
 async def get_collections_queue(current_user: dict = Depends(get_current_user)):
     """Get deals that need payment follow-up"""
+    accessible_ids = await get_accessible_user_ids(current_user)
     deals = await db.funded_deals.find(
-        {"user_id": current_user["user_id"], "status": "active"},
+        {"user_id": {"$in": accessible_ids}, "status": "active"},
         {"_id": 0}
     ).to_list(500)
     
@@ -4902,7 +4923,8 @@ async def get_funded_analytics(
     current_user: dict = Depends(get_current_user)
 ):
     """Get funded deals analytics for charts"""
-    query = {"user_id": current_user["user_id"]}
+    accessible_ids = await get_accessible_user_ids(current_user)
+    query = {"user_id": {"$in": accessible_ids}}
     
     deals = await db.funded_deals.find(query, {"_id": 0}).to_list(1000)
     
