@@ -140,7 +140,7 @@ const DashboardLayout = ({ children }) => {
             variant="secondary" 
             size="sm"
             onClick={handleStopImpersonation}
-            className="bg-white text-orange-600 hover:bg-orange-50"
+            className="bg-white dark:bg-zinc-800 text-orange-600 hover:bg-orange-50 dark:hover:bg-zinc-700"
           >
             <ArrowLeftCircle className="h-4 w-4 mr-1" />
             Return to Org Admin
@@ -208,7 +208,7 @@ const DashboardLayout = ({ children }) => {
                 />
               </div>
               <div className="flex flex-col">
-                <span className="text-sm font-bold text-gray-900 leading-tight tracking-wide">MERCHANT</span>
+                <span className="text-sm font-bold text-gray-900 dark:text-gray-100 leading-tight tracking-wide">MERCHANT</span>
                 <span className="text-xs font-semibold text-orange-500 tracking-wider">FOLLOWUP</span>
               </div>
             </Link>

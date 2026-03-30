@@ -19,29 +19,36 @@ CRM platform for merchant payment follow-ups with SMS automation, credit-based b
 - Business metrics (deals, pipeline) in USD
 - Admin Credit Shop for purchasing packages
 - Org Admin can grant credits to any org
+- Phone number purchase: 40 credits
+- SMS send: 1 credit per message
+- org_admin without org_id cannot bypass credits
 
 ## Twilio Integration (LIVE — A2P Compliant)
 - Messaging Service SID: MGe8c2388e2bd76b308c013071f7f848a6
 - All sends route through Messaging Service for 10DLC compliance
 - New purchases auto-add to Messaging Service
-- Webhooks: /api/sms/webhook/inbound (Form data), /api/sms/webhook/status
+- Webhooks: /api/sms/webhook/inbound (Form data + TwiML), /api/sms/webhook/status
 - Phone search: SMS-enabled only, respects area code (no toll-free fallback)
 - Mock numbers blocked from sending with clear error
+- Status callback on all outbound messages
 
 ## Completed Features
 - [x] User auth with JWT + role-based access
 - [x] Multi-org management with impersonation
-- [x] Client management with phone formatting
+- [x] Client management with phone formatting (fixed)
 - [x] Credit-based billing system with admin grants
-- [x] Phone number search/purchase (live Twilio)
+- [x] Phone number search/purchase (live Twilio, SMS-enabled filter)
 - [x] SMS sending (live, A2P compliant, delivered)
 - [x] Inbound SMS webhook (Form data, TwiML response)
 - [x] Status callback webhook
 - [x] Campaign system with trigger words
 - [x] Phone Blower auto-dialer
-- [x] Dark mode (ThemeContext)
+- [x] Dark mode (ThemeContext) — comprehensive fix across all pages
 - [x] Privacy Policy & Terms of Service
 - [x] Message status indicators (delivered/failed/undelivered)
+- [x] Credit bypass fix (mandatory deduction for all purchases)
+- [x] Unread message notification badge (sidebar + client dots)
+- [x] Message ordering fix (chronological: oldest top, newest bottom)
 
 ## Test Credentials
 - Org Admin: orgadmin@merchant.com / Admin123!
