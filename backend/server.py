@@ -20,6 +20,22 @@ import asyncio
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
 
+# Ensure critical integration vars are loaded from .env even if system env has them empty.
+# load_dotenv(override=False) won't replace an existing empty system var.
+# This is critical for production where the deployment platform may inject blank vars.
+from dotenv import dotenv_values as _dotenv_values
+_file_env = _dotenv_values(ROOT_DIR / '.env')
+_CRITICAL_VARS = [
+    'TWILIO_ACCOUNT_SID', 'TWILIO_AUTH_TOKEN', 'TWILIO_MESSAGING_SERVICE_SID',
+    'STRIPE_API_KEY', 'GOOGLE_CLIENT_ID', 'GOOGLE_CLIENT_SECRET',
+    'JWT_SECRET', 'EMERGENT_LLM_KEY',
+]
+for _key in _CRITICAL_VARS:
+    _sys_val = os.environ.get(_key, '').strip()
+    _file_val = (_file_env.get(_key) or '').strip()
+    if not _sys_val and _file_val:
+        os.environ[_key] = _file_val
+
 # MongoDB connection
 mongo_url = os.environ['MONGO_URL']
 client = AsyncIOMotorClient(mongo_url)
@@ -45,6 +61,15 @@ logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 )
 logger = logging.getLogger(__name__)
+
+# Startup diagnostics — logged once at boot so production issues are immediately visible
+logger.info("=== STARTUP ENV CHECK ===")
+logger.info(f"TWILIO_ACCOUNT_SID loaded: {bool(os.environ.get('TWILIO_ACCOUNT_SID', '').strip())}")
+logger.info(f"TWILIO_AUTH_TOKEN loaded: {bool(os.environ.get('TWILIO_AUTH_TOKEN', '').strip())}")
+logger.info(f"TWILIO_MESSAGING_SERVICE_SID loaded: {bool(os.environ.get('TWILIO_MESSAGING_SERVICE_SID', '').strip())}")
+logger.info(f"STRIPE_API_KEY loaded: {bool(os.environ.get('STRIPE_API_KEY', '').strip())}")
+logger.info(f"MONGO_URL loaded: {bool(os.environ.get('MONGO_URL', '').strip())}")
+logger.info("=== END ENV CHECK ===")
 
 
 def get_base_url(request: Request) -> str:
