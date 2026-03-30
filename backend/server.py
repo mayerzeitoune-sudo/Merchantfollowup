@@ -2858,28 +2858,52 @@ async def search_available_numbers(
     limit: int = 20,
     current_user: dict = Depends(get_current_user)
 ):
-    """Search for available phone numbers by area code - placeholder + real Twilio"""
-    # Get active provider
-    provider = await db.sms_providers.find_one(
-        {"user_id": current_user["user_id"], "is_active": True}
-    )
+    """Search for available phone numbers via Twilio API"""
+    twilio_sid = os.environ.get("TWILIO_ACCOUNT_SID")
+    twilio_token = os.environ.get("TWILIO_AUTH_TOKEN")
     
-    # Generate placeholder numbers for demo
-    placeholder_numbers = []
-    for i in range(min(limit, 10)):
-        placeholder_numbers.append({
-            "phone_number": f"+1{area_code}{random.randint(1000000, 9999999)}",
-            "friendly_name": f"({area_code}) {random.randint(100, 999)}-{random.randint(1000, 9999)}",
-            "monthly_cost": round(random.uniform(1.00, 2.50) * 8, 2),
-            "capabilities": ["sms", "voice"],
-            "region": "US"
-        })
+    if not twilio_sid or not twilio_token:
+        # Fallback to placeholder if no Twilio creds
+        placeholder_numbers = []
+        for i in range(min(limit, 10)):
+            placeholder_numbers.append({
+                "phone_number": f"+1{area_code or '555'}{random.randint(1000000, 9999999)}",
+                "friendly_name": f"({area_code or '555'}) {random.randint(100, 999)}-{random.randint(1000, 9999)}",
+                "capabilities": {"SMS": True, "voice": True},
+                "region": "US",
+                "locality": ""
+            })
+        return {"available_numbers": placeholder_numbers, "provider_configured": False}
     
-    return {
-        "available_numbers": placeholder_numbers,
-        "provider_configured": provider is not None,
-        "note": "Connect your SMS provider (Twilio, etc.) in Settings to purchase real numbers"
-    }
+    try:
+        from twilio.rest import Client
+        client = Client(twilio_sid, twilio_token)
+        
+        kwargs = {"limit": min(limit, 20)}
+        if area_code and len(area_code) == 3:
+            kwargs["area_code"] = area_code
+        
+        numbers = client.available_phone_numbers(country).local.list(**kwargs)
+        
+        results = []
+        for n in numbers:
+            results.append({
+                "phone_number": n.phone_number,
+                "friendly_name": n.friendly_name,
+                "capabilities": {
+                    "SMS": n.capabilities.get("sms", False) if n.capabilities else False,
+                    "voice": n.capabilities.get("voice", False) if n.capabilities else False,
+                    "MMS": n.capabilities.get("mms", False) if n.capabilities else False,
+                },
+                "region": n.region or "",
+                "locality": n.locality or "",
+                "postal_code": n.postal_code or "",
+            })
+        
+        return {"available_numbers": results, "provider_configured": True}
+    except Exception as e:
+        logger.error(f"Twilio number search error: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to search numbers: {str(e)}")
 
 @api_router.post("/phone-numbers/purchase")
 async def purchase_phone_number(data: PhoneNumberCreate, current_user: dict = Depends(get_current_user)):
@@ -2930,6 +2954,43 @@ async def purchase_phone_number(data: PhoneNumberCreate, current_user: dict = De
             metadata={"phone_number": data.phone_number}
         )
     
+    # Actually purchase through Twilio if configured
+    twilio_sid = os.environ.get("TWILIO_ACCOUNT_SID")
+    twilio_token = os.environ.get("TWILIO_AUTH_TOKEN")
+    twilio_purchased = False
+    twilio_sid_number = None
+    
+    if twilio_sid and twilio_token and data.provider == "twilio":
+        try:
+            from twilio.rest import Client
+            client = Client(twilio_sid, twilio_token)
+            
+            # Buy the number
+            incoming = client.incoming_phone_numbers.create(
+                phone_number=data.phone_number,
+                sms_url=f"{os.environ.get('BACKEND_URL', '')}/api/sms/webhook/inbound",
+                sms_method="POST",
+                voice_url=f"{os.environ.get('BACKEND_URL', '')}/api/phone-blower/twiml/blower-message",
+                voice_method="POST",
+            )
+            twilio_purchased = True
+            twilio_sid_number = incoming.sid
+            logger.info(f"Twilio number purchased: {data.phone_number} (SID: {incoming.sid})")
+        except Exception as e:
+            logger.error(f"Twilio purchase failed: {e}")
+            # Refund credits if Twilio purchase fails
+            if org_id:
+                from routes.credits import add_credits
+                await add_credits(
+                    org_id=org_id,
+                    user_id=current_user["user_id"],
+                    amount=PHONE_NUMBER_COST_CREDITS,
+                    source="refund",
+                    description=f"Refund: Failed to purchase {data.phone_number} — {str(e)}",
+                )
+                # Dispatch balance update
+            raise HTTPException(status_code=500, detail=f"Twilio purchase failed: {str(e)}")
+    
     phone_id = str(uuid.uuid4())
     now = datetime.now(timezone.utc).isoformat()
     
@@ -2957,6 +3018,8 @@ async def purchase_phone_number(data: PhoneNumberCreate, current_user: dict = De
         "assigned_user_name": assigned_user_name,
         "monthly_cost": 8.00,
         "credit_cost": PHONE_NUMBER_COST_CREDITS,
+        "twilio_sid": twilio_sid_number,
+        "twilio_purchased": twilio_purchased,
         "created_at": now
     }
     
@@ -3318,19 +3381,49 @@ async def send_sms_to_contact(
         "content": processed_message,
         "from_number": from_number,
         "timestamp": now,
-        "status": "sent" if provider else "pending_provider",
+        "status": "pending",
         "campaign_id": campaign_id,
         "campaign_name": campaign_name,
         "step_number": step_number
     }
+    
+    # Send via Twilio if configured
+    twilio_sid = os.environ.get("TWILIO_ACCOUNT_SID")
+    twilio_token = os.environ.get("TWILIO_AUTH_TOKEN")
+    
+    if twilio_sid and twilio_token and from_number and client.get("phone"):
+        try:
+            from twilio.rest import Client
+            twilio_client = Client(twilio_sid, twilio_token)
+            
+            # Normalize the to-number
+            to_phone = client["phone"]
+            if not to_phone.startswith("+"):
+                to_phone = f"+1{to_phone.replace('-','').replace(' ','').replace('(','').replace(')','')}"
+            
+            msg = twilio_client.messages.create(
+                body=processed_message,
+                from_=from_number,
+                to=to_phone
+            )
+            message_doc["status"] = msg.status or "sent"
+            message_doc["twilio_sid"] = msg.sid
+            logger.info(f"SMS sent via Twilio: {msg.sid} from {from_number} to {to_phone}")
+        except Exception as e:
+            logger.error(f"Twilio send error: {e}")
+            message_doc["status"] = "failed"
+            message_doc["error"] = str(e)
+    else:
+        message_doc["status"] = "pending_provider"
+        message_doc["note"] = "Twilio not configured or missing from_number"
     
     await db.conversations.insert_one(message_doc)
     
     return {
         "message_id": message_id,
         "from_number": from_number,
-        "status": "sent" if provider else "pending_provider",
-        "note": None if provider else "Configure SMS provider to send messages"
+        "status": message_doc["status"],
+        "twilio_sid": message_doc.get("twilio_sid"),
     }
 
 # ============== INBOUND SMS WEBHOOK (Twilio/Provider) ==============

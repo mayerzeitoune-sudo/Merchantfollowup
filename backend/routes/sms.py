@@ -2,7 +2,7 @@
 Twilio SMS Integration Routes
 Handles real SMS sending via Twilio API
 """
-from fastapi import APIRouter, HTTPException, Depends, Query
+from fastapi import APIRouter, HTTPException, Depends, Query, Form
 from pydantic import BaseModel
 from typing import Optional, List
 from motor.motor_asyncio import AsyncIOMotorClient
@@ -37,6 +37,7 @@ class SMSRequest(BaseModel):
     to: str
     message: str
     client_id: Optional[str] = None
+    from_number: Optional[str] = None
 
 
 class BulkSMSRequest(BaseModel):
@@ -46,19 +47,22 @@ class BulkSMSRequest(BaseModel):
 
 def get_twilio_client():
     """Get Twilio client if credentials are configured"""
-    if not TWILIO_ACCOUNT_SID or not TWILIO_AUTH_TOKEN:
+    sid = os.environ.get("TWILIO_ACCOUNT_SID")
+    token = os.environ.get("TWILIO_AUTH_TOKEN")
+    if not sid or not token:
         return None
     from twilio.rest import Client
-    return Client(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN)
+    return Client(sid, token)
 
 
 @router.get("/status")
 async def get_sms_status():
     """Check if Twilio SMS is configured"""
-    is_configured = bool(TWILIO_ACCOUNT_SID and TWILIO_AUTH_TOKEN and TWILIO_PHONE_NUMBER)
+    sid = os.environ.get("TWILIO_ACCOUNT_SID")
+    token = os.environ.get("TWILIO_AUTH_TOKEN")
+    is_configured = bool(sid and token)
     return {
         "configured": is_configured,
-        "from_number": TWILIO_PHONE_NUMBER if is_configured else None,
         "message": "Twilio SMS is ready" if is_configured else "Twilio credentials not configured"
     }
 
@@ -95,10 +99,15 @@ async def send_sms(request: SMSRequest, user_id: str = Query(...)):
         }
     
     try:
+        # Determine from number
+        sender = request.from_number or os.environ.get("TWILIO_PHONE_NUMBER")
+        if not sender:
+            raise HTTPException(status_code=400, detail="No from_number provided and no default TWILIO_PHONE_NUMBER configured")
+        
         # Send via Twilio
         message = twilio_client.messages.create(
             body=request.message,
-            from_=TWILIO_PHONE_NUMBER,
+            from_=sender,
             to=request.to
         )
         
@@ -108,7 +117,7 @@ async def send_sms(request: SMSRequest, user_id: str = Query(...)):
             "user_id": user_id,
             "client_id": request.client_id,
             "to": request.to,
-            "from": TWILIO_PHONE_NUMBER,
+            "from": sender,
             "message": request.message,
             "status": message.status,
             "direction": "outbound",
@@ -163,16 +172,25 @@ async def send_sms(request: SMSRequest, user_id: str = Query(...)):
 
 @router.post("/webhook/inbound")
 async def handle_inbound_sms(
-    From: str = Query(None),
-    To: str = Query(None),
-    Body: str = Query(None),
-    MessageSid: str = Query(None)
+    From: str = "",
+    To: str = "",
+    Body: str = "",
+    MessageSid: str = "",
 ):
-    """Webhook endpoint for receiving inbound SMS from Twilio"""
-    logger.info(f"Inbound SMS from {From}: {Body}")
+    """Webhook endpoint for receiving inbound SMS from Twilio (form-encoded POST)"""
+    logger.info(f"Inbound SMS from {From} to {To}: {Body}")
     
-    # Find the client by phone number
-    client_doc = await db.clients.find_one({"phone": From})
+    if not From or not Body:
+        # Try to extract from request body if form params didn't bind
+        return {"status": "received", "matched": False, "note": "No data"}
+    
+    # Normalize phone for matching
+    from_clean = From.replace("+1", "").replace("+", "").replace("-", "").replace(" ", "").replace("(", "").replace(")", "")
+    
+    # Find the client by phone number (last 10 digits)
+    client_doc = await db.clients.find_one({
+        "phone": {"$regex": from_clean[-10:] if len(from_clean) >= 10 else from_clean}
+    })
     
     # Find the user who owns this phone number (via their Twilio number)
     # For now, we'll try to find by the last outbound message to this number
