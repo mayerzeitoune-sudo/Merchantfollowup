@@ -3452,8 +3452,9 @@ async def get_conversation(
     if not client:
         raise HTTPException(status_code=404, detail="Client not found")
     
-    # Build query - filter by from_number if specified
-    query = {"user_id": {"$in": accessible_ids}, "client_id": client_id}
+    # Build query — client ownership is already verified above,
+    # so show ALL messages for this client (both inbound and outbound)
+    query = {"client_id": client_id}
     if from_number and from_number != "default":
         query["from_number"] = from_number
     elif from_number == "default":
@@ -3480,8 +3481,9 @@ async def get_conversation_chains(client_id: str, current_user: dict = Depends(g
         raise HTTPException(status_code=404, detail="Client not found")
     
     # Get all unique from_numbers used with this client
+    # Client ownership already verified above
     pipeline = [
-        {"$match": {"user_id": {"$in": accessible_ids}, "client_id": client_id}},
+        {"$match": {"client_id": client_id}},
         {"$group": {
             "_id": "$from_number",
             "message_count": {"$sum": 1},
@@ -5365,9 +5367,19 @@ async def get_inbox_threads(current_user: dict = Depends(get_current_user)):
     """
     accessible_ids = await get_accessible_user_ids(current_user)
 
-    # Aggregate conversations grouped by client_id
+    # First get all client IDs that belong to this user/org
+    user_clients = await db.clients.find(
+        {"user_id": {"$in": accessible_ids}},
+        {"_id": 0, "id": 1}
+    ).to_list(1000)
+    user_client_ids = [c["id"] for c in user_clients]
+
+    if not user_client_ids:
+        return {"threads": []}
+
+    # Aggregate conversations grouped by client_id — using CLIENT ownership, not message user_id
     pipeline = [
-        {"$match": {"user_id": {"$in": accessible_ids}, "client_id": {"$exists": True, "$ne": None}}},
+        {"$match": {"client_id": {"$in": user_client_ids}}},
         {"$sort": {"timestamp": -1}},
         {"$group": {
             "_id": "$client_id",
@@ -5396,10 +5408,10 @@ async def get_inbox_threads(current_user: dict = Depends(get_current_user)):
 
     threads_raw = await db.conversations.aggregate(pipeline).to_list(200)
 
-    # Build client lookup — only include clients the user actually owns/has access to
+    # Build client lookup from already-fetched client IDs
     client_ids = [t["_id"] for t in threads_raw if t["_id"]]
     clients_docs = await db.clients.find(
-        {"id": {"$in": client_ids}, "user_id": {"$in": accessible_ids}},
+        {"id": {"$in": client_ids}},
         {"_id": 0, "id": 1, "name": 1, "phone": 1, "company": 1, "pipeline_stage": 1, "updated_at": 1}
     ).to_list(500)
     clients_map = {c["id"]: c for c in clients_docs}

@@ -198,6 +198,15 @@ const Inbox = () => {
     loadConversation(client.id);
   }, [loadConversation]);
 
+  // Auto-refresh active conversation every 5 seconds for live inbound messages
+  useEffect(() => {
+    if (!selectedClient) return;
+    const interval = setInterval(() => {
+      loadConversation(selectedClient.id, activeChain);
+    }, 5000);
+    return () => clearInterval(interval);
+  }, [selectedClient, activeChain, loadConversation]);
+
   const handleChainSelect = useCallback((fromNumber) => {
     setActiveChain(fromNumber);
     if (selectedClient) {
