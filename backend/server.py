@@ -93,6 +93,7 @@ class UserCreate(BaseModel):
     phone: Optional[str] = None
     business: Optional[str] = None
     sms_opt_in: bool = False
+    invite_id: Optional[str] = None
 
 class UserLogin(BaseModel):
     email: EmailStr
@@ -725,8 +726,9 @@ def calculate_reminder_count(start_date: str, end_date: str, days_of_week: List[
 
 @api_router.post("/auth/register", response_model=dict)
 async def register(user: UserCreate):
-    # Check if user exists
-    existing = await db.users.find_one({"email": user.email})
+    # Case-insensitive email check
+    email_lower = user.email.strip().lower()
+    existing = await db.users.find_one({"email": {"$regex": f"^{email_lower}$", "$options": "i"}})
     if existing:
         raise HTTPException(status_code=400, detail="Email already registered")
     
@@ -742,17 +744,41 @@ async def register(user: UserCreate):
     otp = generate_otp()
     otp_expires = (datetime.now(timezone.utc) + timedelta(minutes=10)).isoformat()
     
+    # Default role and org
+    role = "admin" if is_first_user else "agent"
+    org_id = None
+    team_id = None
+
+    # Check if registering via invite link
+    invite_id = getattr(user, 'invite_id', None)
+    if invite_id:
+        invite = await db.team_invites.find_one({"id": invite_id, "status": "pending"})
+        if invite:
+            role = invite.get("role", "agent")
+            team_id = invite.get("team_id")
+            # Get the inviter's org_id
+            inviter = await db.users.find_one({"id": invite.get("invited_by")}, {"_id": 0, "org_id": 1})
+            if inviter:
+                org_id = inviter.get("org_id")
+            # Mark invite as accepted
+            await db.team_invites.update_one(
+                {"id": invite_id},
+                {"$set": {"status": "accepted", "accepted_at": now, "accepted_by": user_id}}
+            )
+    
     user_doc = {
         "id": user_id,
-        "email": user.email,
+        "email": email_lower,
         "password": hash_password(user.password),
         "name": user.name,
         "phone": user.phone,
         "business": user.business,
         "sms_opt_in": user.sms_opt_in,
         "sms_opt_in_date": now if user.sms_opt_in else None,
-        "is_verified": False,  # Requires OTP verification
-        "role": "admin" if is_first_user else "agent",  # First user gets admin role
+        "is_verified": False,
+        "role": role,
+        "org_id": org_id,
+        "team_id": team_id,
         "otp": otp,
         "otp_expires": otp_expires,
         "created_at": now,
@@ -805,7 +831,8 @@ async def verify_otp_route(data: VerifyOTP):
 
 @api_router.post("/auth/login", response_model=dict)
 async def login(data: UserLogin):
-    user = await db.users.find_one({"email": data.email})
+    email_lower = data.email.strip().lower()
+    user = await db.users.find_one({"email": {"$regex": f"^{email_lower}$", "$options": "i"}})
     if not user:
         raise HTTPException(status_code=401, detail="Invalid credentials")
     
@@ -1930,8 +1957,9 @@ async def invite_team_member(data: dict, current_user: dict = Depends(get_curren
     
     team_id = user.get("team_id") or current_user["user_id"]
     
-    # Check if email already exists
-    existing = await db.users.find_one({"email": data.get("email")})
+    # Check if email already exists (case-insensitive)
+    invite_email = data.get("email", "").strip().lower()
+    existing = await db.users.find_one({"email": {"$regex": f"^{invite_email}$", "$options": "i"}})
     if existing:
         raise HTTPException(status_code=400, detail="User with this email already exists")
     
@@ -2025,8 +2053,9 @@ async def create_team_member(data: dict, current_user: dict = Depends(get_curren
     
     team_id = user.get("team_id") or current_user["user_id"]
     
-    # Check if email already exists
-    existing = await db.users.find_one({"email": data.get("email")})
+    # Check if email already exists (case-insensitive)
+    member_email = data.get("email", "").strip().lower()
+    existing = await db.users.find_one({"email": {"$regex": f"^{member_email}$", "$options": "i"}})
     if existing:
         raise HTTPException(status_code=400, detail="User with this email already exists")
     
@@ -2041,11 +2070,12 @@ async def create_team_member(data: dict, current_user: dict = Depends(get_curren
     
     new_user = {
         "id": new_user_id,
-        "email": data.get("email"),
+        "email": member_email,
         "name": data.get("name"),
         "password": hashed_password,
         "role": data.get("role", "agent"),
         "team_id": team_id,
+        "org_id": user.get("org_id"),
         "is_verified": True,
         "created_at": now,
         "created_by": current_user["user_id"]

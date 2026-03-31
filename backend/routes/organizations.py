@@ -286,6 +286,7 @@ async def create_organization(data: OrganizationCreate, authorization: str = Que
         "name": data.name,
         "description": data.description,
         "is_active": True,
+        "credit_balance": 0,
         "created_at": now,
         "created_by": user["id"]
     }
