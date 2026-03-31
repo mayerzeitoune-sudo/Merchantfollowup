@@ -254,10 +254,30 @@ async def handle_inbound_sms(
 
     from_clean = From.replace("+1", "").replace("+", "").replace("-", "").replace(" ", "").replace("(", "").replace(")", "")
 
-    # Find the client by phone number (last 10 digits)
-    client_doc = await db.clients.find_one({
-        "phone": {"$regex": from_clean[-10:] if len(from_clean) >= 10 else from_clean}
-    })
+    # Find the client by phone number — prefer one that already has a conversation
+    # with this Twilio number to keep threads connected
+    last_10 = from_clean[-10:] if len(from_clean) >= 10 else from_clean
+    matching_clients = await db.clients.find(
+        {"phone": {"$regex": last_10}}, {"_id": 0, "id": 1}
+    ).to_list(10)
+
+    client_doc = None
+    if matching_clients:
+        if len(matching_clients) == 1:
+            client_doc = matching_clients[0]
+        else:
+            # Multiple clients with same phone — pick the one with the most recent
+            # outbound conversation to this customer from this Twilio number
+            for mc in matching_clients:
+                has_conv = await db.conversations.find_one(
+                    {"client_id": mc["id"], "from_number": To, "direction": "outbound"},
+                    sort=[("timestamp", -1)]
+                )
+                if has_conv:
+                    client_doc = mc
+                    break
+            if not client_doc:
+                client_doc = matching_clients[0]
 
     # Find the owner of the Twilio number that received this message
     # Prefer the record that has an org_id (real org ownership) over orphaned records
