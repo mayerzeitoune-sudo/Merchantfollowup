@@ -1,0 +1,87 @@
+{
+  "summary": "Tested strict data isolation for Merchant CRM. 8/9 backend tests passed. One issue found: org_admin's inbox threads show John's Mayer client due to historical conversation data inconsistency.",
+  "backend_issues": {
+    "critical": [
+      {
+        "endpoint": "GET /api/inbox/threads",
+        "issue": "org_admin sees John's Mayer client (74654ebf) in inbox threads. Root cause: 4 conversations exist in DB with org_admin's user_id but linked to John's client (created before strict isolation was implemented).",
+        "priority": "HIGH",
+        "rca": "The get_inbox_threads function correctly filters by user_id in conversations collection, but there are 4 historical conversations with user_id=dc589ed5 (org_admin) but client_id=74654ebf (John's Mayer). This is a data inconsistency, not a code bug.",
+        "suggested_fix": "Either: 1) Clean up inconsistent conversation data, OR 2) Modify get_inbox_threads to also filter by client ownership (join with clients collection to verify client.user_id matches)"
+      }
+    ],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_strict_data_isolation.py",
+    "/app/test_reports/pytest/strict_data_isolation_results.xml"
+  ],
+  "action_items": [
+    "Fix inbox threads data isolation: Either clean up inconsistent conversation data OR modify get_inbox_threads to filter by client ownership",
+    "Consider adding a data migration script to fix historical conversation data where user_id doesn't match the client's owner"
+  ],
+  "critical_code_review_comments": [
+    "get_inbox_threads (line 5330) filters conversations by user_id but doesn't verify the client belongs to the user. This allows threads to appear for clients the user doesn't own if they have historical conversations.",
+    "Consider adding a join/lookup to verify client.user_id matches the accessible_ids in get_inbox_threads"
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_strict_data_isolation.py"
+  ],
+  "success_rate": {
+    "backend": "89% (8/9 tests passed)",
+    "frontend": "100% (all features verified via UI)"
+  },
+  "test_credentials": {
+    "org_admin": "orgadmin@merchant.com / Admin123!",
+    "admin": "john@acmefunding.com / Password123!"
+  },
+  "seed_data_creation": "None - used existing data",
+  "retest_needed": true,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Strict data isolation is mostly working. org_admin sees only 1 client and 1 phone number (correct). However, inbox threads show 2 entries due to 4 historical conversations with org_admin's user_id but linked to John's client. The code logic is correct - this is a data inconsistency issue that needs cleanup or a code change to filter by client ownership.",
+  "features_tested": {
+    "org_admin_clients_isolation": {
+      "GET /api/clients": "PASS - org_admin sees only 1 client (their own Mayer Zeitoune)",
+      "client_user_id_verification": "PASS - All clients returned have user_id matching org_admin"
+    },
+    "org_admin_phone_numbers_isolation": {
+      "GET /api/phone-numbers/owned": "PASS - org_admin sees only 1 phone number (+15206833288)",
+      "number_ownership_verification": "PASS - Number is assigned/owned by org_admin"
+    },
+    "org_admin_inbox_threads_isolation": {
+      "GET /api/inbox/threads": "FAIL - org_admin sees 2 threads (should be 1)",
+      "issue": "John's Mayer client (74654ebf) appears due to 4 historical conversations with org_admin's user_id"
+    },
+    "admin_cannot_see_org_admin_data": {
+      "GET /api/clients": "PASS - John cannot see org_admin's Mayer client (e797c27f)",
+      "GET /api/phone-numbers/owned": "PASS - John cannot see org_admin's phone number (+15206833288)",
+      "GET /api/contacts/{id}/conversation": "PASS - John gets 404 for org_admin's client"
+    },
+    "duplicate_phone_number_prevention": {
+      "POST /api/phone-numbers/purchase": "PASS - Returns 409 for already-purchased numbers"
+    }
+  },
+  "api_verification": {
+    "org_admin_clients": "200 OK - Returns 1 client (Mayer Zeitoune, id=e797c27f)",
+    "org_admin_phone_numbers": "200 OK - Returns 1 number (+15206833288)",
+    "org_admin_inbox_threads": "200 OK - Returns 2 threads (ISSUE: should be 1)",
+    "admin_clients": "200 OK - Returns 64 clients (org-scoped)",
+    "admin_phone_numbers": "200 OK - Returns 5 numbers (org-scoped)",
+    "admin_inbox_threads": "200 OK - Returns 65 threads (org-scoped)",
+    "duplicate_purchase": "409 Conflict - 'Phone number already owned by another organization'"
+  },
+  "data_inconsistency_details": {
+    "problematic_conversations": "4 conversations with user_id=dc589ed5 (org_admin) but client_id=74654ebf (John's Mayer)",
+    "conversation_ids": ["2a27987c-3953-4042-a4f4-4ea8f8c4eb15", "d87acdff-0803-47ed-9a44-1021818ffcd8", "b27b6504-c5ef-42e8-9bf1-83c29976b39d", "6a5031b1-1a47-481f-94c5-ff8b8f8ec5a8"],
+    "root_cause": "These conversations were created when org_admin could send messages to any client (before strict isolation was implemented)"
+  },
+  "mocked_apis": {
+    "has_mocked_apis": false,
+    "note": "All endpoints are live - no mocking"
+  }
+}

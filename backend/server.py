@@ -3258,8 +3258,12 @@ async def get_owned_numbers(current_user: dict = Depends(get_current_user)):
     user_id = current_user["user_id"]
     
     if role == "org_admin":
-        # Org admin sees all numbers
-        numbers = await db.phone_numbers.find({}, {"_id": 0}).to_list(500)
+        # Org admin only sees numbers they personally own or are assigned to
+        # They use impersonation to view other orgs' numbers
+        numbers = await db.phone_numbers.find(
+            {"$or": [{"assigned_user_id": user_id}, {"user_id": user_id}]},
+            {"_id": 0}
+        ).to_list(500)
     elif role == "admin":
         # Admin sees all numbers in their org + numbers assigned to them
         # Also find numbers assigned to any user in their org (even if org_id on number is None)
@@ -3600,7 +3604,11 @@ async def send_sms_to_contact(
         org_id = user.get("org_id") if user else None
         
         if role == "org_admin":
-            owned_number = await db.phone_numbers.find_one({"phone_number": from_number})
+            # Org admin can only use numbers assigned to or purchased by them
+            owned_number = await db.phone_numbers.find_one({
+                "phone_number": from_number,
+                "$or": [{"assigned_user_id": current_user["user_id"]}, {"user_id": current_user["user_id"]}]
+            })
         elif role == "admin":
             # Admins can use any number in their org
             owned_number = await db.phone_numbers.find_one({
@@ -3922,7 +3930,10 @@ async def initiate_call(
         org_id = user.get("org_id") if user else None
         
         if role == "org_admin":
-            phone_num = await db.phone_numbers.find_one({"phone_number": from_number})
+            phone_num = await db.phone_numbers.find_one({
+                "phone_number": from_number,
+                "$or": [{"assigned_user_id": current_user["user_id"]}, {"user_id": current_user["user_id"]}]
+            })
         elif role == "admin":
             phone_num = await db.phone_numbers.find_one({
                 "phone_number": from_number,
@@ -4449,7 +4460,10 @@ async def send_template_message(
         org_id = user.get("org_id") if user else None
         
         if role == "org_admin":
-            phone_num = await db.phone_numbers.find_one({"phone_number": from_number})
+            phone_num = await db.phone_numbers.find_one({
+                "phone_number": from_number,
+                "$or": [{"assigned_user_id": current_user["user_id"]}, {"user_id": current_user["user_id"]}]
+            })
         elif role == "admin":
             phone_num = await db.phone_numbers.find_one({
                 "phone_number": from_number,
