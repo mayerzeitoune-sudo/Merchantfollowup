@@ -6028,11 +6028,27 @@ async def debug_env_check():
                     val = line.split('=', 1)[1].strip().strip('"').strip("'")
                     file_keys.append({"key": key, "in_file": bool(val), "in_env": bool(os.environ.get(key, '').strip())})
     
+    import json as _djson
+    creds_file_path = Path(__file__).parent / 'twilio_creds.json'
+    creds_file_token_prefix = ""
+    if creds_file_path.exists():
+        with open(creds_file_path) as cf:
+            cfile = _djson.load(cf)
+        creds_file_token_prefix = cfile.get("TWILIO_AUTH_TOKEN", "")[:4]
+
+    env_token_prefix = os.environ.get("TWILIO_AUTH_TOKEN", "")[:4]
+
     return {
         "env_file_path": str(env_path),
         "env_file_exists": env_path.exists(),
+        "twilio_creds_json_exists": creds_file_path.exists(),
         "vars_loaded_from_file_at_startup": _loaded_from_file,
         "file_keys": file_keys,
+        "token_check": {
+            "env_token_starts_with": env_token_prefix,
+            "creds_json_token_starts_with": creds_file_token_prefix,
+            "tokens_match": env_token_prefix == creds_file_token_prefix,
+        },
         "critical_vars": {
             "TWILIO_ACCOUNT_SID": bool(os.environ.get("TWILIO_ACCOUNT_SID", "").strip()),
             "TWILIO_AUTH_TOKEN": bool(os.environ.get("TWILIO_AUTH_TOKEN", "").strip()),
