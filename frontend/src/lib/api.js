@@ -135,6 +135,8 @@ export const smsProvidersApi = {
 
 export const platformApi = {
   getStatus: () => axios.get(`${API}/platform/status`),
+  getTwilioConfig: () => axios.get(`${API}/admin/twilio-config`),
+  setTwilioConfig: (data) => axios.post(`${API}/admin/twilio-config`, data),
 };
 
 export const moderationApi = {

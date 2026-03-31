@@ -2865,14 +2865,103 @@ async def activate_sms_provider(provider_id: str, current_user: dict = Depends(g
     
     return {"message": "Provider activated"}
 
+# ============== TWILIO CREDENTIALS HELPER ==============
+
+async def get_twilio_creds():
+    """Get Twilio credentials from MongoDB first, then twilio_creds.json, then env vars.
+    MongoDB source survives deployments and can be updated via the UI."""
+    # 1. Try MongoDB
+    stored = await db.platform_config.find_one({"key": "twilio_creds"}, {"_id": 0})
+    if stored and stored.get("account_sid") and stored.get("auth_token"):
+        return stored["account_sid"], stored["auth_token"], stored.get("messaging_service_sid", "")
+
+    # 2. Try twilio_creds.json file
+    import json as _cjson
+    creds_path = Path(__file__).parent / 'twilio_creds.json'
+    if creds_path.exists():
+        try:
+            with open(creds_path) as f:
+                creds = _cjson.load(f)
+            sid = creds.get("TWILIO_ACCOUNT_SID", "")
+            token = creds.get("TWILIO_AUTH_TOKEN", "")
+            ms = creds.get("TWILIO_MESSAGING_SERVICE_SID", "")
+            if sid and token:
+                return sid, token, ms
+        except Exception:
+            pass
+
+    # 3. Fall back to env vars
+    return (
+        os.environ.get("TWILIO_ACCOUNT_SID", "").strip(),
+        os.environ.get("TWILIO_AUTH_TOKEN", "").strip(),
+        os.environ.get("TWILIO_MESSAGING_SERVICE_SID", "").strip(),
+    )
+
+
+@api_router.post("/admin/twilio-config")
+async def set_twilio_config(data: dict, current_user: dict = Depends(get_current_user)):
+    """Store Twilio credentials in MongoDB (org_admin only). Survives deployments."""
+    user = await db.users.find_one({"id": current_user["user_id"]}, {"_id": 0, "role": 1})
+    if not user or user.get("role") != "org_admin":
+        raise HTTPException(status_code=403, detail="Only global admin can configure Twilio")
+
+    sid = data.get("account_sid", "").strip()
+    token = data.get("auth_token", "").strip()
+    ms = data.get("messaging_service_sid", "").strip()
+    if not sid or not token:
+        raise HTTPException(status_code=400, detail="account_sid and auth_token are required")
+
+    # Verify credentials work
+    try:
+        from twilio.rest import Client
+        test_client = Client(sid, token)
+        account = test_client.api.accounts(sid).fetch()
+        if account.status != "active":
+            raise HTTPException(status_code=400, detail=f"Twilio account status: {account.status}")
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Invalid Twilio credentials: {str(e)}")
+
+    await db.platform_config.update_one(
+        {"key": "twilio_creds"},
+        {"$set": {
+            "key": "twilio_creds",
+            "account_sid": sid,
+            "auth_token": token,
+            "messaging_service_sid": ms,
+            "updated_at": datetime.now(timezone.utc).isoformat(),
+        }},
+        upsert=True,
+    )
+    return {"message": "Twilio credentials saved and verified", "account_status": "active"}
+
+
+@api_router.get("/admin/twilio-config")
+async def get_twilio_config(current_user: dict = Depends(get_current_user)):
+    """Check stored Twilio config status (org_admin only)"""
+    user = await db.users.find_one({"id": current_user["user_id"]}, {"_id": 0, "role": 1})
+    if not user or user.get("role") != "org_admin":
+        raise HTTPException(status_code=403, detail="Only global admin can view Twilio config")
+
+    stored = await db.platform_config.find_one({"key": "twilio_creds"}, {"_id": 0})
+    if stored and stored.get("account_sid"):
+        return {
+            "configured": True,
+            "source": "database",
+            "sid_prefix": stored["account_sid"][:6] + "...",
+            "token_prefix": stored.get("auth_token", "")[:4] + "...",
+            "updated_at": stored.get("updated_at"),
+        }
+    return {"configured": False, "source": "none"}
+
+
 # ============== PLATFORM STATUS ==============
 
 @api_router.get("/platform/status")
 async def get_platform_status(request: Request, current_user: dict = Depends(get_current_user)):
     """Return platform integration status (never exposes keys)"""
-    twilio_sid = os.environ.get("TWILIO_ACCOUNT_SID", "")
-    twilio_token = os.environ.get("TWILIO_AUTH_TOKEN", "")
-    twilio_ms = os.environ.get("TWILIO_MESSAGING_SERVICE_SID", "")
+    twilio_sid, twilio_token, twilio_ms = await get_twilio_creds()
     stripe_key = os.environ.get("STRIPE_API_KEY", "")
     
     # Check user role
@@ -2919,24 +3008,10 @@ async def search_available_numbers(
     current_user: dict = Depends(get_current_user)
 ):
     """Search for available phone numbers via Twilio API"""
-    # Read creds directly from twilio_creds.json — bypasses all env var issues
-    import json as _json
-    creds_path = Path(__file__).parent / 'twilio_creds.json'
-    twilio_sid = ""
-    twilio_token = ""
-    if creds_path.exists():
-        with open(creds_path) as f:
-            creds = _json.load(f)
-        twilio_sid = creds.get("TWILIO_ACCOUNT_SID", "")
-        twilio_token = creds.get("TWILIO_AUTH_TOKEN", "")
+    twilio_sid, twilio_token, _ = await get_twilio_creds()
 
     if not twilio_sid or not twilio_token:
-        # Fall back to env
-        twilio_sid = os.environ.get("TWILIO_ACCOUNT_SID", "").strip()
-        twilio_token = os.environ.get("TWILIO_AUTH_TOKEN", "").strip()
-
-    if not twilio_sid or not twilio_token:
-        raise HTTPException(status_code=503, detail=f"Twilio not configured. SID={'yes' if twilio_sid else 'no'} TOKEN={'yes' if twilio_token else 'no'}")
+        raise HTTPException(status_code=503, detail="Twilio not configured. Go to Settings to enter your Twilio credentials.")
 
     def _parse_capabilities(caps):
         if not caps:
@@ -3069,19 +3144,7 @@ async def purchase_phone_number(data: PhoneNumberCreate, request: Request, curre
     )
     
     # Actually purchase through Twilio - REQUIRED, no fake numbers ever
-    # Read creds directly from twilio_creds.json — bypasses env var caching issues
-    import json as _json
-    _creds_path = Path(__file__).parent / 'twilio_creds.json'
-    twilio_sid = ""
-    twilio_token = ""
-    if _creds_path.exists():
-        with open(_creds_path) as _f:
-            _creds = _json.load(_f)
-        twilio_sid = _creds.get("TWILIO_ACCOUNT_SID", "")
-        twilio_token = _creds.get("TWILIO_AUTH_TOKEN", "")
-    if not twilio_sid or not twilio_token:
-        twilio_sid = os.environ.get("TWILIO_ACCOUNT_SID", "").strip()
-        twilio_token = os.environ.get("TWILIO_AUTH_TOKEN", "").strip()
+    twilio_sid, twilio_token, _ = await get_twilio_creds()
     
     if not twilio_sid or not twilio_token:
         # Refund credits - Twilio not configured
@@ -3584,8 +3647,7 @@ async def send_sms_to_contact(
     }
     
     # Send via Twilio if configured
-    twilio_sid = os.environ.get("TWILIO_ACCOUNT_SID")
-    twilio_token = os.environ.get("TWILIO_AUTH_TOKEN")
+    twilio_sid, twilio_token, _ = await get_twilio_creds()
     
     # Deduct credits for the SMS
     org_id = user.get("org_id")
@@ -5481,8 +5543,7 @@ async def initiate_call(data: dict, current_user: dict = Depends(get_current_use
     now = datetime.now(timezone.utc).isoformat()
     
     # Check if Twilio is configured for actual calls
-    twilio_account_sid = os.environ.get("TWILIO_ACCOUNT_SID")
-    twilio_auth_token = os.environ.get("TWILIO_AUTH_TOKEN")
+    twilio_account_sid, twilio_auth_token, _ = await get_twilio_creds()
     
     call_doc = {
         "id": call_id,
@@ -5547,8 +5608,7 @@ async def end_call(call_id: str, current_user: dict = Depends(get_current_user))
     # If real Twilio call, end it
     if call.get("twilio_sid"):
         try:
-            twilio_account_sid = os.environ.get("TWILIO_ACCOUNT_SID")
-            twilio_auth_token = os.environ.get("TWILIO_AUTH_TOKEN")
+            twilio_account_sid, twilio_auth_token, _ = await get_twilio_creds()
             if twilio_account_sid and twilio_auth_token:
                 from twilio.rest import Client
                 twilio_client = Client(twilio_account_sid, twilio_auth_token)

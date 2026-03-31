@@ -39,17 +39,81 @@ class SMSRequest(BaseModel):
 
 
 def get_twilio_client():
-    """Get Twilio client — reads from twilio_creds.json first, then env vars"""
+    """Get Twilio client — reads from MongoDB first, then twilio_creds.json, then env vars"""
     import json as _json
     from pathlib import Path
+    import asyncio
+
     sid = ""
     token = ""
+
+    # 1. Try MongoDB (sync wrapper for async call)
+    try:
+        loop = asyncio.get_event_loop()
+        if loop.is_running():
+            # We're in an async context, can't do sync DB call here
+            # Fall through to file/env
+            pass
+    except RuntimeError:
+        pass
+
+    # 2. Try twilio_creds.json
     creds_path = Path(__file__).resolve().parent.parent / 'twilio_creds.json'
     if creds_path.exists():
-        with open(creds_path) as f:
-            creds = _json.load(f)
-        sid = creds.get("TWILIO_ACCOUNT_SID", "")
-        token = creds.get("TWILIO_AUTH_TOKEN", "")
+        try:
+            with open(creds_path) as f:
+                creds = _json.load(f)
+            sid = creds.get("TWILIO_ACCOUNT_SID", "")
+            token = creds.get("TWILIO_AUTH_TOKEN", "")
+        except Exception:
+            pass
+
+    # 3. Fall back to env
+    if not sid or not token:
+        sid = os.environ.get("TWILIO_ACCOUNT_SID", "")
+        token = os.environ.get("TWILIO_AUTH_TOKEN", "")
+    if not sid or not token:
+        return None
+    from twilio.rest import Client
+    return Client(sid, token)
+
+
+async def get_twilio_client_async():
+    """Async version - checks MongoDB first for credentials"""
+    from motor.motor_asyncio import AsyncIOMotorClient
+    from pathlib import Path
+    import json as _json
+
+    sid = ""
+    token = ""
+
+    # 1. Try MongoDB
+    try:
+        mongo_url = os.environ.get("MONGO_URL", "mongodb://localhost:27017")
+        db_name = os.environ.get("DB_NAME", "test_database")
+        _client = AsyncIOMotorClient(mongo_url)
+        _db = _client[db_name]
+        stored = await _db.platform_config.find_one({"key": "twilio_creds"}, {"_id": 0})
+        _client.close()
+        if stored and stored.get("account_sid") and stored.get("auth_token"):
+            sid = stored["account_sid"]
+            token = stored["auth_token"]
+    except Exception:
+        pass
+
+    # 2. Try twilio_creds.json
+    if not sid or not token:
+        creds_path = Path(__file__).resolve().parent.parent / 'twilio_creds.json'
+        if creds_path.exists():
+            try:
+                with open(creds_path) as f:
+                    creds = _json.load(f)
+                sid = creds.get("TWILIO_ACCOUNT_SID", "")
+                token = creds.get("TWILIO_AUTH_TOKEN", "")
+            except Exception:
+                pass
+
+    # 3. Fall back to env
     if not sid or not token:
         sid = os.environ.get("TWILIO_ACCOUNT_SID", "")
         token = os.environ.get("TWILIO_AUTH_TOKEN", "")

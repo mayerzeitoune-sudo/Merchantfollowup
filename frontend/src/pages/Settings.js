@@ -67,6 +67,10 @@ const Settings = () => {
   const [ownedNumbers, setOwnedNumbers] = useState([]);
   const [selectedDeleteNumber, setSelectedDeleteNumber] = useState('');
   const [deleteRequestSent, setDeleteRequestSent] = useState(false);
+  const [twilioSid, setTwilioSid] = useState('');
+  const [twilioToken, setTwilioToken] = useState('');
+  const [twilioMs, setTwilioMs] = useState('');
+  const [twilioSaving, setTwilioSaving] = useState(false);
   
   const isAdmin = user?.role === 'admin' || user?.role === 'org_admin';
 
@@ -93,6 +97,30 @@ const Settings = () => {
       setPlatformStatus(res.data);
     } catch (error) {
       console.error('Failed to fetch platform status:', error);
+    }
+  };
+
+  const handleSaveTwilioCreds = async () => {
+    if (!twilioSid.trim() || !twilioToken.trim()) {
+      toast.error('Account SID and Auth Token are required');
+      return;
+    }
+    setTwilioSaving(true);
+    try {
+      await platformApi.setTwilioConfig({
+        account_sid: twilioSid.trim(),
+        auth_token: twilioToken.trim(),
+        messaging_service_sid: twilioMs.trim(),
+      });
+      toast.success('Twilio credentials saved and verified!');
+      setTwilioSid('');
+      setTwilioToken('');
+      setTwilioMs('');
+      fetchPlatformStatus();
+    } catch (error) {
+      toast.error(error.response?.data?.detail || 'Failed to save Twilio credentials');
+    } finally {
+      setTwilioSaving(false);
     }
   };
 
@@ -383,6 +411,68 @@ const Settings = () => {
                     )}
                   </div>
                 </div>
+
+                {/* Twilio Config Form - org_admin only, shows when not connected */}
+                {user?.role === 'org_admin' && !platformStatus?.twilio?.connected && (
+                  <div className="p-4 rounded-lg border border-amber-200 bg-amber-50 dark:bg-amber-950/30 dark:border-amber-800 space-y-3" data-testid="twilio-config-form">
+                    <p className="text-sm font-medium text-amber-800 dark:text-amber-200">Enter your Twilio credentials to connect:</p>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      <div>
+                        <Label htmlFor="twilio-sid" className="text-xs">Account SID</Label>
+                        <Input id="twilio-sid" placeholder="ACxxxxxxx..." value={twilioSid} onChange={e => setTwilioSid(e.target.value)} data-testid="twilio-sid-input" />
+                      </div>
+                      <div>
+                        <Label htmlFor="twilio-token" className="text-xs">Auth Token</Label>
+                        <Input id="twilio-token" type="password" placeholder="Your auth token" value={twilioToken} onChange={e => setTwilioToken(e.target.value)} data-testid="twilio-token-input" />
+                      </div>
+                      <div>
+                        <Label htmlFor="twilio-ms" className="text-xs">Messaging Service SID (optional)</Label>
+                        <Input id="twilio-ms" placeholder="MGxxxxxxx..." value={twilioMs} onChange={e => setTwilioMs(e.target.value)} data-testid="twilio-ms-input" />
+                      </div>
+                      <div className="flex items-end">
+                        <Button onClick={handleSaveTwilioCreds} disabled={twilioSaving} className="w-full" data-testid="twilio-save-btn">
+                          {twilioSaving ? 'Verifying...' : 'Save & Verify'}
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Also show config button when connected, for updating */}
+                {user?.role === 'org_admin' && platformStatus?.twilio?.connected && (
+                  <div className="px-4 pb-2">
+                    <Dialog>
+                      <DialogTrigger asChild>
+                        <Button variant="outline" size="sm" data-testid="twilio-update-btn">Update Twilio Credentials</Button>
+                      </DialogTrigger>
+                      <DialogContent>
+                        <DialogHeader>
+                          <DialogTitle>Update Twilio Credentials</DialogTitle>
+                          <DialogDescription>Enter new credentials. They will be verified before saving.</DialogDescription>
+                        </DialogHeader>
+                        <div className="space-y-3 py-2">
+                          <div>
+                            <Label htmlFor="twilio-sid-modal">Account SID</Label>
+                            <Input id="twilio-sid-modal" placeholder="ACxxxxxxx..." value={twilioSid} onChange={e => setTwilioSid(e.target.value)} />
+                          </div>
+                          <div>
+                            <Label htmlFor="twilio-token-modal">Auth Token</Label>
+                            <Input id="twilio-token-modal" type="password" placeholder="Your auth token" value={twilioToken} onChange={e => setTwilioToken(e.target.value)} />
+                          </div>
+                          <div>
+                            <Label htmlFor="twilio-ms-modal">Messaging Service SID (optional)</Label>
+                            <Input id="twilio-ms-modal" placeholder="MGxxxxxxx..." value={twilioMs} onChange={e => setTwilioMs(e.target.value)} />
+                          </div>
+                        </div>
+                        <DialogFooter>
+                          <Button onClick={handleSaveTwilioCreds} disabled={twilioSaving}>
+                            {twilioSaving ? 'Verifying...' : 'Save & Verify'}
+                          </Button>
+                        </DialogFooter>
+                      </DialogContent>
+                    </Dialog>
+                  </div>
+                )}
 
                 {/* Stripe Payments - Only visible to org_admin */}
                 {platformStatus?.stripe && (
