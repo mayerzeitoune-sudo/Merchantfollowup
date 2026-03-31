@@ -3717,7 +3717,8 @@ async def send_sms_to_contact(
                 raise ValueError(f"Client has no valid phone digits: {raw}")
             
             status_cb = get_base_url(request)
-            ms_sid = os.environ.get('TWILIO_MESSAGING_SERVICE_SID', '')
+            # Read Messaging Service SID from MongoDB
+            _, _, ms_sid = await get_twilio_creds()
             
             # Build Twilio message params
             msg_params = {

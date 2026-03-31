@@ -171,7 +171,9 @@ async def send_sms(request_obj: Request, request: SMSRequest, user_id: str = Que
         if not sender:
             raise HTTPException(status_code=400, detail="No from_number provided and no default TWILIO_PHONE_NUMBER configured")
 
-        ms_sid = os.environ.get('TWILIO_MESSAGING_SERVICE_SID', '')
+        # Read Messaging Service SID from MongoDB (not env vars)
+        stored_config = await db.platform_config.find_one({"key": "twilio_creds"}, {"_id": 0})
+        ms_sid = (stored_config or {}).get("messaging_service_sid", "") if stored_config else ""
         msg_params = {"body": request.message, "to": request.to, "from_": sender}
         if ms_sid:
             msg_params["messaging_service_sid"] = ms_sid
@@ -179,6 +181,9 @@ async def send_sms(request_obj: Request, request: SMSRequest, user_id: str = Que
         status_cb_proto = request_obj.headers.get("x-forwarded-proto", "https")
         status_cb_host = request_obj.headers.get("x-forwarded-host") or request_obj.headers.get("host", "")
         status_cb = f"{status_cb_proto}://{status_cb_host}" if status_cb_host else str(request_obj.base_url).rstrip("/")
+        # Ensure status callback points to production, not preview
+        if "preview" in status_cb:
+            status_cb = "https://merchantfollowup.com"
         if status_cb:
             msg_params["status_callback"] = f"{status_cb}/api/sms/webhook/status"
         
