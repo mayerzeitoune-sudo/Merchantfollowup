@@ -3004,13 +3004,90 @@ async def get_twilio_config(current_user: dict = Depends(get_current_user)):
     return {"configured": False, "source": "none"}
 
 
+# ============== STRIPE CREDENTIALS HELPER ==============
+
+async def get_stripe_creds():
+    """Get Stripe credentials from MongoDB first, then fall back to env vars.
+    MongoDB source survives deployments and bypasses env caching."""
+    stored = await db.platform_config.find_one({"key": "stripe_creds"}, {"_id": 0})
+    if stored and stored.get("secret_key"):
+        return stored["secret_key"], stored.get("publishable_key", "")
+    return os.environ.get("STRIPE_API_KEY", "").strip(), ""
+
+
+@api_router.post("/admin/stripe-config")
+async def set_stripe_config(data: dict, current_user: dict = Depends(get_current_user)):
+    """Store Stripe credentials in MongoDB (org_admin only). Survives deployments."""
+    user = await db.users.find_one({"id": current_user["user_id"]}, {"_id": 0, "role": 1})
+    if not user or user.get("role") != "org_admin":
+        raise HTTPException(status_code=403, detail="Only global admin can configure Stripe")
+
+    secret_key = data.get("secret_key", "").strip()
+    publishable_key = data.get("publishable_key", "").strip()
+    if not secret_key:
+        raise HTTPException(status_code=400, detail="Stripe secret key is required")
+
+    # Verify the key works
+    try:
+        import stripe as stripe_lib
+        stripe_lib.api_key = secret_key
+        # Try a lightweight call; restricted keys may not have Account access
+        try:
+            stripe_lib.Balance.retrieve()
+        except stripe_lib.error.PermissionError:
+            # Key is valid but has restricted permissions — that's fine
+            pass
+        except stripe_lib.error.AuthenticationError:
+            raise HTTPException(status_code=400, detail="Invalid Stripe key: authentication failed")
+    except HTTPException:
+        raise
+    except Exception as e:
+        error_msg = str(e)
+        if "PermissionError" in error_msg or "permission" in error_msg.lower():
+            pass  # restricted key with limited perms is OK
+        else:
+            raise HTTPException(status_code=400, detail=f"Invalid Stripe key: {error_msg}")
+
+    await db.platform_config.update_one(
+        {"key": "stripe_creds"},
+        {"$set": {
+            "key": "stripe_creds",
+            "secret_key": secret_key,
+            "publishable_key": publishable_key,
+            "updated_at": datetime.now(timezone.utc).isoformat(),
+        }},
+        upsert=True,
+    )
+
+    return {"message": "Stripe credentials saved and verified", "status": "connected"}
+
+
+@api_router.get("/admin/stripe-config")
+async def get_stripe_config(current_user: dict = Depends(get_current_user)):
+    """Check stored Stripe config status (org_admin only)"""
+    user = await db.users.find_one({"id": current_user["user_id"]}, {"_id": 0, "role": 1})
+    if not user or user.get("role") != "org_admin":
+        raise HTTPException(status_code=403, detail="Only global admin can view Stripe config")
+
+    stored = await db.platform_config.find_one({"key": "stripe_creds"}, {"_id": 0})
+    if stored and stored.get("secret_key"):
+        return {
+            "configured": True,
+            "source": "database",
+            "key_prefix": stored["secret_key"][:8] + "...",
+            "has_publishable_key": bool(stored.get("publishable_key")),
+            "updated_at": stored.get("updated_at"),
+        }
+    return {"configured": False, "source": "none"}
+
+
 # ============== PLATFORM STATUS ==============
 
 @api_router.get("/platform/status")
 async def get_platform_status(request: Request, current_user: dict = Depends(get_current_user)):
     """Return platform integration status (never exposes keys)"""
     twilio_sid, twilio_token, twilio_ms = await get_twilio_creds()
-    stripe_key = os.environ.get("STRIPE_API_KEY", "")
+    stripe_key, _ = await get_stripe_creds()
     
     # Check user role
     user = await db.users.find_one({"id": current_user["user_id"]}, {"_id": 0, "role": 1})
@@ -5370,7 +5447,7 @@ async def stripe_webhook(request: Request):
     """Handle Stripe webhooks - no auth required"""
     try:
         from emergentintegrations.payments.stripe.checkout import StripeCheckout
-        api_key = os.environ.get("STRIPE_API_KEY")
+        api_key, _ = await get_stripe_creds()
         if not api_key:
             return {"status": "error", "message": "Stripe not configured"}
         

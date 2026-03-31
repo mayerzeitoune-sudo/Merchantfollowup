@@ -71,6 +71,9 @@ const Settings = () => {
   const [twilioToken, setTwilioToken] = useState('');
   const [twilioMs, setTwilioMs] = useState('');
   const [twilioSaving, setTwilioSaving] = useState(false);
+  const [stripeSecretKey, setStripeSecretKey] = useState('');
+  const [stripePublishableKey, setStripePublishableKey] = useState('');
+  const [stripeSaving, setStripeSaving] = useState(false);
   
   const isAdmin = user?.role === 'admin' || user?.role === 'org_admin';
 
@@ -121,6 +124,28 @@ const Settings = () => {
       toast.error(error.response?.data?.detail || 'Failed to save Twilio credentials');
     } finally {
       setTwilioSaving(false);
+    }
+  };
+
+  const handleSaveStripeCreds = async () => {
+    if (!stripeSecretKey.trim()) {
+      toast.error('Stripe Secret Key is required');
+      return;
+    }
+    setStripeSaving(true);
+    try {
+      await platformApi.setStripeConfig({
+        secret_key: stripeSecretKey.trim(),
+        publishable_key: stripePublishableKey.trim(),
+      });
+      toast.success('Stripe credentials saved and verified!');
+      setStripeSecretKey('');
+      setStripePublishableKey('');
+      fetchPlatformStatus();
+    } catch (error) {
+      toast.error(error.response?.data?.detail || 'Failed to save Stripe credentials');
+    } finally {
+      setStripeSaving(false);
     }
   };
 
@@ -474,8 +499,7 @@ const Settings = () => {
                   </div>
                 )}
 
-                {/* Stripe Payments - Only visible to org_admin */}
-                {platformStatus?.stripe && (
+                {/* Stripe Payments - Always visible with config for org_admin */}
                 <div className="flex items-center justify-between p-4 rounded-lg border" data-testid="stripe-status-card">
                   <div className="flex items-center gap-4">
                     <div className={`h-12 w-12 rounded-lg flex items-center justify-center ${platformStatus?.stripe?.connected ? 'bg-green-100 dark:bg-green-950' : 'bg-red-100 dark:bg-red-950'}`}>
@@ -498,6 +522,59 @@ const Settings = () => {
                     </Badge>
                   )}
                 </div>
+
+                {/* Stripe Config Form - org_admin only, shows when not connected */}
+                {user?.role === 'org_admin' && !platformStatus?.stripe?.connected && (
+                  <div className="p-4 rounded-lg border border-amber-200 bg-amber-50 dark:bg-amber-950/30 dark:border-amber-800 space-y-3" data-testid="stripe-config-form">
+                    <p className="text-sm font-medium text-amber-800 dark:text-amber-200">Enter your Stripe credentials to connect:</p>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      <div>
+                        <Label htmlFor="stripe-secret" className="text-xs">Secret Key (sk_live_... or rk_live_...)</Label>
+                        <Input id="stripe-secret" type="password" placeholder="sk_live_... or rk_live_..." value={stripeSecretKey} onChange={e => setStripeSecretKey(e.target.value)} data-testid="stripe-secret-input" />
+                      </div>
+                      <div>
+                        <Label htmlFor="stripe-pub" className="text-xs">Publishable Key (pk_live_...) — optional</Label>
+                        <Input id="stripe-pub" placeholder="pk_live_..." value={stripePublishableKey} onChange={e => setStripePublishableKey(e.target.value)} data-testid="stripe-pub-input" />
+                      </div>
+                      <div className="flex items-end md:col-span-2">
+                        <Button onClick={handleSaveStripeCreds} disabled={stripeSaving} className="w-full md:w-auto" data-testid="stripe-save-btn">
+                          {stripeSaving ? 'Verifying...' : 'Save & Verify'}
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Stripe update button when already connected */}
+                {user?.role === 'org_admin' && platformStatus?.stripe?.connected && (
+                  <div className="px-4 pb-2">
+                    <Dialog>
+                      <DialogTrigger asChild>
+                        <Button variant="outline" size="sm" data-testid="stripe-update-btn">Update Stripe Credentials</Button>
+                      </DialogTrigger>
+                      <DialogContent>
+                        <DialogHeader>
+                          <DialogTitle>Update Stripe Credentials</DialogTitle>
+                          <DialogDescription>Enter new credentials. They will be verified before saving.</DialogDescription>
+                        </DialogHeader>
+                        <div className="space-y-3 py-2">
+                          <div>
+                            <Label htmlFor="stripe-secret-modal">Secret Key</Label>
+                            <Input id="stripe-secret-modal" type="password" placeholder="sk_live_... or rk_live_..." value={stripeSecretKey} onChange={e => setStripeSecretKey(e.target.value)} />
+                          </div>
+                          <div>
+                            <Label htmlFor="stripe-pub-modal">Publishable Key (optional)</Label>
+                            <Input id="stripe-pub-modal" placeholder="pk_live_..." value={stripePublishableKey} onChange={e => setStripePublishableKey(e.target.value)} />
+                          </div>
+                        </div>
+                        <DialogFooter>
+                          <Button onClick={handleSaveStripeCreds} disabled={stripeSaving}>
+                            {stripeSaving ? 'Verifying...' : 'Save & Verify'}
+                          </Button>
+                        </DialogFooter>
+                      </DialogContent>
+                    </Dialog>
+                  </div>
                 )}
               </CardContent>
             </Card>

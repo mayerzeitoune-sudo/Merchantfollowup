@@ -19,6 +19,16 @@ db = None
 _get_current_user_func = None
 _add_credits_func = None
 
+
+async def get_stripe_creds():
+    """Get Stripe credentials from MongoDB first, then fall back to env vars.
+    MongoDB source survives deployments and bypasses env caching."""
+    stored = await db.platform_config.find_one({"key": "stripe_creds"}, {"_id": 0})
+    if stored and stored.get("secret_key"):
+        return stored["secret_key"], stored.get("publishable_key", "")
+    # Fall back to env
+    return os.environ.get("STRIPE_API_KEY", "").strip(), ""
+
 def set_db(database):
     global db
     db = database
@@ -101,9 +111,9 @@ async def create_checkout(data: CheckoutRequest, request: Request, current_user:
     if not package:
         raise HTTPException(status_code=400, detail="Invalid package")
 
-    api_key = os.environ.get("STRIPE_API_KEY")
+    api_key, _ = await get_stripe_creds()
     if not api_key:
-        raise HTTPException(status_code=500, detail="Stripe not configured")
+        raise HTTPException(status_code=500, detail="Stripe not configured. Ask your platform admin to add Stripe keys in Settings.")
 
     # Build dynamic URLs from frontend origin
     origin = data.origin_url.rstrip("/")
@@ -162,7 +172,7 @@ async def get_checkout_status(session_id: str, current_user: dict = Depends(get_
     """Poll Stripe for checkout session status and process credits if paid"""
     from emergentintegrations.payments.stripe.checkout import StripeCheckout
 
-    api_key = os.environ.get("STRIPE_API_KEY")
+    api_key, _ = await get_stripe_creds()
     if not api_key:
         raise HTTPException(status_code=500, detail="Stripe not configured")
 

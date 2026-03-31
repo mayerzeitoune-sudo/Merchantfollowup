@@ -137,6 +137,8 @@ export const platformApi = {
   getStatus: () => axios.get(`${API}/platform/status`),
   getTwilioConfig: () => axios.get(`${API}/admin/twilio-config`),
   setTwilioConfig: (data) => axios.post(`${API}/admin/twilio-config`, data),
+  getStripeConfig: () => axios.get(`${API}/admin/stripe-config`),
+  setStripeConfig: (data) => axios.post(`${API}/admin/stripe-config`, data),
 };
 
 export const moderationApi = {
