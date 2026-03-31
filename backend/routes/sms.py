@@ -253,34 +253,9 @@ async def handle_inbound_sms(
         return Response(content=EMPTY_TWIML, media_type="application/xml")
 
     from_clean = From.replace("+1", "").replace("+", "").replace("-", "").replace(" ", "").replace("(", "").replace(")", "")
-
-    # Find the client by phone number — prefer one that already has a conversation
-    # with this Twilio number to keep threads connected
     last_10 = from_clean[-10:] if len(from_clean) >= 10 else from_clean
-    matching_clients = await db.clients.find(
-        {"phone": {"$regex": last_10}}, {"_id": 0, "id": 1}
-    ).to_list(10)
 
-    client_doc = None
-    if matching_clients:
-        if len(matching_clients) == 1:
-            client_doc = matching_clients[0]
-        else:
-            # Multiple clients with same phone — pick the one with the most recent
-            # outbound conversation to this customer from this Twilio number
-            for mc in matching_clients:
-                has_conv = await db.conversations.find_one(
-                    {"client_id": mc["id"], "from_number": To, "direction": "outbound"},
-                    sort=[("timestamp", -1)]
-                )
-                if has_conv:
-                    client_doc = mc
-                    break
-            if not client_doc:
-                client_doc = matching_clients[0]
-
-    # Find the owner of the Twilio number that received this message
-    # Prefer the record that has an org_id (real org ownership) over orphaned records
+    # ── STEP 1: Find the owner of the Twilio number (source of truth) ──
     phone_owner = await db.phone_numbers.find_one(
         {"phone_number": To, "org_id": {"$ne": None}},
         {"_id": 0, "user_id": 1, "assigned_user_id": 1, "org_id": 1}
@@ -291,11 +266,15 @@ async def handle_inbound_sms(
             {"_id": 0, "user_id": 1, "assigned_user_id": 1, "org_id": 1}
         )
 
-    # Determine user_id — prefer assigned user, then purchaser, then last outbound sender, then client owner
+    # The phone number owner determines who receives this message
     user_id = None
+    owner_org_id = None
     if phone_owner:
         user_id = phone_owner.get("assigned_user_id") or phone_owner.get("user_id")
+        owner_org_id = phone_owner.get("org_id")
+        logger.info(f"Inbound SMS: number {To} owned by user_id={user_id}, org_id={owner_org_id}")
 
+    # Fallback: check last outbound conversation from this number
     if not user_id:
         last_outbound = await db.conversations.find_one(
             {"from_number": To, "direction": "outbound"},
@@ -303,8 +282,47 @@ async def handle_inbound_sms(
         )
         if last_outbound:
             user_id = last_outbound.get("user_id")
+            logger.info(f"Inbound SMS: resolved user_id from last outbound: {user_id}")
 
-    # Fallback: use the client's owner as the user_id
+    # ── STEP 2: Find the client scoped to the number owner ──
+    # Get all users in the owner's org so we match the right client record
+    accessible_user_ids = [user_id] if user_id else []
+    if owner_org_id:
+        org_users = await db.users.find(
+            {"org_id": owner_org_id}, {"_id": 0, "id": 1}
+        ).to_list(500)
+        accessible_user_ids = list(set(accessible_user_ids + [u["id"] for u in org_users]))
+
+    client_doc = None
+    if accessible_user_ids:
+        # Prefer client within the number owner's org
+        client_doc = await db.clients.find_one(
+            {"phone": {"$regex": last_10}, "user_id": {"$in": accessible_user_ids}},
+            {"_id": 0, "id": 1}
+        )
+
+    # Fallback: any client with this phone (for cases where phone owner is unknown)
+    if not client_doc:
+        matching_clients = await db.clients.find(
+            {"phone": {"$regex": last_10}}, {"_id": 0, "id": 1}
+        ).to_list(10)
+        if matching_clients:
+            if len(matching_clients) == 1:
+                client_doc = matching_clients[0]
+            else:
+                # Multiple matches — pick the one with outbound history on this number
+                for mc in matching_clients:
+                    has_conv = await db.conversations.find_one(
+                        {"client_id": mc["id"], "from_number": To, "direction": "outbound"},
+                        sort=[("timestamp", -1)]
+                    )
+                    if has_conv:
+                        client_doc = mc
+                        break
+                if not client_doc:
+                    client_doc = matching_clients[0]
+
+    # If we still don't have user_id, use the matched client's owner
     if not user_id and client_doc:
         client_full = await db.clients.find_one({"id": client_doc["id"]}, {"_id": 0, "user_id": 1})
         if client_full:
@@ -312,6 +330,7 @@ async def handle_inbound_sms(
             logger.info(f"Inbound SMS: resolved user_id from client owner: {user_id}")
 
     client_id = client_doc.get("id") if client_doc else None
+    logger.info(f"Inbound SMS: final resolution user_id={user_id}, client_id={client_id}")
 
     # Store in conversations (same collection the Inbox reads from)
     conv_doc = {

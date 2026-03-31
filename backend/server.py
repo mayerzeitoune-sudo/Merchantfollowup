@@ -3746,7 +3746,6 @@ async def receive_inbound_sms_legacy(
 ):
     """
     Legacy inbound SMS webhook (form-encoded).
-    Redirects to the canonical /sms/webhook/inbound handler.
     """
     from fastapi.responses import Response
     EMPTY_TWIML = '<?xml version="1.0" encoding="UTF-8"?><Response></Response>'
@@ -3757,20 +3756,25 @@ async def receive_inbound_sms_legacy(
     customer_phone = From
     our_number = To
     customer_phone_clean = customer_phone.replace("+1", "").replace("+", "").replace("-", "").replace(" ", "")
+    last_10 = customer_phone_clean[-10:] if len(customer_phone_clean) >= 10 else customer_phone_clean
 
-    # Find the client by phone number
-    client_doc = await db.clients.find_one({
-        "phone": {"$regex": customer_phone_clean[-10:] if len(customer_phone_clean) >= 10 else customer_phone_clean}
-    })
-
-    # Find owner of the Twilio number
+    # ── STEP 1: Find the owner of the Twilio number (source of truth) ──
     phone_owner = await db.phone_numbers.find_one(
-        {"phone_number": our_number},
-        {"_id": 0, "user_id": 1, "assigned_user_id": 1}
+        {"phone_number": our_number, "org_id": {"$ne": None}},
+        {"_id": 0, "user_id": 1, "assigned_user_id": 1, "org_id": 1}
     )
+    if not phone_owner:
+        phone_owner = await db.phone_numbers.find_one(
+            {"phone_number": our_number},
+            {"_id": 0, "user_id": 1, "assigned_user_id": 1, "org_id": 1}
+        )
+
     user_id = None
+    owner_org_id = None
     if phone_owner:
         user_id = phone_owner.get("assigned_user_id") or phone_owner.get("user_id")
+        owner_org_id = phone_owner.get("org_id")
+
     if not user_id:
         last_outbound = await db.conversations.find_one(
             {"from_number": our_number, "direction": "outbound"},
@@ -3778,7 +3782,30 @@ async def receive_inbound_sms_legacy(
         )
         if last_outbound:
             user_id = last_outbound.get("user_id")
-    # Fallback: use client's owner
+
+    # ── STEP 2: Find the client scoped to the number owner ──
+    accessible_user_ids = [user_id] if user_id else []
+    if owner_org_id:
+        org_users = await db.users.find(
+            {"org_id": owner_org_id}, {"_id": 0, "id": 1}
+        ).to_list(500)
+        accessible_user_ids = list(set(accessible_user_ids + [u["id"] for u in org_users]))
+
+    client_doc = None
+    if accessible_user_ids:
+        client_doc = await db.clients.find_one(
+            {"phone": {"$regex": last_10}, "user_id": {"$in": accessible_user_ids}},
+            {"_id": 0}
+        )
+
+    # Fallback: any client with this phone
+    if not client_doc:
+        client_doc = await db.clients.find_one(
+            {"phone": {"$regex": last_10}},
+            {"_id": 0}
+        )
+
+    # If still no user_id, use client's owner
     if not user_id and client_doc:
         user_id = client_doc.get("user_id")
 
