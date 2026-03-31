@@ -3778,6 +3778,9 @@ async def receive_inbound_sms_legacy(
         )
         if last_outbound:
             user_id = last_outbound.get("user_id")
+    # Fallback: use client's owner
+    if not user_id and client_doc:
+        user_id = client_doc.get("user_id")
 
     client_id = client_doc.get("id") if client_doc else None
 

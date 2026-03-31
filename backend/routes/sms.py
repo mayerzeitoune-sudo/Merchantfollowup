@@ -291,7 +291,7 @@ async def handle_inbound_sms(
             {"_id": 0, "user_id": 1, "assigned_user_id": 1, "org_id": 1}
         )
 
-    # Determine user_id — prefer assigned user, then purchaser, then last outbound sender
+    # Determine user_id — prefer assigned user, then purchaser, then last outbound sender, then client owner
     user_id = None
     if phone_owner:
         user_id = phone_owner.get("assigned_user_id") or phone_owner.get("user_id")
@@ -303,6 +303,13 @@ async def handle_inbound_sms(
         )
         if last_outbound:
             user_id = last_outbound.get("user_id")
+
+    # Fallback: use the client's owner as the user_id
+    if not user_id and client_doc:
+        client_full = await db.clients.find_one({"id": client_doc["id"]}, {"_id": 0, "user_id": 1})
+        if client_full:
+            user_id = client_full.get("user_id")
+            logger.info(f"Inbound SMS: resolved user_id from client owner: {user_id}")
 
     client_id = client_doc.get("id") if client_doc else None
 
