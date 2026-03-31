@@ -68,12 +68,34 @@ async def create_checkout(data: CheckoutRequest, request: Request, current_user:
     user = await db.users.find_one({"id": current_user["user_id"]}, {"_id": 0})
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
-    if user.get("role") not in ("admin", "org_admin"):
+    if user.get("role") not in ("admin", "org_admin", "team_leader"):
         raise HTTPException(status_code=403, detail="Only admins can purchase credits")
 
     org_id = user.get("org_id")
     if not org_id:
-        raise HTTPException(status_code=400, detail="User has no organization")
+        # For org_admin without org_id, create a personal org or find one they manage
+        if user.get("role") == "org_admin":
+            # Find any org they created or own
+            owned_org = await db.organizations.find_one(
+                {"$or": [{"owner_id": user["id"]}, {"created_by": user["id"]}]},
+                {"_id": 0, "id": 1}
+            )
+            if owned_org:
+                org_id = owned_org["id"]
+            else:
+                # Create a personal org for the platform admin
+                org_id = str(uuid.uuid4())
+                await db.organizations.insert_one({
+                    "id": org_id,
+                    "name": f"{user.get('name', 'Admin')}'s Organization",
+                    "owner_id": user["id"],
+                    "credit_balance": 0,
+                    "is_active": True,
+                    "created_at": datetime.now(timezone.utc).isoformat()
+                })
+                await db.users.update_one({"id": user["id"]}, {"$set": {"org_id": org_id}})
+        else:
+            raise HTTPException(status_code=400, detail="User has no organization")
 
     package = CREDIT_PACKAGES.get(data.package_id)
     if not package:
@@ -88,9 +110,11 @@ async def create_checkout(data: CheckoutRequest, request: Request, current_user:
     success_url = f"{origin}/credit-shop?session_id={{CHECKOUT_SESSION_ID}}"
     cancel_url = f"{origin}/credit-shop"
 
-    # Build webhook URL from backend host
+    # Build webhook URL from backend host — always use production
     host_url = str(request.base_url).rstrip("/")
-    webhook_url = f"{host_url}api/webhook/stripe"
+    if "preview" in host_url:
+        host_url = "https://merchantfollowup.com"
+    webhook_url = f"{host_url}/api/webhook/stripe"
 
     stripe_checkout = StripeCheckout(api_key=api_key, webhook_url=webhook_url)
 
