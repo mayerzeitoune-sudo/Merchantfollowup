@@ -2934,6 +2934,24 @@ async def set_twilio_config(data: dict, current_user: dict = Depends(get_current
         }},
         upsert=True,
     )
+
+    # Update Messaging Service webhook URLs to production if MS SID is provided
+    if ms:
+        try:
+            from twilio.rest import Client as TClient
+            tc = TClient(sid, token)
+            # Always use the production domain for messaging service webhooks
+            # Read from the stored config or use merchantfollowup.com as default
+            prod_url = "https://merchantfollowup.com"
+            tc.messaging.v1.services(ms).update(
+                inbound_request_url=f"{prod_url}/api/sms/webhook/inbound",
+                inbound_method="POST",
+                status_callback=f"{prod_url}/api/sms/webhook/status"
+            )
+            logger.info(f"Updated Messaging Service {ms} webhook URLs to {prod_url}")
+        except Exception as e:
+            logger.warning(f"Could not update Messaging Service webhook URLs: {e}")
+
     return {"message": "Twilio credentials saved and verified", "account_status": "active"}
 
 
@@ -3166,8 +3184,11 @@ async def purchase_phone_number(data: PhoneNumberCreate, request: Request, curre
         from twilio.rest import Client
         client = Client(twilio_sid, twilio_token)
         
-        # Buy the number
+        # Buy the number — webhook URLs must point to production domain
         backend_url = get_base_url(request)
+        # If we're on preview, override to production domain for webhook URLs
+        if "preview" in backend_url:
+            backend_url = "https://merchantfollowup.com"
         incoming = client.incoming_phone_numbers.create(
             phone_number=data.phone_number,
             sms_url=f"{backend_url}/api/sms/webhook/inbound",
@@ -3181,7 +3202,7 @@ async def purchase_phone_number(data: PhoneNumberCreate, request: Request, curre
         logger.info(f"Twilio number purchased: {data.phone_number} (SID: {incoming.sid})")
         
         # Auto-add to Messaging Service for A2P 10DLC compliance
-        ms_sid = os.environ.get('TWILIO_MESSAGING_SERVICE_SID', '')
+        _, _, ms_sid = await get_twilio_creds()
         if ms_sid:
             try:
                 client.messaging.v1.services(ms_sid).phone_numbers.create(
