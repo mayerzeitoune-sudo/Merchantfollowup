@@ -11,7 +11,7 @@ Full-stack CRM for merchant follow-up with SMS (Twilio), credit-based economy, m
 ## Core Architecture Principles
 1. **Phone number owner is source of truth** — whoever purchased/is assigned a number is the ONLY one who sees messages on it
 2. **Client ownership drives data visibility** — inbox threads and conversations are scoped by client ownership, not message `user_id`
-3. **Twilio credentials stored in MongoDB** — not in `.env` files (deployment caching issues)
+3. **External credentials stored in MongoDB** — not in `.env` files (deployment caching issues). Both Twilio and Stripe keys use `platform_config` collection.
 4. **Dynamic webhook URLs** — use `request.base_url`, never hardcoded URLs
 
 ## Architecture
@@ -20,7 +20,7 @@ Full-stack CRM for merchant follow-up with SMS (Twilio), credit-based economy, m
 ├── backend/
 │   ├── routes/
 │   │   ├── credits.py, payments.py, sms.py, moderation.py, gmail.py, etc.
-│   ├── server.py (~6200 lines)
+│   ├── server.py (~6350 lines)
 │   └── .env
 ├── frontend/
 │   ├── src/pages/    — Inbox.js, CreditShop.js, Settings.js, etc.
@@ -31,27 +31,31 @@ Full-stack CRM for merchant follow-up with SMS (Twilio), credit-based economy, m
 ## What's Been Implemented
 
 ### Session — March 31, 2026 (Latest)
-- **Inbound SMS routing fix**: Webhook now resolves owner from `phone_numbers` table FIRST, then finds client within owner's org scope. Prevents cross-org client matching.
-- **Frontend auto-refresh**: Conversation panel now polls every 5 seconds for new inbound messages. Thread list polls every 8 seconds.
-- **Client-based inbox threads**: Threads are now aggregated by client ownership (not message `user_id`). This means even messages with null/wrong `user_id` appear correctly.
-- **Conversation query fix**: Removed redundant `user_id` filter from conversation endpoint — client ownership verification is sufficient.
-- **Strict data isolation**: org_admin only sees their own data, unique phone number index, 3 SMS send endpoints restricted to owned numbers.
-- **Legacy webhook handler updated**: Same owner-first routing logic applied to both `routes/sms.py` and `server.py` legacy handler.
+- **Stripe keys migrated to MongoDB**: `get_stripe_creds()` helper reads from `platform_config` collection first, falls back to `.env`. Mirrors Twilio pattern exactly.
+- **Stripe config API**: `POST /api/admin/stripe-config` saves & verifies keys, `GET /api/admin/stripe-config` returns status. Org_admin only.
+- **Stripe config UI**: Settings page shows Stripe status card + config form for org_admin. "Update Stripe Credentials" dialog when already connected.
+- **Platform status updated**: `GET /api/platform/status` now checks Stripe from MongoDB instead of `.env`.
+- **Stripe webhook updated**: `/api/webhook/stripe` now uses `get_stripe_creds()` from MongoDB.
+- **Restricted key support**: Stripe verification handles `PermissionError` for restricted keys (`rk_live_...`).
 
 ### Previous Sessions
-- Stripe live integration, credit system
+- Inbound SMS routing fix, Frontend auto-refresh, Client-based inbox threads
+- Strict data isolation, org_admin only sees personal data
 - Twilio credentials migrated to MongoDB
 - Dynamic webhook URL resolution
-- Inbound SMS duplicate client fix
 - Content moderation, org admin impersonation
 - Google OAuth, Privacy/Terms pages, branding
+- Credit system, Stripe live integration
 
 ## Prioritized Backlog
 
+### P0
+- Deploy to production (user must click Deploy on Emergent platform)
+
 ### P1
-- Refactor `server.py` monolith into `routes/` directory (6200+ lines)
-- Bulk user upload backend
+- Refactor `server.py` monolith into `routes/` directory (6350+ lines)
 - Support Email UI on Settings page
+- Bulk user upload backend
 
 ### P2
 - Email Inbox view
@@ -66,7 +70,7 @@ Full-stack CRM for merchant follow-up with SMS (Twilio), credit-based economy, m
 - `clients`: id, name, user_id, org_id, phone, pipeline_stage
 - `phone_numbers`: id, phone_number (UNIQUE INDEX), user_id, assigned_user_id, org_id, twilio_purchased
 - `conversations`: id, user_id, client_id, direction, content, from_number, timestamp
-- `system_config` / `platform_config`: Twilio credentials stored here
+- `platform_config`: key="twilio_creds" | key="stripe_creds" — stores API credentials that survive deployments
 
 ## Test Credentials
 - Org Admin: orgadmin@merchant.com / Admin123!
