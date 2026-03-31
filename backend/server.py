@@ -560,9 +560,9 @@ async def get_accessible_user_ids(current_user: dict) -> List[str]:
     role = user.get("role", "agent")
     
     if role == "org_admin":
-        # Org admin sees all
-        all_users = await db.users.find({}, {"id": 1, "_id": 0}).to_list(10000)
-        return [u["id"] for u in all_users]
+        # Org admin sees only their own data.
+        # They use impersonation (Organizations page) to view other orgs.
+        return [current_user["user_id"]]
     
     elif role == "admin":
         # Admin sees all users in their organization (by org_id)
