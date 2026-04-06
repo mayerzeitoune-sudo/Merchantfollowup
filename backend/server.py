@@ -19,7 +19,7 @@ import asyncio
 
 ROOT_DIR = Path(__file__).parent
 _env_path = ROOT_DIR / '.env'
-load_dotenv(_env_path, override=True)
+load_dotenv(_env_path)
 
 # Force-load Twilio creds from twilio_creds.json.
 # The deployment platform caches old .env values. This file ALWAYS takes priority.
@@ -33,6 +33,19 @@ if _twilio_creds_path.exists():
         if _val:
             os.environ[_key] = _val
             _loaded_from_file.append(_key)
+
+# Selectively force-load STRIPE_API_KEY from .env if not in system env
+# (K8s vars like MONGO_URL must NOT be overridden, but Stripe key might be missing)
+if not os.environ.get('STRIPE_API_KEY', '').strip() and _env_path.exists():
+    with open(_env_path) as _ef:
+        for _line in _ef:
+            _line = _line.strip()
+            if _line.startswith('STRIPE_API_KEY='):
+                _sval = _line.split('=', 1)[1].strip().strip('"').strip("'")
+                if _sval:
+                    os.environ['STRIPE_API_KEY'] = _sval
+                    _loaded_from_file.append('STRIPE_API_KEY')
+                break
 
 # MongoDB connection
 mongo_url = os.environ['MONGO_URL']
