@@ -19,7 +19,7 @@ import asyncio
 
 ROOT_DIR = Path(__file__).parent
 _env_path = ROOT_DIR / '.env'
-load_dotenv(_env_path)
+load_dotenv(_env_path, override=True)
 
 # Force-load Twilio creds from twilio_creds.json.
 # The deployment platform caches old .env values. This file ALWAYS takes priority.
