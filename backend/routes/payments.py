@@ -112,8 +112,9 @@ async def create_checkout(data: CheckoutRequest, request: Request, current_user:
         raise HTTPException(status_code=400, detail="Invalid package")
 
     api_key, _ = await get_stripe_creds()
+    logger.info(f"Stripe checkout: key found={bool(api_key)}, key_prefix={api_key[:8] if api_key else 'NONE'}...")
     if not api_key:
-        raise HTTPException(status_code=500, detail="Stripe not configured. Ask your platform admin to add Stripe keys in Settings.")
+        raise HTTPException(status_code=500, detail="Stripe not configured. Go to Settings > Platform Integrations to add your Stripe key.")
 
     # Build dynamic URLs from frontend origin
     origin = data.origin_url.rstrip("/")
@@ -143,7 +144,11 @@ async def create_checkout(data: CheckoutRequest, request: Request, current_user:
         metadata=metadata,
     )
 
-    session = await stripe_checkout.create_checkout_session(checkout_req)
+    try:
+        session = await stripe_checkout.create_checkout_session(checkout_req)
+    except Exception as e:
+        logger.error(f"Stripe create_checkout_session FAILED: {e}")
+        raise HTTPException(status_code=502, detail=f"Stripe error: {str(e)}")
 
     # Create payment_transactions record BEFORE redirect
     txn = {

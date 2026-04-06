@@ -6324,6 +6324,50 @@ async def shutdown_db_client():
 
 
 @app.on_event("startup")
+async def startup_seed_credentials():
+    """Auto-seed API credentials from .env into MongoDB on first boot.
+    This ensures keys survive the deployment platform's .env caching/stripping."""
+    try:
+        # Seed Stripe key if not already in DB
+        existing_stripe = await db.platform_config.find_one({"key": "stripe_creds"}, {"_id": 0})
+        env_stripe = os.environ.get("STRIPE_API_KEY", "").strip()
+        if not existing_stripe and env_stripe:
+            await db.platform_config.update_one(
+                {"key": "stripe_creds"},
+                {"$set": {
+                    "key": "stripe_creds",
+                    "secret_key": env_stripe,
+                    "publishable_key": "",
+                    "updated_at": datetime.now(timezone.utc).isoformat(),
+                    "source": "auto_seeded_from_env",
+                }},
+                upsert=True,
+            )
+            logger.info("Auto-seeded Stripe key from .env to MongoDB")
+
+        # Seed Twilio creds if not already in DB
+        existing_twilio = await db.platform_config.find_one({"key": "twilio_creds"}, {"_id": 0})
+        env_twilio_sid = os.environ.get("TWILIO_ACCOUNT_SID", "").strip()
+        env_twilio_token = os.environ.get("TWILIO_AUTH_TOKEN", "").strip()
+        if not existing_twilio and env_twilio_sid and env_twilio_token:
+            await db.platform_config.update_one(
+                {"key": "twilio_creds"},
+                {"$set": {
+                    "key": "twilio_creds",
+                    "account_sid": env_twilio_sid,
+                    "auth_token": env_twilio_token,
+                    "messaging_service_sid": os.environ.get("TWILIO_MESSAGING_SERVICE_SID", "").strip(),
+                    "updated_at": datetime.now(timezone.utc).isoformat(),
+                    "source": "auto_seeded_from_env",
+                }},
+                upsert=True,
+            )
+            logger.info("Auto-seeded Twilio creds from .env to MongoDB")
+    except Exception as e:
+        logger.error(f"Credential auto-seed failed: {e}")
+
+
+@app.on_event("startup")
 async def startup_campaign_scheduler():
     """Start the background scheduler for drip campaign processing at 10:45 AM ET daily"""
     from apscheduler.schedulers.asyncio import AsyncIOScheduler
